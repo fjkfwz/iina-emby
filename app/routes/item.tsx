@@ -25,19 +25,22 @@ export default function ItemDetailRoute() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [detailEpisode, setDetailEpisode] = useState<EmbyItemMetadata | null>(null);
 
-  // TanStack Query for item details with instant initialData from route transition
+  // Item details. The list item from the route transition is only a placeholder: list queries
+  // request a reduced field set (no logo, ratings, sometimes no overview), so it must never be
+  // cached as the full item.
   const itemQuery = useQuery({
     queryKey: activeServer?.id && id ? embyKeys.item(activeServer.id, id) : ["empty-item"],
     queryFn: async ({ signal }) => {
       if (!activeServer || !id) return null;
       return fetchItemDetails(activeServer, id, signal, true);
     },
-    initialData: stateItem,
+    placeholderData: stateItem,
     enabled: Boolean(activeServer?.id && id),
   });
 
   const item = itemQuery.data ?? stateItem;
-  const isRefreshing = itemQuery.isRefetching;
+  // Show the refresh indicator only for refetches of real data, not while replacing the placeholder.
+  const isRefreshing = itemQuery.isRefetching && !itemQuery.isPlaceholderData;
 
   const handleRefresh = useCallback(() => {
     return itemQuery.refetch();
