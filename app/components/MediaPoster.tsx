@@ -96,7 +96,8 @@ export const MediaPoster = memo(function MediaPoster({
       onClick(item);
       return;
     }
-    navigate(`/item/${item.Id}`, { state: { item } });
+    const targetId = item.Type === "Episode" && item.SeriesId ? item.SeriesId : item.Id;
+    navigate(`/item/${targetId}`, { state: targetId === item.Id ? { item } : undefined });
   };
 
   return (

@@ -92,18 +92,6 @@ export function ItemHero({
         })
       : undefined);
 
-  // Ambient blurred backdrop: lightweight thumbnail for instant load & GPU-efficient ambient glow
-  const ambientUrl =
-    pendingImg ||
-    (item
-      ? getItemImageUrl(activeServer.serverUrl, item, {
-          prefer: "backdrop",
-          maxWidth: 480,
-          quality: 60,
-          accessToken: activeServer.accessToken,
-        })
-      : undefined);
-
   // Logo: check item's ImageTags.Logo (hide if pending image is active to avoid showing old logo over new movie)
   const logoTag = item?.ImageTags?.Logo;
   const logoUrl =
@@ -152,18 +140,11 @@ export function ItemHero({
 
   return (
     <>
-      {/* Ambient Blurred Backdrop providing dominant background color */}
-      {ambientUrl ? (
-        <div className={styles.ambientBackdrop} aria-hidden="true">
-          <img src={ambientUrl} alt="" className={styles.ambientImage} decoding="async" />
-          <div className={styles.ambientOverlay} />
-        </div>
-      ) : null}
-
-      {/* Top Crisp Backdrop with bottom gradient transparency mask */}
+      {/* Top Crisp Backdrop with smooth downward fade into window background */}
       {backdropUrl ? (
         <div className={styles.backdropContainer}>
           <img src={backdropUrl} alt={item?.Name || "Backdrop"} className={styles.backdropImage} decoding="async" />
+          <div className={styles.backdropOverlay} />
         </div>
       ) : null}
 
@@ -183,12 +164,14 @@ export function ItemHero({
                 size="sm"
                 onClick={toggleFavorite}
                 disabled={favUpdating}
-                title={isFavorite ? "取消收藏" : "加入收藏"}
-                aria-label={isFavorite ? "取消收藏" : "加入收藏"}
+                title={isFavorite ? "Remove from Favorites" : "Add to Favorites"}
+                aria-label={isFavorite ? "Remove from Favorites" : "Add to Favorites"}
               >
-                <div style={{ display: "flex", alignItems: "center", gap: "5px", padding: "0 4px" }}>
-                  {isFavorite ? <IconHeartFilled size={15} color="#ff4757" /> : <IconHeart size={15} />}
-                  <span style={{ fontSize: "0.78rem", fontWeight: 500 }}>{isFavorite ? "已收藏" : "收藏"}</span>
+                <div style={{ display: "flex", alignItems: "center", padding: "0 6px" }}>
+                  <span style={{ display: "inline-flex", alignItems: "center", marginRight: "8px" }}>
+                    {isFavorite ? <IconHeartFilled size={15} color="#ff4757" /> : <IconHeart size={15} />}
+                  </span>
+                  <span style={{ fontSize: "0.82rem", fontWeight: 500 }}>{isFavorite ? "Favorited" : "Favorite"}</span>
                 </div>
               </GlassElement>
               {canIdentify ? (
@@ -209,80 +192,93 @@ export function ItemHero({
         />
       </div>
 
-      {/* Hero Bottom Layout */}
+      {/* Hero Layout */}
       <main className={styles.heroContent}>
-        <div className={styles.row}>
-          <div className={styles.leftColumn}>
-            <div className={styles.logoWrapper}>
-              {logoUrl ? (
-                <img src={logoUrl} alt={item?.Name || "Logo"} className={styles.logoImage} onError={() => setLogoError(true)} />
-              ) : (
-                <h1 className={styles.titleFallback}>{item?.Name || "Media"}</h1>
-              )}
-            </div>
-          </div>
+        {/* Title / Logo */}
+        <div className={styles.titleArea}>
+          {logoUrl ? (
+            <img src={logoUrl} alt={item?.Name || "Logo"} className={styles.logoImage} onError={() => setLogoError(true)} />
+          ) : (
+            <h1 className={styles.titleFallback}>{item?.Name || "Media"}</h1>
+          )}
         </div>
 
-        <div className={styles.row}>
-          <div className={styles.leftColumn}>
-            <GlassElement
-              variant="primary"
-              size="lg"
-              shape="rounded"
-              fullWidth
-              onClick={onPlay}
-              disabled={isPlaying || (isSeries && !nextUpEpisode)}
-              aria-label="Play"
-              leftSection={<IconPlayerPlayFilled size={18} />}
-            >
-              <span>Play{resumeTimeClock ? ` ${resumeTimeClock}` : ""}</span>
-            </GlassElement>
-          </div>
+        {/* Metadata Badges (Rating, Specs, Genres) */}
+        <div className={styles.metaRow}>
+          {rating ? (
+            <span className={styles.starRating}>
+              <span className={styles.starIcon}>★</span>
+              <span>{rating}</span>
+            </span>
+          ) : null}
 
-          {/* Right Column: Rating, Genres, Technical Specs, Overview */}
-          <div className={styles.rightColumn}>
-            {/* Row 1: Star Rating, Official Rating, Genres */}
-            <div className={styles.ratingGenresRow}>
-              {rating ? (
-                <span className={styles.starRating}>
-                  <span className={styles.starIcon}>★</span>
-                  <span>{rating}</span>
-                </span>
-              ) : null}
+          {officialRating ? <span className={styles.officialRatingBadge}>{officialRating}</span> : null}
 
-              {officialRating ? <span className={styles.officialRatingBadge}>{officialRating}</span> : null}
+          {durationText ? <span className={styles.specBadge}>{durationText}</span> : null}
+          {premiereDateText ? <span className={styles.specBadge}>{premiereDateText}</span> : null}
+          {resolutionBadge ? <span className={styles.specBadge}>{resolutionBadge}</span> : null}
+          {hdrBadge ? <span className={styles.specBadge}>{hdrBadge}</span> : null}
+          {fpsBadge ? <span className={styles.specBadge}>{fpsBadge}</span> : null}
+          {sizeBadge ? <span className={styles.specBadge}>{sizeBadge}</span> : null}
 
-              {genresText ? <span className={styles.genres}>{genresText}</span> : null}
+          {genresText ? <span className={styles.genres}>{genresText}</span> : null}
 
-              {isSyncing && (
-                <span className={styles.syncingBadge} title="Metadata is syncing with server...">
-                  <span className={styles.syncDot} />
-                  <span>Syncing with server</span>
-                </span>
-              )}
-            </div>
-
-            {/* Row 2: Duration, Release Date, Specs */}
-            <div className={styles.specsRow}>
-              {durationText ? <span className={styles.specBadge}>{durationText}</span> : null}
-              {premiereDateText ? <span className={styles.specBadge}>{premiereDateText}</span> : null}
-              {resolutionBadge ? <span className={styles.specBadge}>{resolutionBadge}</span> : null}
-              {hdrBadge ? <span className={styles.specBadge}>{hdrBadge}</span> : null}
-              {fpsBadge ? <span className={styles.specBadge}>{fpsBadge}</span> : null}
-              {sizeBadge ? <span className={styles.specBadge}>{sizeBadge}</span> : null}
-            </div>
-
-            {/* Row 3: Overview with prefix */}
-            {overviewText ? (
-              <p className={styles.overview}>
-                {overviewPrefix ? <strong className={styles.overviewPrefix}>{overviewPrefix} • </strong> : null}
-                {overviewText}
-              </p>
-            ) : null}
-          </div>
+          {isSyncing && (
+            <span className={styles.syncingBadge} title="Metadata is syncing with server...">
+              <span className={styles.syncDot} />
+              <span>Syncing with server</span>
+            </span>
+          )}
         </div>
 
-        {/* Row 3: Full-width Cast & Crew Section */}
+        {/* Action Row */}
+        <div className={styles.actionRow}>
+          <GlassElement
+            variant="primary"
+            size="lg"
+            shape="rounded"
+            onClick={onPlay}
+            disabled={isPlaying || (isSeries && !nextUpEpisode)}
+            aria-label="Play"
+            className={styles.playButton}
+            leftSection={<IconPlayerPlayFilled size={18} />}
+          >
+            <span>
+              {isSeries && nextUpEpisode
+                ? `播放 S${nextUpEpisode.ParentIndexNumber ?? 1}:E${nextUpEpisode.IndexNumber ?? 1}${resumeTimeClock ? ` (${resumeTimeClock})` : ""}`
+                : `Play${resumeTimeClock ? ` ${resumeTimeClock}` : ""}`}
+            </span>
+          </GlassElement>
+
+          <GlassElement
+            variant={isFavorite ? "primary" : "glass"}
+            shape="rounded"
+            size="lg"
+            onClick={toggleFavorite}
+            disabled={favUpdating}
+            title={isFavorite ? "Remove from Favorites" : "Add to Favorites"}
+            aria-label={isFavorite ? "Remove from Favorites" : "Add to Favorites"}
+          >
+            <div style={{ display: "flex", alignItems: "center", padding: "0 8px" }}>
+              <span style={{ display: "inline-flex", alignItems: "center", marginRight: "8px" }}>
+                {isFavorite ? <IconHeartFilled size={18} color="#ff4757" /> : <IconHeart size={18} />}
+              </span>
+              <span style={{ fontSize: "0.875rem", fontWeight: 500 }}>{isFavorite ? "Favorited" : "Favorite"}</span>
+            </div>
+          </GlassElement>
+        </div>
+
+        {/* Overview / Synopsis */}
+        {overviewText ? (
+          <div className={styles.overviewContainer}>
+            <p className={styles.overview}>
+              {overviewPrefix ? <strong className={styles.overviewPrefix}>{overviewPrefix} • </strong> : null}
+              {overviewText}
+            </p>
+          </div>
+        ) : null}
+
+        {/* Full-width Cast & Crew Section */}
         {item?.People && item.People.length > 0 && <CastSection people={item.People} server={activeServer} />}
       </main>
 

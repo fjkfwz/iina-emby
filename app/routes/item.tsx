@@ -1,9 +1,10 @@
 import { type EmbyItemMetadata, formatFullEpisodeTitle } from "@shared";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router";
 import { EpisodeDetailModal } from "../components/EpisodeDetailModal";
 import { ItemHero } from "../components/ItemHero";
+import { ItemMediaInfo } from "../components/ItemMediaInfo";
 import { SeriesEpisodesShelf } from "../components/SeriesEpisodesShelf";
 import { useIINABridge, useOnWindowReopen } from "../hooks/useIINABridge";
 import { useSeriesEpisodes } from "../hooks/useSeriesEpisodes";
@@ -19,6 +20,7 @@ export default function ItemDetailRoute() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const location = useLocation();
+  const queryClient = useQueryClient();
   const { activeServer, playMedia } = useIINABridge();
 
   const stateItem = location.state?.item as EmbyItemMetadata | undefined;
@@ -32,11 +34,11 @@ export default function ItemDetailRoute() {
     queryKey: activeServer?.id && id ? embyKeys.item(activeServer.id, id) : ["empty-item"],
     queryFn: async ({ signal }) => {
       if (!activeServer || !id) return null;
-      return fetchItemDetails(activeServer, id, signal, true);
+      return fetchItemDetails(activeServer, id, signal, false);
     },
     placeholderData: stateItem,
-    staleTime: 0,
-    refetchOnMount: true,
+    staleTime: 60 * 1000,
+    refetchOnMount: false,
     enabled: Boolean(activeServer?.id && id),
   });
 
@@ -45,8 +47,12 @@ export default function ItemDetailRoute() {
   const isRefreshing = itemQuery.isRefetching && !itemQuery.isPlaceholderData;
 
   const handleRefresh = useCallback(() => {
-    return itemQuery.refetch();
-  }, [itemQuery]);
+    if (!activeServer || !id) return Promise.resolve(null);
+    return fetchItemDetails(activeServer, id, undefined, true).then((fresh) => {
+      queryClient.setQueryData(embyKeys.item(activeServer.id, id), fresh);
+      return fresh;
+    });
+  }, [activeServer, id]);
 
   useOnWindowReopen(() => {
     handleRefresh();
@@ -128,6 +134,8 @@ export default function ItemDetailRoute() {
           onEpisodeClick={setDetailEpisode}
         />
       )}
+
+      <ItemMediaInfo item={playTarget || item} />
 
       <EpisodeDetailModal episode={detailEpisode} onClose={() => setDetailEpisode(null)} onPlay={handlePlayEpisode} />
     </div>

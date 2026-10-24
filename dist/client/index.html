@@ -10,162 +10,11 @@
 window.addEventListener('error', function(e) {
   console.error('[Error]', e.message, e.filename, e.lineno);
 });
-window.__ImageCache = (function() {
-  const DB_NAME = 'emby_media_images_cache_v3';
-  const STORE_NAME = 'images';
-  const memCache = new Map();
-  let dbPromise = null;
-  let hasCleanup = false;
-
-  function openDB() {
-    if (!dbPromise) {
-      dbPromise = new Promise((resolve) => {
-        if (!window.indexedDB) return resolve(null);
-        try {
-          const req = indexedDB.open(DB_NAME, 1);
-          req.onupgradeneeded = (e) => {
-            const db = e.target.result;
-            if (!db.objectStoreNames.contains(STORE_NAME)) {
-              const store = db.createObjectStore(STORE_NAME, { keyPath: 'u' });
-              store.createIndex('t', 't', { unique: false });
-            }
-          };
-          req.onsuccess = (e) => resolve(e.target.result);
-          req.onerror = () => resolve(null);
-        } catch (e) {
-          resolve(null);
-        }
-      });
-    }
-    return dbPromise;
-  }
-
-  function getSync(url) {
-    if (!url) return null;
-    return memCache.get(url) || null;
-  }
-
-  async function getFromIDB(url) {
-    if (!url) return null;
-    if (memCache.has(url)) return memCache.get(url);
-    try {
-      const db = await openDB();
-      if (!db) return null;
-      const stored = await new Promise((res) => {
-        try {
-          const tx = db.transaction(STORE_NAME, 'readonly');
-          const store = tx.objectStore(STORE_NAME);
-          const req = store.get(url);
-          req.onsuccess = () => res(req.result);
-          req.onerror = () => res(null);
-        } catch (e) {
-          res(null);
-        }
-      });
-      if (stored && stored.b) {
-        const blobUrl = URL.createObjectURL(stored.b);
-        memCache.set(url, blobUrl);
-        return blobUrl;
-      }
-    } catch (e) {}
-    return null;
-  }
-
-  const saveQueue = [];
-  let isProcessingQueue = false;
-
-  function processNextQueue() {
-    if (saveQueue.length === 0) {
-      isProcessingQueue = false;
-      return;
-    }
-    isProcessingQueue = true;
-    const { url, imgEl } = saveQueue.shift();
-    setTimeout(() => {
-      doSave(url, imgEl);
-      processNextQueue();
-    }, 40);
-  }
-
-  function saveFromImage(url, imgEl) {
-    if (!url || !imgEl || memCache.has(url)) return;
-    if (url.indexOf('/Images/Backdrop') !== -1 || (imgEl.naturalWidth && imgEl.naturalWidth > 600)) return;
-    saveQueue.push({ url, imgEl });
-    if (!isProcessingQueue) {
-      processNextQueue();
-    }
-  }
-
-  function doSave(url, imgEl) {
-    try {
-      let nw = imgEl.naturalWidth || 0;
-      let nh = imgEl.naturalHeight || 0;
-      if (nw === 0 || nh === 0) return;
-
-      let scale = 1;
-      const MAX_W = 420;
-      const MAX_H = 630;
-      if (nw > MAX_W || nh > MAX_H) {
-        scale = Math.min(MAX_W / nw, MAX_H / nh);
-      }
-      const tw = Math.round(nw * scale);
-      const th = Math.round(nh * scale);
-
-      const cvs = document.createElement("canvas");
-      cvs.width = tw;
-      cvs.height = th;
-      const ctx = cvs.getContext("2d");
-      ctx.drawImage(imgEl, 0, 0, tw, th);
-
-      cvs.toBlob(async (blob) => {
-        if (!blob || blob.size === 0) return;
-        const blobUrl = URL.createObjectURL(blob);
-        memCache.set(url, blobUrl);
-
-        try {
-          const db = await openDB();
-          if (db) {
-            const tx = db.transaction(STORE_NAME, "readwrite");
-            const store = tx.objectStore(STORE_NAME);
-            store.put({ u: url, b: blob, t: Date.now() });
-
-            if (!hasCleanup) {
-              hasCleanup = true;
-              cleanup(db);
-            }
-          }
-        } catch (e) {}
-      }, "image/jpeg", 0.88);
-    } catch (e) {}
-  }
-
-  async function cleanup(db) {
-    try {
-      const tx = db.transaction(STORE_NAME, 'readonly');
-      const store = tx.objectStore(STORE_NAME);
-      const countReq = store.count();
-      countReq.onsuccess = () => {
-        if (countReq.result > 1500) {
-          const delTx = db.transaction(STORE_NAME, 'readwrite');
-          const delStore = delTx.objectStore(STORE_NAME);
-          const index = delStore.index('t');
-          let deleted = 0;
-          const toDelete = countReq.result - 1300;
-          index.openCursor().onsuccess = (e) => {
-            const cursor = e.target.result;
-            if (cursor && deleted < toDelete) {
-              delStore.delete(cursor.primaryKey);
-              deleted++;
-              cursor.continue();
-            }
-          };
-        }
-      };
-    } catch (e) {}
-  }
-
-  return { getSync, getFromIDB, saveFromImage };
-})();
+window.__ImageCache = {
+  getSync: function() { return null; },
+  getFromIDB: function() { return Promise.resolve(null); },
+  saveFromImage: function() {}
+};
 </script>
     <script type="module" crossorigin>var __defProp = Object.defineProperty;
 var __typeError = (msg) => {
@@ -11468,52 +11317,44 @@ function Do({ className: e2 }) {
 }
 function CachedImg(e) {
   let { src: t, alt: a, className: s, loading: l, onError: r, onLoad: c, ...n } = e;
-  let [i, o] = (0, _.useState)(() => {
-    if (!t) return t;
-    return window.__ImageCache ? window.__ImageCache.getSync(t) || t : t;
+  let [v, sv] = (0, _.useState)(() => {
+    return l === `eager` || typeof IntersectionObserver === `undefined`;
   });
-
+  let ref = (0, _.useRef)(null);
   (0, _.useEffect)(() => {
-    let u = false;
-    if (!t || !window.__ImageCache) return;
-    let m = window.__ImageCache.getSync(t);
-    if (m) {
-      if (i !== m) o(m);
-      return;
-    }
-    window.__ImageCache.getFromIDB(t).then((idbUrl) => {
-      if (!u && idbUrl && i !== idbUrl) {
-        o(idbUrl);
+    if (v || !ref.current || typeof IntersectionObserver === `undefined`) return;
+    let obs = new IntersectionObserver((entries) => {
+      if (entries[0] && entries[0].isIntersecting) {
+        sv(true);
+        obs.disconnect();
       }
-    });
-    return () => { u = true; };
-  }, [t]);
-
+    }, { rootMargin: `350px` });
+    obs.observe(ref.current);
+    return () => { obs.disconnect(); };
+  }, [v]);
   return (0, b.jsx)(`img`, {
+    ref,
     ...n,
-    src: i,
+    src: v ? t : void 0,
     alt: a,
     className: s,
-    loading: l || `eager`,
-    crossOrigin: `anonymous`,
-    onLoad: (ev) => {
-      if (window.__ImageCache && i === t) {
-        window.__ImageCache.saveFromImage(t, ev.target);
-      }
-      if (c) c(ev);
-    },
-    onError: (ev) => {
-      if (i !== t) {
-        o(t);
-      } else if (r) {
-        r(ev);
-      }
-    }
+    decoding: `async`,
+    onLoad: c,
+    onError: r
   });
 }
 function Oo({ item: e2, server: t2, onPlay: n2, onClick: r2, onUserDataChange: i2, aspectRatio: a2 = 16 / 9, width: o2, className: s2, title: c2, subtitle: l2, subtitleLines: u2 }) {
   let d2 = Gn(), [f2, p2] = (0, _.useState)(false), { isPlayed: m2, unplayedCount: h2, playbackPositionTicks: g2, canMarkPlayed: v2, canMarkUnplayed: y2, pendingAction: x2, isUpdating: S2, isConfirmOpen: C2, requestMarkPlayed: ee2, requestMarkUnplayed: w2, cancelTogglePlayed: te2, confirmTogglePlayed: T2 } = Wa({ item: e2, server: t2, onUserDataChange: i2 }), E2 = e2.Type === `Episode`, ne2 = E2 ? e2.SeriesName || e2.Name || `Episode` : e2.Name || `Movie`, re2 = c2 ?? ne2, ie2 = E2 ? Oi(e2.ParentIndexNumber, e2.IndexNumber, e2.Name) : e2.ProductionYear ? String(e2.ProductionYear) : void 0, D2 = l2 === void 0 ? ie2 : l2, ae2 = f2 ? void 0 : xi(t2.serverUrl, e2, { prefer: `thumb`, maxWidth: 520, maxHeight: 293, quality: 85, accessToken: t2.accessToken }), oe2 = Ci(g2), se2 = Ci(e2.RunTimeTicks), ce2 = se2 > 0 && oe2 > 0, le2 = ce2 ? Math.min(100, Math.max(0, oe2 / se2 * 100)) : 0, ue2 = ce2 ? Ti(oe2, se2) : se2 > 0 ? wi(se2) : null, de2 = c2 || (E2 ? `${e2.SeriesName || ``} - ${Oi(e2.ParentIndexNumber, e2.IndexNumber, e2.Name)}` : e2.Name || ``);
-  let _handlePrevClick = (r3) => { r3 && r3.stopPropagation && r3.stopPropagation(); let _p = { streamUrl: Ki(t2, e2.Id), title: de2, startPositionTicks: g2 }; if (n2) { n2(_p); } else if (window?.iina?.postMessage) { window.iina.postMessage("play-media", _p); } }; return (0, b.jsxs)(`div`, { className: `${Ga.card} ${s2 || ``}`, onClick: _handlePrevClick, style: { width: o2 || `100%`, cursor: `pointer` }, children: [(0, b.jsxs)(`div`, { className: Ga.preview, onClick: _handlePrevClick, style: { cursor: `pointer` }, children: [(0, b.jsx)(`button`, { type: `button`, className: Ga.previewBtn, style: { aspectRatio: a2 }, onClick: _handlePrevClick, "aria-label": `Play ${de2}` }), ae2 ? (0, b.jsx)(CachedImg, { src: ae2, alt: re2, className: Ga.image, loading: `eager`, onError: () => p2(true) }) : (0, b.jsx)(`div`, { className: Ga.placeholder, children: (0, b.jsx)(Da, { size: 38, stroke: 1.5 }) }), h2 === null ? m2 ? (0, b.jsx)(`div`, { className: Ga.playedBadge, title: `Played`, children: (0, b.jsx)(pa, { size: 14, stroke: 2.5 }) }) : null : (0, b.jsx)(`div`, { className: Ga.unplayedBadge, title: `${h2} unplayed episodes`, children: h2 }), (0, b.jsx)(`div`, { className: Ga.hoverOverlay, "aria-hidden": `true`, children: (0, b.jsxs)(`span`, { className: `${R.button} ${R.variantGlass} ${R.shapeCircle} ${R.iconLg}`, children: [(0, b.jsx)(`span`, { className: R.lens }), (0, b.jsx)(`span`, { className: R.content, children: (0, b.jsx)(ka, { size: 22, fill: `currentColor`, stroke: 0 }) })] }) }), ue2 && (0, b.jsxs)(b.Fragment, { children: [(0, b.jsx)(`div`, { className: Ga.scrim }), (0, b.jsx)(`div`, { className: Ga.timeOverlay, children: (0, b.jsx)(`span`, { className: Ga.timeText, children: ue2 }) })] }), ce2 && (0, b.jsx)(`div`, { className: Ga.progressBarTrack, children: (0, b.jsx)(`div`, { className: Ga.progressBarFill, style: { width: `${le2}%` } }) }), (0, b.jsxs)(io, { trigger: (e3) => (0, b.jsx)(`button`, { type: `button`, className: Ga.menuBtn, "aria-label": `More actions`, ...e3, children: (0, b.jsx)(va, { size: 14, stroke: 2.5 }) }), children: [(0, b.jsx)(io.Item, { icon: (0, b.jsx)(wa, { size: 16 }), onSelect: () => d2(`/item/${e2.Id}`, { state: { item: e2 } }), children: `Details` }), (v2 || y2) && (0, b.jsx)(io.Divider, {}), (0, b.jsx)(fo, { canMarkPlayed: v2, canMarkUnplayed: y2, isUpdating: S2, onRequestMarkPlayed: ee2, onRequestMarkUnplayed: w2 })] })] }), (0, b.jsxs)(`button`, { type: `button`, className: Ga.meta, onClick: (t3) => {
+  let _lastThumbClick = 0;
+  let _handlePrevClick = (r3) => {
+    r3 && r3.stopPropagation && r3.stopPropagation();
+    let now = Date.now();
+    if (now - _lastThumbClick < 350) return;
+    _lastThumbClick = now;
+    let _p = { streamUrl: Ki(t2, e2.Id), title: de2, startPositionTicks: g2 };
+    if (n2) { n2(_p); } else if (window?.iina?.postMessage) { window.iina.postMessage("play-media", _p); }
+  };
+  return (0, b.jsxs)(`div`, { className: `${Ga.card} ${s2 || ``}`, onClick: _handlePrevClick, style: { width: o2 || `100%`, cursor: `pointer` }, children: [(0, b.jsxs)(`div`, { className: Ga.preview, onClick: _handlePrevClick, style: { cursor: `pointer` }, children: [(0, b.jsx)(`button`, { type: `button`, className: Ga.previewBtn, style: { aspectRatio: a2 }, onClick: _handlePrevClick, "aria-label": `Play ${de2}` }), ae2 ? (0, b.jsx)(CachedImg, { src: ae2, alt: re2, className: Ga.image, loading: `lazy`, onError: () => p2(true) }) : (0, b.jsx)(`div`, { className: Ga.placeholder, children: (0, b.jsx)(Da, { size: 38, stroke: 1.5 }) }), h2 === null ? m2 ? (0, b.jsx)(`div`, { className: Ga.playedBadge, title: `Played`, children: (0, b.jsx)(pa, { size: 14, stroke: 2.5 }) }) : null : (0, b.jsx)(`div`, { className: Ga.unplayedBadge, title: `${h2} unplayed episodes`, children: h2 }), (0, b.jsx)(`div`, { className: Ga.hoverOverlay, "aria-hidden": `true`, children: (0, b.jsxs)(`span`, { className: `${R.button} ${R.variantGlass} ${R.shapeCircle} ${R.iconLg}`, children: [(0, b.jsx)(`span`, { className: R.lens }), (0, b.jsx)(`span`, { className: R.content, children: (0, b.jsx)(ka, { size: 22, fill: `currentColor`, stroke: 0 }) })] }) }), ue2 && (0, b.jsxs)(b.Fragment, { children: [(0, b.jsx)(`div`, { className: Ga.scrim }), (0, b.jsx)(`div`, { className: Ga.timeOverlay, children: (0, b.jsx)(`span`, { className: Ga.timeText, children: ue2 }) })] }), ce2 && (0, b.jsx)(`div`, { className: Ga.progressBarTrack, children: (0, b.jsx)(`div`, { className: Ga.progressBarFill, style: { width: `${le2}%` } }) }), (0, b.jsxs)(io, { trigger: (e3) => (0, b.jsx)(`button`, { type: `button`, className: Ga.menuBtn, "aria-label": `More actions`, ...e3, children: (0, b.jsx)(va, { size: 14, stroke: 2.5 }) }), children: [(0, b.jsx)(io.Item, { icon: (0, b.jsx)(wa, { size: 16 }), onSelect: () => d2(`/item/${e2.Id}`, { state: { item: e2 } }), children: `Details` }), (v2 || y2) && (0, b.jsx)(io.Divider, {}), (0, b.jsx)(fo, { canMarkPlayed: v2, canMarkUnplayed: y2, isUpdating: S2, onRequestMarkPlayed: ee2, onRequestMarkUnplayed: w2 })] })] }), (0, b.jsxs)(`button`, { type: `button`, className: Ga.meta, onClick: (t3) => {
     if (t3.stopPropagation(), r2) {
       r2(e2);
       return;
@@ -11672,8 +11513,12 @@ function Uo({ className: e2 }) {
 }
 function B({ item: e2, server: t2, onClick: n2, onUserDataChange: r2, onIdentifySuccess: i2, className: a2 }) {
   let o2 = Gn(), [s2, c2] = (0, _.useState)(false), [l2, u2] = (0, _.useState)(false), d2 = !!t2.user?.Policy?.IsAdministrator && ea(e2.Type), { isPlayed: f2, unplayedCount: p2, canMarkPlayed: m2, canMarkUnplayed: h2, pendingAction: g2, isUpdating: v2, isConfirmOpen: y2, requestMarkPlayed: x2, requestMarkUnplayed: S2, cancelTogglePlayed: C2, confirmTogglePlayed: ee2 } = Wa({ item: e2, server: t2, onUserDataChange: r2 }), w2 = !!e2.isIdentifying, te2 = e2.pendingImageUrl, T2 = s2 ? void 0 : te2 || xi(t2.serverUrl, e2, { prefer: `primary`, maxWidth: 280, maxHeight: 420, quality: 85, accessToken: t2.accessToken }), E2 = typeof e2.CommunityRating == `number` && e2.CommunityRating > 0 ? e2.CommunityRating.toFixed(1) : null;
+  let _lastCardClick = 0;
   let _handleCardClick = (t3) => {
     t3 && t3.stopPropagation && t3.stopPropagation();
+    let now = Date.now();
+    if (now - _lastCardClick < 350) return;
+    _lastCardClick = now;
     if (n2) {
       n2(e2);
       return;
@@ -11681,7 +11526,7 @@ function B({ item: e2, server: t2, onClick: n2, onUserDataChange: r2, onIdentify
     let n3 = e2.Type === "Episode" && e2.SeriesId ? e2.SeriesId : e2.Id;
     o2(`/item/${n3}`, { state: n3 === e2.Id ? { item: e2 } : void 0 });
   };
-  return (0, b.jsxs)(`div`, { className: `${Ho.card} ${a2 || ``}`, onClick: _handleCardClick, style: { cursor: `pointer` }, children: [(0, b.jsx)(`button`, { type: `button`, className: Ho.cardButton, onClick: _handleCardClick, "aria-label": `View ${e2.Name || `Media`}` }), (0, b.jsxs)(`div`, { className: Ho.posterWrapper, onClick: _handleCardClick, style: { cursor: `pointer` }, children: [T2 ? (0, b.jsx)(CachedImg, { src: T2, alt: e2.Name || `Media`, className: Ho.image, loading: `eager`, onError: () => c2(true) }) : (0, b.jsx)(`div`, { className: Ho.placeholder, children: (0, b.jsx)(Da, { size: 36 }) }), w2 && (0, b.jsxs)(`div`, { className: Ho.syncingBadge, title: `Metadata is syncing with server...`, children: [(0, b.jsx)(`span`, { className: Ho.syncDot }), (0, b.jsx)(`span`, { children: `Syncing` })] }), p2 === null ? f2 ? (0, b.jsx)(`div`, { className: Ho.playedBadge, title: `Played`, children: (0, b.jsx)(pa, { size: 14, stroke: 2.5 }) }) : null : (0, b.jsx)(`div`, { className: Ho.unplayedBadge, title: `${p2} unplayed episodes`, children: p2 }), E2 !== null && (0, b.jsx)(`div`, { className: Ho.ratingBadge, title: `Rating: ${E2}`, children: E2 }), (0, b.jsxs)(io, { trigger: (e3) => (0, b.jsx)(`button`, { type: `button`, className: Ho.menuBtn, "aria-label": `More actions`, ...e3, onClick: (ev) => { ev && ev.stopPropagation && ev.stopPropagation(); e3.onClick && e3.onClick(ev); }, children: (0, b.jsx)(va, { size: 14, stroke: 2.5 }) }), children: [(0, b.jsx)(io.Item, { icon: (0, b.jsx)(wa, { size: 16 }), onSelect: () => o2(`/item/${e2.Id}`, { state: { item: e2 } }), children: `Details` }), d2 && (0, b.jsx)(io.Item, { icon: (0, b.jsx)(xa, { size: 16 }), onSelect: () => u2(true), children: `Identify` }), (m2 || h2) && (0, b.jsx)(io.Divider, {}), (0, b.jsx)(fo, { canMarkPlayed: m2, canMarkUnplayed: h2, isUpdating: v2, onRequestMarkPlayed: x2, onRequestMarkUnplayed: S2 })] })] }), (0, b.jsxs)(`div`, { className: Ho.meta, children: [(0, b.jsx)(`span`, { className: Ho.title, title: e2.Name, children: e2.Name || `Untitled` }), e2.ProductionYear ? (0, b.jsx)(`span`, { className: Ho.year, children: e2.ProductionYear }) : null] }), y2 && (0, b.jsx)(co, { opened: y2, onClose: C2, onConfirm: ee2, item: e2, action: g2 ?? void 0, isLoading: v2 }), d2 && l2 && (0, b.jsx)(Vo, { opened: l2, onClose: () => u2(false), item: e2, server: t2, onSuccess: (t3) => {
+  return (0, b.jsxs)(`div`, { className: `${Ho.card} ${a2 || ``}`, onClick: _handleCardClick, style: { cursor: `pointer` }, children: [(0, b.jsx)(`button`, { type: `button`, className: Ho.cardButton, onClick: _handleCardClick, "aria-label": `View ${e2.Name || `Media`}` }), (0, b.jsxs)(`div`, { className: Ho.posterWrapper, onClick: _handleCardClick, style: { cursor: `pointer` }, children: [T2 ? (0, b.jsx)(CachedImg, { src: T2, alt: e2.Name || `Media`, className: Ho.image, loading: `lazy`, onError: () => c2(true) }) : (0, b.jsx)(`div`, { className: Ho.placeholder, children: (0, b.jsx)(Da, { size: 36 }) }), w2 && (0, b.jsxs)(`div`, { className: Ho.syncingBadge, title: `Metadata is syncing with server...`, children: [(0, b.jsx)(`span`, { className: Ho.syncDot }), (0, b.jsx)(`span`, { children: `Syncing` })] }), p2 === null ? f2 ? (0, b.jsx)(`div`, { className: Ho.playedBadge, title: `Played`, children: (0, b.jsx)(pa, { size: 14, stroke: 2.5 }) }) : null : (0, b.jsx)(`div`, { className: Ho.unplayedBadge, title: `${p2} unplayed episodes`, children: p2 }), E2 !== null && (0, b.jsx)(`div`, { className: Ho.ratingBadge, title: `Rating: ${E2}`, children: E2 }), (0, b.jsxs)(io, { trigger: (e3) => (0, b.jsx)(`button`, { type: `button`, className: Ho.menuBtn, "aria-label": `More actions`, ...e3, onClick: (ev) => { ev && ev.stopPropagation && ev.stopPropagation(); e3.onClick && e3.onClick(ev); }, children: (0, b.jsx)(va, { size: 14, stroke: 2.5 }) }), children: [(0, b.jsx)(io.Item, { icon: (0, b.jsx)(wa, { size: 16 }), onSelect: () => o2(`/item/${e2.Id}`, { state: { item: e2 } }), children: `Details` }), d2 && (0, b.jsx)(io.Item, { icon: (0, b.jsx)(xa, { size: 16 }), onSelect: () => u2(true), children: `Identify` }), (m2 || h2) && (0, b.jsx)(io.Divider, {}), (0, b.jsx)(fo, { canMarkPlayed: m2, canMarkUnplayed: h2, isUpdating: v2, onRequestMarkPlayed: x2, onRequestMarkUnplayed: S2 })] })] }), (0, b.jsxs)(`div`, { className: Ho.meta, children: [(0, b.jsx)(`span`, { className: Ho.title, title: e2.Name, children: e2.Name || `Untitled` }), e2.ProductionYear ? (0, b.jsx)(`span`, { className: Ho.year, children: e2.ProductionYear }) : null] }), y2 && (0, b.jsx)(co, { opened: y2, onClose: C2, onConfirm: ee2, item: e2, action: g2 ?? void 0, isLoading: v2 }), d2 && l2 && (0, b.jsx)(Vo, { opened: l2, onClose: () => u2(false), item: e2, server: t2, onSuccess: (t3) => {
     console.log(`[MediaPoster] IdentifyModal completed for item: "${e2.Name}" (${e2.Id}) with:`, t3), i2 ? i2(e2, t3) : r2 && r2(e2, e2.UserData || {});
   } })] });
 }
@@ -11904,6 +11749,124 @@ function CastSection({ people, server }) {
     ]
   });
 }
+function MediaInfoSection({ item: it }) {
+  if (!it) return null;
+  let ms = it.MediaStreams || it.MediaSources?.[0]?.MediaStreams || [];
+  if (!Array.isArray(ms) || ms.length === 0) return null;
+  let v = ms.find(s => s.Type === "Video");
+  let audios = ms.filter(s => s.Type === "Audio");
+  let subs = ms.filter(s => s.Type === "Subtitle");
+  if (!v && audios.length === 0 && subs.length === 0) return null;
+
+  let mSource = it.MediaSources?.[0];
+  let resText = v?.Width && v.Height ? (v.Width >= 3800 ? "4K UHD (" + v.Width + " × " + v.Height + ")" : (v.Width >= 1900 ? "1080p FHD (" + v.Width + " × " + v.Height + ")" : v.Width + " × " + v.Height)) : "";
+  let subType = v?.ExtendedVideoSubType || "";
+  let dyn = subType.indexOf("Dovi") !== -1 ? "Dolby Vision (P8.1)" : (v?.VideoRange === "DolbyVision" ? "Dolby Vision" : (v?.VideoRange === "HDR" ? "HDR10" : "SDR"));
+  let fps = v?.RealFrameRate || v?.AverageFrameRate;
+  let fileSize = mSource?.Size ? (mSource.Size >= 1073741824 ? (mSource.Size / 1073741824).toFixed(2) + " GB" : (mSource.Size / 1048576).toFixed(1) + " MB") : "";
+  let container = mSource?.Container || (mSource?.Path ? mSource.Path.split(".").pop().toUpperCase() : "");
+
+  let langMap = {
+    zh: "中文", chi: "中文", zho: "中文", "zh-cn": "简体中文", "zh-hans": "简体中文",
+    "zh-tw": "繁体中文", "zh-hant": "繁体中文", "zh-hk": "粤语 / 繁中", yue: "粤语",
+    en: "英语", eng: "英语", ja: "日语", jpn: "日语", ko: "韩语", kor: "韩语",
+    ru: "俄语", rus: "俄语", fr: "法语", fre: "法语", de: "德语", ger: "德语",
+    cantonese: "粤语", mandarin: "国语 / 普通话"
+  };
+  function getLang(s) {
+    if (s.DisplayLanguage && s.DisplayLanguage.trim()) return s.DisplayLanguage.trim();
+    if (!s.Language) return "未知语言";
+    return langMap[s.Language.toLowerCase()] || s.Language.toUpperCase();
+  }
+  function getAudioCodec(c, prof) {
+    if (!c) return "Audio";
+    let lc = c.toLowerCase();
+    if (lc === "truehd") return "Dolby TrueHD";
+    if (lc === "dca" || lc === "dts") return prof && prof.toLowerCase().indexOf("ma") !== -1 ? "DTS-HD MA" : "DTS";
+    if (lc === "eac3") return "Dolby Digital Plus (E-AC-3)";
+    if (lc === "ac3") return "Dolby Digital (AC-3)";
+    if (lc === "aac") return "AAC";
+    if (lc === "flac") return "FLAC";
+    return c.toUpperCase();
+  }
+  function getChannels(ch, lay) {
+    if (ch === 8) return "7.1 声道";
+    if (ch === 6) return "5.1 环绕声";
+    if (ch === 2) return "立体声 2.0";
+    if (ch === 1) return "单声道";
+    if (lay) return lay;
+    return ch ? ch + " 声道" : "";
+  }
+
+  return (0, b.jsxs)("section", {
+    className: "_mediaInfoContainer_custom",
+    children: [
+      (0, b.jsx)("div", { className: "_mediaInfoHeader_custom", children: (0, b.jsx)("h3", { className: "_mediaInfoTitle_custom", children: "媒体详情" }) }),
+      (0, b.jsxs)("div", {
+        className: "_mediaInfoGrid_custom",
+        children: [
+          v ? (0, b.jsxs)("div", {
+            className: "_mediaInfoCard_custom",
+            children: [
+              (0, b.jsxs)("div", { className: "_mediaCardHeader_custom", children: [(0, b.jsx)("span", { style: { color: "#38bdf8" }, children: "🎬" }), (0, b.jsx)("span", { className: "_mediaCardTitle_custom", children: "视频规格" })] }),
+              (0, b.jsxs)("div", { className: "_specList_custom", children: [
+                resText ? (0, b.jsxs)("div", { className: "_specItem_custom", children: [(0, b.jsx)("span", { className: "_specLabel_custom", children: "分辨率" }), (0, b.jsx)("span", { className: "_specValue_custom", children: resText })] }) : null,
+                v.Codec ? (0, b.jsxs)("div", { className: "_specItem_custom", children: [(0, b.jsx)("span", { className: "_specLabel_custom", children: "编码" }), (0, b.jsx)("span", { className: "_specValue_custom", children: v.Codec.toUpperCase() + (v.Profile ? " (" + v.Profile + ")" : "") })] }) : null,
+                (0, b.jsxs)("div", { className: "_specItem_custom", children: [(0, b.jsx)("span", { className: "_specLabel_custom", children: "色彩范围" }), (0, b.jsx)("span", { className: "_specValue_custom", children: dyn })] }),
+                fps && fps > 0 ? (0, b.jsxs)("div", { className: "_specItem_custom", children: [(0, b.jsx)("span", { className: "_specLabel_custom", children: "帧率" }), (0, b.jsx)("span", { className: "_specValue_custom", children: fps.toFixed(fps % 1 === 0 ? 0 : 3) + " FPS" })] }) : null,
+                container ? (0, b.jsxs)("div", { className: "_specItem_custom", children: [(0, b.jsx)("span", { className: "_specLabel_custom", children: "封装格式" }), (0, b.jsx)("span", { className: "_specValue_custom", children: container })] }) : null,
+                fileSize ? (0, b.jsxs)("div", { className: "_specItem_custom", children: [(0, b.jsx)("span", { className: "_specLabel_custom", children: "文件大小" }), (0, b.jsx)("span", { className: "_specValue_custom", children: fileSize })] }) : null
+              ] })
+            ]
+          }) : null,
+          audios.length > 0 ? (0, b.jsxs)("div", {
+            className: "_mediaInfoCard_custom",
+            children: [
+              (0, b.jsxs)("div", { className: "_mediaCardHeader_custom", children: [(0, b.jsx)("span", { style: { color: "#a78bfa" }, children: "🔊" }), (0, b.jsx)("span", { className: "_mediaCardTitle_custom", children: "音频轨道 (" + audios.length + ")" })] }),
+              (0, b.jsx)("div", { className: "_streamList_custom", children: audios.map((a, idx) => {
+                let l = getLang(a);
+                let c = getAudioCodec(a.Codec, a.Profile);
+                let ch = getChannels(a.Channels, a.ChannelLayout);
+                return (0, b.jsxs)("div", { key: a.Index ?? idx, className: "_streamItem_custom", children: [
+                  (0, b.jsxs)("div", { className: "_streamMain_custom", children: [
+                    (0, b.jsx)("span", { className: "_streamLang_custom", children: l }),
+                    a.IsDefault ? (0, b.jsx)("span", { className: "_badgeDef_custom", children: "默认" }) : null,
+                    a.Title && a.Title !== l ? (0, b.jsx)("span", { className: "_streamNote_custom", children: a.Title }) : null
+                  ] }),
+                  (0, b.jsxs)("div", { className: "_streamMeta_custom", children: [
+                    (0, b.jsx)("span", { children: c }),
+                    ch ? (0, b.jsx)("span", { children: " • " + ch }) : null
+                  ] })
+                ] });
+              }) })
+            ]
+          }) : null,
+          subs.length > 0 ? (0, b.jsxs)("div", {
+            className: "_mediaInfoCard_custom",
+            children: [
+              (0, b.jsxs)("div", { className: "_mediaCardHeader_custom", children: [(0, b.jsx)("span", { style: { color: "#fb923c" }, children: "💬" }), (0, b.jsx)("span", { className: "_mediaCardTitle_custom", children: "字幕轨道 (" + subs.length + ")" })] }),
+              (0, b.jsx)("div", { className: "_streamList_custom", children: subs.map((s, idx) => {
+                let l = getLang(s);
+                let fmt = (s.Codec || "SRT").toUpperCase();
+                let isExt = Boolean(s.IsExternal);
+                return (0, b.jsxs)("div", { key: s.Index ?? idx, className: "_streamItem_custom", children: [
+                  (0, b.jsxs)("div", { className: "_streamMain_custom", children: [
+                    (0, b.jsx)("span", { className: "_streamLang_custom", children: l }),
+                    s.IsDefault ? (0, b.jsx)("span", { className: "_badgeDef_custom", children: "默认" }) : null,
+                    (0, b.jsx)("span", { className: isExt ? "_badgeExt_custom" : "_badgeInt_custom", children: isExt ? "外挂" : "内置" }),
+                    fmt === "ASS" ? (0, b.jsx)("span", { className: "_badgeAss_custom", children: "特效" }) : null,
+                    s.Title && s.Title !== l ? (0, b.jsx)("span", { className: "_streamNote_custom", children: s.Title }) : null
+                  ] }),
+                  (0, b.jsx)("div", { className: "_streamMeta_custom", children: (0, b.jsx)("span", { children: "格式: " + fmt }) })
+                ] });
+              }) })
+            ]
+          }) : null
+        ]
+      })
+    ]
+  });
+}
 function es({ item: e2, nextUpEpisode: t2, activeServer: n2, isPlaying: r2 = false, onPlay: i2, onBack: a2, onRefresh: o2, isRefreshing: s2 = false }) {
   let [c2, l2] = (0, _.useState)(false), [u2, d2] = (0, _.useState)(false), [favUpdating, setFavUpdating] = (0, _.useState)(false), f2 = !!n2.user?.Policy?.IsAdministrator && ea(e2?.Type), p2 = e2?.Type === `Series`, m2 = p2 ? t2 : e2, h2 = !!e2?.isIdentifying, g2 = e2?.pendingImageUrl, v2 = g2 || (e2 ? xi(n2.serverUrl, e2, { prefer: `backdrop`, maxWidth: 2560, accessToken: n2.accessToken }) : void 0), y2 = e2?.ImageTags?.Logo, x2 = !c2 && !g2 && y2 && e2 ? yi(n2.serverUrl, e2.Id, { imageType: `Logo`, maxWidth: 600, tag: y2, accessToken: n2.accessToken }) : void 0, S2 = typeof e2?.CommunityRating == `number` && e2.CommunityRating > 0 ? e2.CommunityRating.toFixed(1) : null, C2 = e2?.OfficialRating || null, ee2 = (Array.isArray(e2?.Genres) && e2.Genres.length > 0 ? e2.Genres : Array.isArray(e2?.GenreItems) ? e2.GenreItems.map((e3) => e3.Name) : []).join(` \u2022 `), { durationText: w2, premiereDateText: te2, resolutionBadge: T2, hdrBadge: E2, fpsBadge: ne2, sizeBadge: re2 } = $o(m2 || void 0, e2), ie2 = m2?.UserData?.PlaybackPositionTicks, D2 = Qo(ie2), ae2 = null;
   if (p2 && t2) {
@@ -11911,7 +11874,7 @@ function es({ item: e2, nextUpEpisode: t2, activeServer: n2, isPlaying: r2 = fal
     ae2 = `${e2?.Name || `Series`} \u2022 Season ${n3} \u2022 Episode ${r3}`;
   } else e2?.Name && (ae2 = `${e2.Name}`);
   let oe2 = String(m2?.Overview || e2?.Overview || ``);
-  return (0, b.jsxs)(b.Fragment, { children: [v2 ? (0, b.jsxs)(`div`, { className: H.ambientBackdrop, "aria-hidden": `true`, children: [(0, b.jsx)(`img`, { src: v2, alt: ``, className: H.ambientImage, decoding: `async` }), (0, b.jsx)(`div`, { className: H.ambientOverlay })] }) : null, v2 ? (0, b.jsx)(`div`, { className: H.backdropContainer, children: (0, b.jsx)(`img`, { src: v2, alt: e2?.Name || `Backdrop`, className: H.backdropImage, decoding: `async` }) }) : null, (0, b.jsx)(`div`, { className: H.headerSpacer, children: (0, b.jsx)(Ao, { onBack: a2, backTitle: `Back`, onRefresh: o2, isRefreshing: s2, className: H.pageHeader, rightSection: (() => {
+  return (0, b.jsxs)(b.Fragment, { children: [null, v2 ? (0, b.jsxs)(`div`, { className: H.backdropContainer, children: [(0, b.jsx)(`img`, { src: v2, alt: e2?.Name || `Backdrop`, className: H.backdropImage, decoding: `async` }), (0, b.jsx)(`div`, { className: "_backdropOverlay_custom" })] }) : null, (0, b.jsx)(`div`, { className: H.headerSpacer, children: (0, b.jsx)(Ao, { onBack: a2, backTitle: `Back`, onRefresh: o2, isRefreshing: s2, className: H.pageHeader, rightSection: (() => {
   let isFav = !!e2?.UserData?.IsFavorite;
   let toggleFav = async () => {
     if (!n2 || !e2?.Id || favUpdating) return;
@@ -11942,19 +11905,37 @@ function es({ item: e2, nextUpEpisode: t2, activeServer: n2, isPlaying: r2 = fal
         shape: `rounded`,
         size: `sm`,
         onClick: toggleFav,
-        title: isFav ? `取消收藏` : `加入收藏`,
+        title: isFav ? `Remove from Favorites` : `Add to Favorites`,
         children: (0, b.jsxs)(`div`, {
-          style: { display: `flex`, alignItems: `center`, gap: `5px`, padding: `0 4px` },
+          style: { display: `flex`, alignItems: `center`, padding: `0 6px` },
           children: [
-            (0, b.jsx)(isFav ? HeartFilledIcon : HeartIcon, { size: 15, color: isFav ? `#ff4757` : `currentColor` }),
-            (0, b.jsx)(`span`, { style: { fontSize: `0.78rem`, fontWeight: 500 }, children: isFav ? `已收藏` : `收藏` })
+            (0, b.jsx)(`span`, { style: { display: `inline-flex`, alignItems: `center`, marginRight: `8px` }, children: (0, b.jsx)(isFav ? HeartFilledIcon : HeartIcon, { size: 15, color: isFav ? `#ff4757` : `currentColor` }) }),
+            (0, b.jsx)(`span`, { style: { fontSize: `0.82rem`, fontWeight: 500 }, children: isFav ? `Favorited` : `Favorite` })
           ]
         })
       }),
       f2 ? (0, b.jsx)(_o, { variant: `glass`, shape: `rounded`, size: `sm`, isIconOnly: true, onClick: () => d2(true), title: `Identify`, "aria-label": `Identify metadata`, children: (0, b.jsx)(xa, { size: 16 }) }) : null
     ]
   });
-})() }) }), (0, b.jsxs)(`main`, { className: H.heroContent, children: [(0, b.jsx)(`div`, { className: H.row, children: (0, b.jsx)(`div`, { className: H.leftColumn, children: (0, b.jsx)(`div`, { className: H.logoWrapper, children: x2 ? (0, b.jsx)(CachedImg, { src: x2, alt: e2?.Name || `Logo`, className: H.logoImage, onError: () => l2(true) }) : (0, b.jsx)(`h1`, { className: H.titleFallback, children: e2?.Name || `Media` }) }) }) }), (0, b.jsxs)(`div`, { className: H.row, children: [(0, b.jsx)(`div`, { className: H.leftColumn, children: (0, b.jsx)(_o, { variant: `primary`, size: `lg`, shape: `rounded`, fullWidth: true, onClick: i2, disabled: r2 || p2 && !t2, "aria-label": `Play`, leftSection: (0, b.jsx)(Ha, { size: 18 }), children: (0, b.jsxs)(`span`, { children: [`Play`, D2 ? ` ${D2}` : ``] }) }) }), (0, b.jsxs)(`div`, { className: H.rightColumn, children: [(0, b.jsxs)(`div`, { className: H.ratingGenresRow, children: [S2 ? (0, b.jsxs)(`span`, { className: H.starRating, children: [(0, b.jsx)(`span`, { className: H.starIcon, children: `\u2605` }), (0, b.jsx)(`span`, { children: S2 })] }) : null, C2 ? (0, b.jsx)(`span`, { className: H.officialRatingBadge, children: C2 }) : null, ee2 ? (0, b.jsx)(`span`, { className: H.genres, children: ee2 }) : null, h2 && (0, b.jsxs)(`span`, { className: H.syncingBadge, title: `Metadata is syncing with server...`, children: [(0, b.jsx)(`span`, { className: H.syncDot }), (0, b.jsx)(`span`, { children: `Syncing with server` })] })] }), (0, b.jsxs)(`div`, { className: H.specsRow, children: [w2 ? (0, b.jsx)(`span`, { className: H.specBadge, children: w2 }) : null, te2 ? (0, b.jsx)(`span`, { className: H.specBadge, children: te2 }) : null, T2 ? (0, b.jsx)(`span`, { className: H.specBadge, children: T2 }) : null, E2 ? (0, b.jsx)(`span`, { className: H.specBadge, children: E2 }) : null, ne2 ? (0, b.jsx)(`span`, { className: H.specBadge, children: ne2 }) : null, re2 ? (0, b.jsx)(`span`, { className: H.specBadge, children: re2 }) : null] }), oe2 ? (0, b.jsxs)(`p`, { className: H.overview, children: [ae2 ? (0, b.jsxs)(`strong`, { className: H.overviewPrefix, children: [ae2, ` \u2022 `] }) : null, oe2] }) : null] })] }), e2?.People && e2.People.length > 0 ? (0, b.jsx)(CastSection, { people: e2.People, server: n2 }) : null] }), f2 && e2 && u2 && (0, b.jsx)(Vo, { opened: u2, onClose: () => d2(false), item: e2, server: n2, onSuccess: (t3) => {
+})() }) }), (0, b.jsxs)(`main`, { className: H.heroContent, children: [
+  (0, b.jsx)(`div`, { className: H.logoWrapper, children: x2 ? (0, b.jsx)(CachedImg, { src: x2, alt: e2?.Name || `Logo`, className: H.logoImage, onError: () => l2(true) }) : (0, b.jsx)(`h1`, { className: H.titleFallback, children: e2?.Name || `Media` }) }),
+  (0, b.jsxs)(`div`, { className: H.ratingGenresRow, children: [
+    S2 ? (0, b.jsxs)(`span`, { className: H.starRating, children: [(0, b.jsx)(`span`, { className: H.starIcon, children: `\u2605` }), (0, b.jsx)(`span`, { children: S2 })] }) : null,
+    C2 ? (0, b.jsx)(`span`, { className: H.officialRatingBadge, children: C2 }) : null,
+    w2 ? (0, b.jsx)(`span`, { className: H.specBadge, children: w2 }) : null,
+    te2 ? (0, b.jsx)(`span`, { className: H.specBadge, children: te2 }) : null,
+    T2 ? (0, b.jsx)(`span`, { className: H.specBadge, children: T2 }) : null,
+    E2 ? (0, b.jsx)(`span`, { className: H.specBadge, children: E2 }) : null,
+    ne2 ? (0, b.jsx)(`span`, { className: H.specBadge, children: ne2 }) : null,
+    re2 ? (0, b.jsx)(`span`, { className: H.specBadge, children: re2 }) : null,
+    ee2 ? (0, b.jsx)(`span`, { className: H.genres, children: ee2 }) : null,
+    h2 && (0, b.jsxs)(`span`, { className: H.syncingBadge, title: `Metadata is syncing with server...`, children: [(0, b.jsx)(`span`, { className: H.syncDot }), (0, b.jsx)(`span`, { children: `Syncing with server` })] })
+  ] }),
+  (0, b.jsx)(`div`, { style: { minWidth: "180px", marginTop: "6px", marginBottom: "4px" }, children: (0, b.jsx)(_o, { variant: `primary`, size: `lg`, shape: `rounded`, onClick: i2, disabled: r2 || p2 && !t2, "aria-label": `Play`, leftSection: (0, b.jsx)(Ha, { size: 18 }), children: (0, b.jsxs)(`span`, { children: [p2 && t2 ? `播放 S${t2.ParentIndexNumber ?? 1}:E${t2.IndexNumber ?? 1}${D2 ? ` (${D2})` : ``}` : `Play${D2 ? ` ${D2}` : ``}`] }) }) }),
+  oe2 ? (0, b.jsxs)(`p`, { className: H.overview, children: [ae2 ? (0, b.jsxs)(`strong`, { className: H.overviewPrefix, children: [ae2, ` \u2022 `] }) : null, oe2] }) : null,
+  e2?.People && e2.People.length > 0 ? (0, b.jsx)(CastSection, { people: e2.People, server: n2 }) : null,
+  (0, b.jsx)(MediaInfoSection, { item: m2 || e2 })
+] }), f2 && e2 && u2 && (0, b.jsx)(Vo, { opened: u2, onClose: () => d2(false), item: e2, server: n2, onSuccess: (t3) => {
     if (console.log(`[ItemHero:Identify] Identify completed for "${e2.Name}" (${e2.Id}) with:`, t3), t3 && n2) {
       let r3 = t3.ImageUrl || t3.ThumbnailUrl;
       N.setQueryData(P.item(n2.id, e2.Id), (e3) => e3 && { ...e3, Name: t3.Name || e3.Name, ProductionYear: t3.ProductionYear ?? e3.ProductionYear, PremiereDate: t3.PremiereDate ?? e3.PremiereDate, Overview: t3.Overview ?? e3.Overview, ProviderIds: { ...e3.ProviderIds || {}, ...t3.ProviderIds || {} }, pendingImageUrl: r3, isIdentifying: true });
@@ -11989,7 +11970,13 @@ function rs(e2, t2) {
 }
 var is = { container: `_container_7nzjo_1` };
 function as() {
-  let { id: e2 } = qn(), t2 = Gn(), n2 = Un(), { activeServer: r2, playMedia: i2 } = I(), a2 = n2.state?.item, [o2, s2] = (0, _.useState)(false), [c2, l2] = (0, _.useState)(null), u2 = dt({ queryKey: r2?.id && e2 ? P.item(r2.id, e2) : [`empty-item`], queryFn: async ({ signal: t3 }) => !r2 || !e2 ? null : Gi(r2, e2, t3, true), placeholderData: a2, staleTime: 0, refetchOnMount: true, enabled: !!(r2?.id && e2) }), d2 = u2.data ?? a2, f2 = u2.isRefetching, p2 = (0, _.useCallback)(() => u2.refetch(), [u2]);
+  let { id: e2 } = qn(), t2 = Gn(), n2 = Un(), { activeServer: r2, playMedia: i2 } = I(), a2 = n2.state?.item, [o2, s2] = (0, _.useState)(false), [c2, l2] = (0, _.useState)(null), u2 = dt({ queryKey: r2?.id && e2 ? P.item(r2.id, e2) : [`empty-item`], queryFn: async ({ signal: t3 }) => !r2 || !e2 ? null : Gi(r2, e2, t3, false), placeholderData: a2, staleTime: 6e4, refetchOnMount: false, enabled: !!(r2?.id && e2) }), d2 = u2.data ?? a2, f2 = u2.isRefetching && !u2.isPlaceholderData, p2 = (0, _.useCallback)(() => {
+    if (!r2 || !e2) return Promise.resolve(null);
+    return Gi(r2, e2, void 0, true).then((fresh) => {
+      N.setQueryData(P.item(r2.id, e2), fresh);
+      return fresh;
+    });
+  }, [r2, e2]);
   la(() => {
     p2();
   });
@@ -13379,6 +13366,211 @@ html, body {
   display: none !important;
   width: 0 !important;
   height: 0 !important;
+}
+
+/* --- Details Page Overhaul & Bottom Blur Removal --- */
+._ambientBackdrop_elgw0_2 {
+  display: none !important;
+}
+
+._backdropContainer_elgw0_26 {
+  height: min(60vw, 560px) !important;
+  min-height: 420px !important;
+  -webkit-mask-image: linear-gradient(180deg, #000 0%, #000 45%, rgba(0, 0, 0, 0.7) 70%, rgba(0, 0, 0, 0.2) 88%, transparent 100%) !important;
+  mask-image: linear-gradient(180deg, #000 0%, #000 45%, rgba(0, 0, 0, 0.7) 70%, rgba(0, 0, 0, 0.2) 88%, transparent 100%) !important;
+}
+
+._backdropOverlay_custom {
+  position: absolute !important;
+  inset: 0 !important;
+  background: linear-gradient(180deg, rgba(22, 22, 26, 0.1) 0%, rgba(22, 22, 26, 0.45) 55%, rgba(22, 22, 26, 0.98) 100%),
+              linear-gradient(90deg, rgba(22, 22, 26, 0.8) 0%, rgba(22, 22, 26, 0.3) 50%, transparent 100%) !important;
+  pointer-events: none !important;
+}
+
+._headerSpacer_elgw0_47 {
+  height: 90px !important;
+  min-height: 80px !important;
+}
+
+._heroContent_elgw0_64 {
+  margin-top: min(10vw, 80px) !important;
+  padding: 0 40px 1.5rem 40px !important;
+  gap: 16px !important;
+}
+
+._logoWrapper_elgw0_107 {
+  min-height: 60px !important;
+  max-height: 110px !important;
+  display: flex !important;
+  align-items: flex-end !important;
+}
+
+._logoImage_elgw0_114 {
+  max-width: 360px !important;
+  max-height: 100px !important;
+  height: auto !important;
+  filter: drop-shadow(0 4px 16px rgba(0, 0, 0, 0.7)) !important;
+}
+
+._titleFallback_elgw0_123 {
+  font-size: 34px !important;
+  font-weight: 700 !important;
+  color: #ffffff !important;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.85) !important;
+}
+
+._overview_elgw0_208 {
+  -webkit-line-clamp: 6 !important;
+  line-height: 1.65 !important;
+  font-size: 0.9375rem !important;
+  color: rgba(255, 255, 255, 0.82) !important;
+  max-width: 860px !important;
+}
+
+/* Media Info Section */
+._mediaInfoContainer_custom {
+  width: 100% !important;
+  box-sizing: border-box !important;
+  margin-top: 2rem !important;
+  padding-top: 1.5rem !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+._mediaInfoHeader_custom {
+  margin-bottom: 1.25rem !important;
+}
+._mediaInfoTitle_custom {
+  font-size: 1.125rem !important;
+  font-weight: 700 !important;
+  color: #ffffff !important;
+  margin: 0 !important;
+}
+._mediaInfoGrid_custom {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)) !important;
+  gap: 1.25rem !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+._mediaInfoCard_custom {
+  background: rgba(255, 255, 255, 0.04) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 12px !important;
+  padding: 1.25rem !important;
+  -webkit-backdrop-filter: blur(16px) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 0.875rem !important;
+}
+._mediaCardHeader_custom {
+  display: flex !important;
+  align-items: center !important;
+  gap: 0.5rem !important;
+  padding-bottom: 0.75rem !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important;
+}
+._mediaCardTitle_custom {
+  font-size: 0.9375rem !important;
+  font-weight: 600 !important;
+  color: rgba(255, 255, 255, 0.9) !important;
+}
+._specList_custom {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 0.625rem !important;
+}
+._specItem_custom {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  font-size: 0.875rem !important;
+}
+._specLabel_custom {
+  color: rgba(255, 255, 255, 0.55) !important;
+}
+._specValue_custom {
+  color: rgba(255, 255, 255, 0.95) !important;
+  font-weight: 500 !important;
+  text-align: right !important;
+}
+._streamList_custom {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 0.75rem !important;
+  max-height: 240px !important;
+  overflow-y: auto !important;
+}
+._streamItem_custom {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 0.25rem !important;
+  padding: 0.5rem 0.625rem !important;
+  background: rgba(255, 255, 255, 0.03) !important;
+  border-radius: 6px !important;
+  border: 1px solid rgba(255, 255, 255, 0.04) !important;
+}
+._streamMain_custom {
+  display: flex !important;
+  align-items: center !important;
+  flex-wrap: wrap !important;
+  gap: 0.375rem !important;
+}
+._streamLang_custom {
+  font-size: 0.875rem !important;
+  font-weight: 600 !important;
+  color: #ffffff !important;
+}
+._streamNote_custom {
+  font-size: 0.75rem !important;
+  color: rgba(255, 255, 255, 0.5) !important;
+  margin-left: 0.25rem !important;
+  max-width: 140px !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+._streamMeta_custom {
+  font-size: 0.75rem !important;
+  color: rgba(255, 255, 255, 0.6) !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 0.375rem !important;
+}
+._badgeDef_custom {
+  background: rgba(59, 130, 246, 0.2) !important;
+  color: #60a5fa !important;
+  border: 1px solid rgba(59, 130, 246, 0.4) !important;
+  border-radius: 4px !important;
+  padding: 0 4px !important;
+  font-size: 0.6875rem !important;
+  font-weight: 600 !important;
+}
+._badgeExt_custom {
+  background: rgba(34, 197, 94, 0.18) !important;
+  color: #4ade80 !important;
+  border: 1px solid rgba(34, 197, 94, 0.35) !important;
+  border-radius: 4px !important;
+  padding: 0 4px !important;
+  font-size: 0.6875rem !important;
+  font-weight: 600 !important;
+}
+._badgeInt_custom {
+  background: rgba(255, 255, 255, 0.08) !important;
+  color: rgba(255, 255, 255, 0.7) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  border-radius: 4px !important;
+  padding: 0 4px !important;
+  font-size: 0.6875rem !important;
+  font-weight: 500 !important;
+}
+._badgeAss_custom {
+  background: rgba(168, 85, 247, 0.18) !important;
+  color: #c084fc !important;
+  border: 1px solid rgba(168, 85, 247, 0.35) !important;
+  border-radius: 4px !important;
+  padding: 0 4px !important;
+  font-size: 0.6875rem !important;
+  font-weight: 600 !important;
 }
 </style>
 </head>
