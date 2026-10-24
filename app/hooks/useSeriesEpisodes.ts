@@ -1,6 +1,6 @@
 import type { EmbyItemMetadata, EmbyServer } from "@shared";
 import { useQuery } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { fetchEpisodes, fetchNextUp, fetchSeasons } from "../lib/emby-library-client";
 import { embyKeys } from "../lib/query-keys";
 
@@ -17,6 +17,11 @@ export interface UseSeriesEpisodesResult {
 export function useSeriesEpisodes(activeServer: EmbyServer | null, item?: EmbyItemMetadata): UseSeriesEpisodesResult {
   const isSeries = item?.Type === "Series";
   const [selectedSeasonIdState, setSelectedSeasonId] = useState<string | null>(null);
+
+  // Reset season selection when viewing a different item
+  useEffect(() => {
+    setSelectedSeasonId(null);
+  }, [item?.Id]);
 
   // 1. Fetch next-up episode if item is a series
   const nextUpQuery = useQuery({
@@ -53,10 +58,10 @@ export function useSeriesEpisodes(activeServer: EmbyServer | null, item?: EmbyIt
   // Determine active season ID
   const selectedSeasonId = useMemo(() => {
     if (!isSeries || seasons.length === 0) return null;
-    if (selectedSeasonIdState && seasons.some((s) => s.Id === selectedSeasonIdState)) {
+    if (selectedSeasonIdState && seasons.some((s) => String(s.Id) === String(selectedSeasonIdState))) {
       return selectedSeasonIdState;
     }
-    if (nextUpEpisode?.SeasonId && seasons.some((s) => s.Id === nextUpEpisode.SeasonId)) {
+    if (nextUpEpisode?.SeasonId && seasons.some((s) => String(s.Id) === String(nextUpEpisode.SeasonId))) {
       return nextUpEpisode.SeasonId;
     }
     // Prefer Season 1 (IndexNumber === 1) over Specials (IndexNumber === 0)

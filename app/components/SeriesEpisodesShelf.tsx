@@ -34,6 +34,7 @@ export const SeriesEpisodesShelf = memo(function SeriesEpisodesShelf({
   return (
     <section className={styles.seriesSection}>
       <MediaShelf
+        key={selectedSeasonId || "default"}
         title={
           <div className={styles.shelfHeader}>
             <h3 className={styles.shelfTitle}>Episodes</h3>

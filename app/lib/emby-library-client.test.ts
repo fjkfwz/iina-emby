@@ -1,6 +1,13 @@
 import type { EmbyServer } from "@shared";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { applyRemoteSearchResult, clearLibraryCache, fetchItemDetails, isIdentifySupported, searchRemoteItem } from "./emby-library-client";
+import {
+  applyRemoteSearchResult,
+  clearLibraryCache,
+  fetchEpisodes,
+  fetchItemDetails,
+  isIdentifySupported,
+  searchRemoteItem,
+} from "./emby-library-client";
 
 describe("emby-library-client caching and deduplication", () => {
   const dummyServer: EmbyServer = {
@@ -106,5 +113,28 @@ describe("emby-library-client caching and deduplication", () => {
         body: JSON.stringify(result),
       }),
     );
+  });
+
+  it("fetches episodes filtering by SeasonId and filters client-side if server returns mixed seasons", async () => {
+    const mockEpisodes = [
+      { Id: "ep-1", Name: "S01E01", SeasonId: "season-1", IndexNumber: 1, ParentIndexNumber: 1 },
+      { Id: "ep-2", Name: "S01E02", SeasonId: "season-1", IndexNumber: 2, ParentIndexNumber: 1 },
+      { Id: "ep-3", Name: "S02E01", SeasonId: "season-2", IndexNumber: 1, ParentIndexNumber: 2 },
+    ];
+
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue({
+      ok: true,
+      json: async () => ({ Items: mockEpisodes }),
+    } as Response);
+
+    const episodes = await fetchEpisodes(dummyServer, "series-123", "season-2");
+
+    expect(fetchSpy).toHaveBeenCalledWith(
+      expect.stringMatching(/SeasonId=season-2/),
+      expect.anything(),
+    );
+    expect(episodes).toHaveLength(1);
+    expect(episodes[0].Id).toBe("ep-3");
+    expect(episodes[0].Name).toBe("S02E01");
   });
 });

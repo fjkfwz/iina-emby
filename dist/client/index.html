@@ -10780,10 +10780,14 @@ async function Ji(e2, t2, n2, r2, i2 = false, a2) {
   let o2 = e2.serverUrl.replace(/\/+$/, ``);
   return Ri(`${o2}:${e2.userId}:episodes:${t2}:${n2 || `all`}${a2 ? `:${a2}` : ``}`, Li, i2, async () => {
     let i3 = new URLSearchParams({ UserId: e2.userId, Fields: `Overview,PrimaryImageAspectRatio,SeriesName,SeasonId,SeriesId,ParentIndexNumber,IndexNumber,MediaSources,MediaStreams,ImageTags,UserData,RunTimeTicks` });
-    n2 && i3.set(`seasonId`, n2), a2 && i3.set(`Limit`, String(a2));
+    n2 && (i3.set(`SeasonId`, n2), i3.set(`seasonId`, n2)), a2 && i3.set(`Limit`, String(a2));
     let s2 = `${o2}/Shows/${encodeURIComponent(t2)}/Episodes?${i3.toString()}`, c2 = await fetch(s2, { signal: r2, headers: Mi(e2.accessToken, { Accept: `application/json` }) });
     if (!c2.ok) throw Error(`Failed to fetch episodes: ${c2.status} ${c2.statusText}`);
-    return (await c2.json()).Items || [];
+    let data = (await c2.json()).Items || [];
+    if (n2 && data.length > 0 && data.some((item) => item.SeasonId && String(item.SeasonId) !== String(n2))) {
+      return data.filter((item) => String(item.SeasonId) === String(n2));
+    }
+    return data;
   });
 }
 async function Yi(e2, t2, n2 = false) {
@@ -11959,7 +11963,7 @@ function es({ item: e2, nextUpEpisode: t2, activeServer: n2, isPlaying: r2 = fal
 var ts = { seriesSection: `_seriesSection_1eql3_1`, shelfHeader: `_shelfHeader_1eql3_9`, shelfTitle: `_shelfTitle_1eql3_15`, seasonSelect: `_seasonSelect_1eql3_23` };
 function ns({ activeServer: e2, seasons: t2, selectedSeasonId: n2, onSelectSeason: r2, episodes: i2, isLoading: a2, onPlayEpisode: o2, onEpisodeClick: s2 }) {
   let c2 = t2.map((e3) => ({ value: e3.Id, label: e3.Name || `Season ${e3.IndexNumber ?? 1}` }));
-  return (0, b.jsx)(`section`, { className: ts.seriesSection, children: (0, b.jsx)(zo, { title: (0, b.jsxs)(`div`, { className: ts.shelfHeader, children: [(0, b.jsx)(`h3`, { className: ts.shelfTitle, children: `Episodes` }), t2.length > 0 && (0, b.jsx)(xo, { data: c2, value: n2, onChange: (e3) => {
+  return (0, b.jsx)(`section`, { className: ts.seriesSection, children: (0, b.jsx)(zo, { key: n2 || "default", title: (0, b.jsxs)(`div`, { className: ts.shelfHeader, children: [(0, b.jsx)(`h3`, { className: ts.shelfTitle, children: `Episodes` }), t2.length > 0 && (0, b.jsx)(xo, { data: c2, value: n2, onChange: (e3) => {
     e3 && r2(e3);
   }, allowDeselect: false, className: ts.seasonSelect })] }), itemWidth: 300, gap: 16, emptyText: a2 ? void 0 : `No episodes available for this season.`, children: a2 && i2.length === 0 ? [1, 2, 3, 4, 5].map((e3) => (0, b.jsx)(Do, {}, e3)) : i2.map((t3) => {
     let n3 = Oi(t3.ParentIndexNumber, t3.IndexNumber, t3.Name || `Episode`);
@@ -11967,7 +11971,9 @@ function ns({ activeServer: e2, seasons: t2, selectedSeasonId: n2, onSelectSeaso
   }) }) });
 }
 function rs(e2, t2) {
-  let n2 = t2?.Type === `Series`, [r2, i2] = (0, _.useState)(null), a2 = dt({ queryKey: e2 && t2?.Id ? P.nextUp(e2.id, t2.Id) : [`emby`, `noop`], enabled: !!(e2 && n2 && t2?.Id), queryFn: async ({ signal: n3 }) => {
+  let n2 = t2?.Type === `Series`, [r2, i2] = (0, _.useState)(null);
+  (0, _.useEffect)(() => { i2(null); }, [t2?.Id]);
+  let a2 = dt({ queryKey: e2 && t2?.Id ? P.nextUp(e2.id, t2.Id) : [`emby`, `noop`], enabled: !!(e2 && n2 && t2?.Id), queryFn: async ({ signal: n3 }) => {
     if (!e2 || !t2?.Id) return null;
     let r3 = await Wi(e2, t2.Id, n3);
     if (r3) return r3;
@@ -11977,7 +11983,7 @@ function rs(e2, t2) {
     } catch {
       return null;
     }
-  }, staleTime: 3e5 }), o2 = dt({ queryKey: e2 && t2?.Id ? P.seasons(e2.id, t2.Id) : [`emby`, `noop`], enabled: !!(e2 && n2 && t2?.Id), queryFn: ({ signal: n3 }) => !e2 || !t2?.Id ? [] : qi(e2, t2.Id, n3), staleTime: 3e5 }), s2 = n2 ? o2.data ?? [] : [], c2 = n2 ? a2.data ?? null : null, l2 = (0, _.useMemo)(() => !n2 || s2.length === 0 ? null : r2 && s2.some((e3) => e3.Id === r2) ? r2 : c2?.SeasonId && s2.some((e3) => e3.Id === c2.SeasonId) ? c2.SeasonId : (s2.find((e3) => e3.IndexNumber === 1) || s2[0]).Id, [n2, s2, r2, c2?.SeasonId]), u2 = dt({ queryKey: e2 && t2?.Id && l2 ? P.seriesEpisodes(e2.id, t2.Id, l2) : [`emby`, `noop`], enabled: !!(e2 && n2 && t2?.Id && l2), queryFn: ({ signal: n3 }) => !e2 || !t2?.Id || !l2 ? [] : Ji(e2, t2.Id, l2, n3), staleTime: 3e5 }), d2 = n2 && l2 ? u2.data ?? [] : [], f2 = n2 && (u2.isLoading || o2.isLoading && s2.length === 0);
+  }, staleTime: 3e5 }), o2 = dt({ queryKey: e2 && t2?.Id ? P.seasons(e2.id, t2.Id) : [`emby`, `noop`], enabled: !!(e2 && n2 && t2?.Id), queryFn: ({ signal: n3 }) => !e2 || !t2?.Id ? [] : qi(e2, t2.Id, n3), staleTime: 3e5 }), s2 = n2 ? o2.data ?? [] : [], c2 = n2 ? a2.data ?? null : null, l2 = (0, _.useMemo)(() => !n2 || s2.length === 0 ? null : r2 && s2.some((e3) => String(e3.Id) === String(r2)) ? r2 : c2?.SeasonId && s2.some((e3) => String(e3.Id) === String(c2.SeasonId)) ? c2.SeasonId : (s2.find((e3) => e3.IndexNumber === 1) || s2[0]).Id, [n2, s2, r2, c2?.SeasonId]), u2 = dt({ queryKey: e2 && t2?.Id && l2 ? P.seriesEpisodes(e2.id, t2.Id, l2) : [`emby`, `noop`], enabled: !!(e2 && n2 && t2?.Id && l2), queryFn: ({ signal: n3 }) => !e2 || !t2?.Id || !l2 ? [] : Ji(e2, t2.Id, l2, n3), staleTime: 3e5 }), d2 = n2 && l2 ? u2.data ?? [] : [], f2 = n2 && (u2.isLoading || o2.isLoading && s2.length === 0);
   return { isSeries: n2, nextUpEpisode: c2 || (n2 && d2.length > 0 ? d2.find((e3) => !e3.UserData?.Played) || d2[0] : null), seasons: s2, selectedSeasonId: l2, setSelectedSeasonId: i2, episodes: d2, isEpisodesLoading: f2 };
 }
 var is = { container: `_container_7nzjo_1` };

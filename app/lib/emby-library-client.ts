@@ -450,6 +450,7 @@ export async function fetchEpisodes(
     });
 
     if (seasonId) {
+      query.set("SeasonId", seasonId);
       query.set("seasonId", seasonId);
     }
     if (limit) {
@@ -469,7 +470,14 @@ export async function fetchEpisodes(
     }
 
     const data = (await response.json()) as EmbyItemsResponse<EmbyItemMetadata>;
-    return data.Items || [];
+    const items = data.Items || [];
+
+    // Fallback client-side filtering: in case the Emby server ignores SeasonId and returns all episodes
+    if (seasonId && items.length > 0 && items.some((item) => item.SeasonId && String(item.SeasonId) !== String(seasonId))) {
+      return items.filter((item) => String(item.SeasonId) === String(seasonId));
+    }
+
+    return items;
   });
 }
 
