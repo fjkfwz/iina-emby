@@ -82,6 +82,20 @@ function cleanServerUrl(rawUrl) {
   }
   return cleaned.replace(/\/web(?:\/.*)?$/i, "").replace(/\/$/, "");
 }
+function sanitizeStreamUrl(rawUrl) {
+  if (!rawUrl || typeof rawUrl !== "string") return rawUrl;
+  let cleaned = rawUrl.trim();
+  try {
+    const parsed = new URL(cleaned);
+    parsed.username = "";
+    parsed.password = "";
+    cleaned = parsed.toString();
+  } catch {
+    cleaned = cleaned.replace(/^(https?:\/\/)[^/@]+@/i, "$1");
+  }
+  cleaned = cleaned.replace(/([?&])ApiKey=/i, "$1api_key=");
+  return cleaned;
+}
 
 // plugin/src/lib/webview-bridge.ts
 function createBridgeDeps({
@@ -827,20 +841,22 @@ function spawnNewPlayerInstance(streamUrl, title) {
 }
 function handleGlobalPlayMedia(data) {
   if (!data?.streamUrl) return;
+  const streamUrl = sanitizeStreamUrl(data.streamUrl) || data.streamUrl;
+  const playData = { ...data, streamUrl };
   const openInNewWindow = preferences.get("open_in_new_window");
   debugLog("Global entry handleGlobalPlayMedia:", {
-    title: data.title,
-    streamUrl: data.streamUrl,
-    startPositionTicks: data.startPositionTicks,
-    startPositionSeconds: data.startPositionSeconds,
+    title: playData.title,
+    streamUrl: playData.streamUrl,
+    startPositionTicks: playData.startPositionTicks,
+    startPositionSeconds: playData.startPositionSeconds,
     activePlayerTarget,
     openInNewWindow
   });
   if (activePlayerTarget !== null && !openInNewWindow) {
     debugLog("Forwarding play-media to active player instance:", activePlayerTarget);
-    global.postMessage(activePlayerTarget, "play-media-command", data);
+    global.postMessage(activePlayerTarget, "play-media-command", playData);
   } else {
-    spawnNewPlayerInstance(data.streamUrl, data.title);
+    spawnNewPlayerInstance(playData.streamUrl, playData.title);
   }
 }
 function handleGlobalPlayMediaList(data) {

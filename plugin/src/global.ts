@@ -4,6 +4,7 @@
  * Manages the standalone browser window, listens for reopen requests, and coordinates playback.
  */
 
+import { sanitizeStreamUrl } from "@shared";
 import { createBrowserWindowManager } from "./lib/browser-window";
 import { createDebugLogger } from "./lib/debug-log";
 import { createEmbyApi } from "./lib/emby-api";
@@ -87,21 +88,24 @@ function spawnNewPlayerInstance(streamUrl: string, title?: string): void {
 function handleGlobalPlayMedia(data?: PlayMediaMessage): void {
   if (!data?.streamUrl) return;
 
+  const streamUrl = sanitizeStreamUrl(data.streamUrl) || data.streamUrl;
+  const playData = { ...data, streamUrl };
+
   const openInNewWindow = preferences.get("open_in_new_window");
   debugLog("Global entry handleGlobalPlayMedia:", {
-    title: data.title,
-    streamUrl: data.streamUrl,
-    startPositionTicks: data.startPositionTicks,
-    startPositionSeconds: data.startPositionSeconds,
+    title: playData.title,
+    streamUrl: playData.streamUrl,
+    startPositionTicks: playData.startPositionTicks,
+    startPositionSeconds: playData.startPositionSeconds,
     activePlayerTarget,
     openInNewWindow,
   });
 
   if (activePlayerTarget !== null && !openInNewWindow) {
     debugLog("Forwarding play-media to active player instance:", activePlayerTarget);
-    global.postMessage(activePlayerTarget, "play-media-command", data);
+    global.postMessage(activePlayerTarget, "play-media-command", playData);
   } else {
-    spawnNewPlayerInstance(data.streamUrl, data.title);
+    spawnNewPlayerInstance(playData.streamUrl, playData.title);
   }
 }
 
