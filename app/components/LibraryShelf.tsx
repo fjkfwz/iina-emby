@@ -1,5 +1,6 @@
 import type { EmbyItemMetadata, EmbyServer, EmbyUserData, EmbyView } from "@shared";
 import { IconChevronRight } from "@tabler/icons-react";
+import { memo } from "react";
 import { useNavigate } from "react-router";
 import styles from "./LibraryShelf.module.css";
 import { MediaPoster, MediaPosterSkeleton } from "./MediaPoster";
@@ -41,7 +42,14 @@ export interface LibraryShelfProps {
   onUserDataChange?: (item: EmbyItemMetadata, userData: EmbyUserData) => void;
 }
 
-export function LibraryShelf({ view, items, server, isLoading, onIdentifySuccess, onUserDataChange }: LibraryShelfProps) {
+export const LibraryShelf = memo(function LibraryShelf({
+  view,
+  items,
+  server,
+  isLoading,
+  onIdentifySuccess,
+  onUserDataChange,
+}: LibraryShelfProps) {
   const navigate = useNavigate();
 
   const handleOpenSection = () => {
@@ -88,4 +96,4 @@ export function LibraryShelf({ view, items, server, isLoading, onIdentifySuccess
       ))}
     </MediaShelf>
   );
-}
+});

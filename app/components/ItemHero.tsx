@@ -54,6 +54,18 @@ export function ItemHero({
         })
       : undefined);
 
+  // Ambient blurred backdrop: lightweight thumbnail for instant load & GPU-efficient ambient glow
+  const ambientUrl =
+    pendingImg ||
+    (item
+      ? getItemImageUrl(activeServer.serverUrl, item, {
+          prefer: "backdrop",
+          maxWidth: 480,
+          quality: 60,
+          accessToken: activeServer.accessToken,
+        })
+      : undefined);
+
   // Logo: check item's ImageTags.Logo (hide if pending image is active to avoid showing old logo over new movie)
   const logoTag = item?.ImageTags?.Logo;
   const logoUrl =
@@ -103,9 +115,9 @@ export function ItemHero({
   return (
     <>
       {/* Ambient Blurred Backdrop providing dominant background color */}
-      {backdropUrl ? (
+      {ambientUrl ? (
         <div className={styles.ambientBackdrop} aria-hidden="true">
-          <img src={backdropUrl} alt="" className={styles.ambientImage} />
+          <img src={ambientUrl} alt="" className={styles.ambientImage} decoding="async" />
           <div className={styles.ambientOverlay} />
         </div>
       ) : null}
@@ -113,7 +125,7 @@ export function ItemHero({
       {/* Top Crisp Backdrop with bottom gradient transparency mask */}
       {backdropUrl ? (
         <div className={styles.backdropContainer}>
-          <img src={backdropUrl} alt={item?.Name || "Backdrop"} className={styles.backdropImage} />
+          <img src={backdropUrl} alt={item?.Name || "Backdrop"} className={styles.backdropImage} decoding="async" />
         </div>
       ) : null}
 
@@ -258,7 +270,7 @@ interface CastSectionProps {
 
 function CastSection({ people, server }: CastSectionProps) {
   if (!people || people.length === 0) return null;
-  const list = people.slice(0, 30);
+  const list = people.slice(0, 10);
 
   return (
     <section className={styles.castSection}>
@@ -273,6 +285,7 @@ function CastSection({ people, server }: CastSectionProps) {
                   imageType: "Primary",
                   maxWidth: 160,
                   maxHeight: 160,
+                  quality: 80,
                   tag: p.PrimaryImageTag,
                   accessToken: server.accessToken,
                 })
@@ -292,7 +305,7 @@ function CastSection({ people, server }: CastSectionProps) {
             <div key={p.Id || `person-${idx}`} className={styles.castCard}>
               <div className={styles.castAvatarWrapper}>
                 {avatarUrl ? (
-                  <img src={avatarUrl} alt={p.Name || ""} className={styles.castAvatar} loading="lazy" />
+                  <img src={avatarUrl} alt={p.Name || ""} className={styles.castAvatar} loading="lazy" decoding="async" />
                 ) : (
                   <div className={styles.castAvatarPlaceholder}>
                     <span>{p.Name ? p.Name.charAt(0).toUpperCase() : "?"}</span>

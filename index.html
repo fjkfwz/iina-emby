@@ -4,30 +4,6 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>IINA Emby</title>
-    <script>
-      function showDebugError(msg) {
-        var d = document.getElementById('debug-error-box');
-        if (!d) {
-          d = document.createElement('div');
-          d.id = 'debug-error-box';
-          d.style = 'position:fixed;bottom:0;left:0;right:0;max-height:50vh;overflow:auto;background:rgba(200,0,0,0.95);color:white;padding:12px;font-family:monospace;font-size:12px;z-index:999999;white-space:pre-wrap;';
-          if (document.body) {
-            document.body.appendChild(d);
-          } else {
-            window.addEventListener('DOMContentLoaded', function() {
-              document.body.appendChild(d);
-            });
-          }
-        }
-        d.textContent += msg + '\n---\n';
-      }
-      window.addEventListener('error', function(e) {
-        showDebugError('ERROR: ' + (e.message || (e.error && e.error.message) || e) + '\n' + (e.error && e.error.stack ? e.error.stack : ''));
-      }, true);
-      window.addEventListener('unhandledrejection', function(e) {
-        showDebugError('REJECTION: ' + (e.reason ? (e.reason.stack || e.reason) : e));
-      });
-    </script>
   </head>
   <body>
     <div id="root"></div>

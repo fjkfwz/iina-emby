@@ -1,7 +1,7 @@
 import type { EmbyItemMetadata, RemoteSearchResult } from "@shared";
 import { IconAlertCircle } from "@tabler/icons-react";
 import { useQuery } from "@tanstack/react-query";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useDeferredValue, useMemo, useState } from "react";
 import { Navigate, useLocation, useNavigate, useParams } from "react-router";
 import { MediaPoster, MediaPosterSkeleton } from "../components/MediaPoster";
 import { PageHeader } from "../components/PageHeader";
@@ -31,6 +31,7 @@ export default function SectionRoute() {
   const stateName = location.state?.name as string | undefined;
   const [filter, setFilter] = useState<SectionFilter>("all");
   const [searchQuery, setSearchQuery] = useState<string>("");
+  const deferredSearchQuery = useDeferredValue(searchQuery);
   const [sortBy, setSortBy] = useState<SectionSortBy>("name");
   const [sortOrder, setSortOrder] = useState<SectionSortOrder>("asc");
 
@@ -46,13 +47,14 @@ export default function SectionRoute() {
 
   const sectionTitle = stateName || viewsQuery.data?.find((v) => v.Id === id)?.Name || "Library";
 
-  // Fetch section data via TanStack Query (bypassCache: true ensures fresh network data on refetch)
+  // Fetch section data via TanStack Query (cached for fast transitions)
   const sectionQuery = useQuery({
     queryKey: activeServer?.id && id ? embyKeys.section(activeServer.id, id) : ["empty-section"],
     queryFn: async ({ signal }) => {
       if (!activeServer || !id) return null;
-      return fetchAllSectionData(activeServer, id, signal, true);
+      return fetchAllSectionData(activeServer, id, signal, false);
     },
+    staleTime: 1000 * 60 * 5,
     enabled: Boolean(activeServer?.id && id),
   });
 
@@ -151,13 +153,13 @@ export default function SectionRoute() {
     if (!rawData) return [];
     return filterAndSortSectionItems(rawData.items, {
       filter,
-      searchQuery,
+      searchQuery: deferredSearchQuery,
       sortBy,
       sortOrder,
       resumeSeriesIds: rawData.resumeSeriesIds,
       resumeItemIds: rawData.resumeItemIds,
     });
-  }, [rawData, filter, searchQuery, sortBy, sortOrder]);
+  }, [rawData, filter, deferredSearchQuery, sortBy, sortOrder]);
 
   // Progressive rendering for DOM performance
   const { visibleItems, hasMore, sentinelRef } = useProgressiveScroll({

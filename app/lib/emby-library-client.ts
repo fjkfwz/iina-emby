@@ -97,6 +97,48 @@ export async function fetchUserViews(server: EmbyServer, signal?: AbortSignal, b
 }
 
 /**
+ * Fetch favorite items for the active user.
+ */
+export async function fetchFavoriteItems(
+  server: EmbyServer,
+  limit = 24,
+  signal?: AbortSignal,
+  bypassCache = false,
+): Promise<EmbyItemMetadata[]> {
+  const base = server.serverUrl.replace(/\/+$/, "");
+  const cacheKey = `${base}:${server.userId}:favorites:${limit}`;
+
+  return getOrFetchCached(cacheKey, DEFAULT_CACHE_TTL_MS, bypassCache, async () => {
+    const query = new URLSearchParams({
+      Filters: "IsFavorite",
+      Recursive: "true",
+      SortBy: "SortName",
+      SortOrder: "Ascending",
+      Limit: String(limit),
+      Fields:
+        "CommunityRating,ProductionYear,ImageTags,BackdropImageTags,UserData,PrimaryImageAspectRatio,SeriesName,ProviderIds",
+      EnableImageTypes: "Primary,Backdrop,Thumb",
+      ImageTypeLimit: "1",
+    });
+
+    const url = `${base}/Users/${encodeURIComponent(server.userId)}/Items?${query.toString()}`;
+    const response = await fetch(url, {
+      signal,
+      headers: buildAuthHeaders(server.accessToken, {
+        Accept: "application/json",
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch favorite items: ${response.status} ${response.statusText}`);
+    }
+
+    const data = (await response.json()) as EmbyItemsResponse<EmbyItemMetadata>;
+    return data.Items || [];
+  });
+}
+
+/**
  * Fetch latest items for a specific library (ParentId).
  */
 export async function fetchLatestItems(
@@ -169,7 +211,6 @@ export async function fetchSectionItems(
 
   return getOrFetchCached(cacheKey, DEFAULT_CACHE_TTL_MS, bypassCache, async () => {
     const query = new URLSearchParams({
-      ParentId: parentId,
       Recursive: "true",
       SortBy: sortBy,
       SortOrder: sortOrder,
@@ -177,13 +218,18 @@ export async function fetchSectionItems(
       Limit: String(limit),
       IncludeItemTypes: includeItemTypes,
       Fields:
-        "CommunityRating,ProductionYear,ImageTags,BackdropImageTags,UserData,PrimaryImageAspectRatio,SeriesName,RunTimeTicks,Overview,RecursiveItemCount,ItemCounts,DateCreated,PremiereDate,OriginalTitle,ProviderIds",
+        "CommunityRating,ProductionYear,ImageTags,BackdropImageTags,UserData,PrimaryImageAspectRatio,SeriesName,ProviderIds",
       EnableImageTypes: "Primary,Backdrop,Thumb",
       ImageTypeLimit: "1",
     });
 
-    if (filter === "played") {
-      query.set("Filters", "IsPlayed");
+    if (parentId === "favorites") {
+      query.set("Filters", "IsFavorite");
+    } else {
+      query.set("ParentId", parentId);
+      if (filter === "played") {
+        query.set("Filters", "IsPlayed");
+      }
     }
 
     const url = `${base}/Users/${encodeURIComponent(server.userId)}/Items?${query.toString()}`;
@@ -226,7 +272,7 @@ export async function fetchAllSectionData(
     fetchSectionItems(
       server,
       parentId,
-      { limit: 10000, startIndex: 0, filter: "all", sortBy: "SortName", sortOrder: "Ascending" },
+      { limit: 2000, startIndex: 0, filter: "all", sortBy: "SortName", sortOrder: "Ascending" },
       signal,
       bypassCache,
     ),

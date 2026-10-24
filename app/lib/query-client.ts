@@ -9,6 +9,7 @@ export const queryClient = new QueryClient({
       gcTime: 1000 * 60 * 30,
       // In desktop app, window focus should not spam the Emby server
       refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
       // Retry once on failure
       retry: 1,
     },

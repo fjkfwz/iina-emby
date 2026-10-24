@@ -36,6 +36,7 @@ export function useLibrarySections(server: EmbyServer | null) {
       return loadedSections.filter((s) => s.items.length > 0);
     },
     enabled: isEnabled,
+    staleTime: 1000 * 60 * 5,
   });
 
   return {

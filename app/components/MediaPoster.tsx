@@ -2,7 +2,7 @@ import type { EmbyItemMetadata, EmbyServer, EmbyUserData, RemoteSearchResult } f
 import { getItemImageUrl } from "@shared";
 import { IconCheck, IconDots, IconFingerprint, IconInfoCircle, IconMovie } from "@tabler/icons-react";
 import type React from "react";
-import { useState } from "react";
+import { memo, useState } from "react";
 import { useNavigate } from "react-router";
 import { useItemPlayedStatus } from "../hooks/useItemPlayedStatus";
 import { isIdentifySupported } from "../lib/emby-library-client";
@@ -43,7 +43,14 @@ export interface MediaPosterProps {
   className?: string;
 }
 
-export function MediaPoster({ item, server, onClick, onUserDataChange, onIdentifySuccess, className }: MediaPosterProps) {
+export const MediaPoster = memo(function MediaPoster({
+  item,
+  server,
+  onClick,
+  onUserDataChange,
+  onIdentifySuccess,
+  className,
+}: MediaPosterProps) {
   const navigate = useNavigate();
   const [imgError, setImgError] = useState(false);
   const [isIdentifyOpen, setIsIdentifyOpen] = useState(false);
@@ -97,7 +104,14 @@ export function MediaPoster({ item, server, onClick, onUserDataChange, onIdentif
       <button type="button" className={classes.cardButton} onClick={handleClick} aria-label={`View ${item.Name || "Media"}`}></button>
       <div className={classes.posterWrapper}>
         {imageUrl ? (
-          <img src={imageUrl} alt={item.Name || "Media"} className={classes.image} loading="lazy" onError={() => setImgError(true)} />
+          <img
+            src={imageUrl}
+            alt={item.Name || "Media"}
+            className={classes.image}
+            loading="lazy"
+            decoding="async"
+            onError={() => setImgError(true)}
+          />
         ) : (
           <div className={classes.placeholder}>
             <IconMovie size={36} />
@@ -192,4 +206,4 @@ export function MediaPoster({ item, server, onClick, onUserDataChange, onIdentif
       )}
     </div>
   );
-}
+});

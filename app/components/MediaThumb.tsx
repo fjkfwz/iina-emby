@@ -11,7 +11,7 @@ import {
 } from "@shared";
 import { IconCheck, IconDots, IconInfoCircle, IconMovie, IconPlayerPlay } from "@tabler/icons-react";
 import type React from "react";
-import { useState } from "react";
+import { memo, useState } from "react";
 import { useNavigate } from "react-router";
 import { useItemPlayedStatus } from "../hooks/useItemPlayedStatus";
 import { buildStreamUrl } from "../lib/emby-library-client";
@@ -57,7 +57,7 @@ export interface MediaThumbProps {
   subtitleLines?: number;
 }
 
-export function MediaThumb({
+export const MediaThumb = memo(function MediaThumb({
   item,
   server,
   onPlay,
@@ -160,7 +160,7 @@ export function MediaThumb({
           aria-label={`Play ${fullPlayTitle}`}
         ></button>
         {imageUrl ? (
-          <img src={imageUrl} alt={title} className={classes.image} loading="lazy" onError={() => setImageError(true)} />
+          <img src={imageUrl} alt={title} className={classes.image} loading="lazy" decoding="async" onError={() => setImageError(true)} />
         ) : (
           <div className={classes.placeholder}>
             <IconMovie size={38} stroke={1.5} />
@@ -257,4 +257,4 @@ export function MediaThumb({
       )}
     </div>
   );
-}
+});

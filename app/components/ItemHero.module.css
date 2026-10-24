@@ -16,7 +16,7 @@
   height: 100%;
   object-fit: cover;
   object-position: center center;
-  filter: blur(100px) saturate(1.5) brightness(1);
+  filter: blur(48px) saturate(1.4) brightness(0.95);
   opacity: 1;
   will-change: transform;
   -webkit-transform: translate3d(0, 0, 0) scale(1.05);
@@ -311,6 +311,7 @@
   flex-shrink: 0;
   text-align: center;
   cursor: default;
+  contain: layout paint;
 }
 
 .castAvatarWrapper {

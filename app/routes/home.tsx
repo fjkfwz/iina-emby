@@ -2,6 +2,7 @@ import { IconAlertCircle } from "@tabler/icons-react";
 import { useCallback, useState } from "react";
 import { Navigate, useNavigate } from "react-router";
 import { ContinueWatching } from "../components/ContinueWatching";
+import { FavoritesShelf } from "../components/FavoritesShelf";
 import { LibraryShelf, LibraryShelfSkeleton } from "../components/LibraryShelf";
 import { PageHeader } from "../components/PageHeader";
 import { Alert } from "../components/ui";
@@ -72,6 +73,9 @@ export default function HomeRoute() {
       <main className={styles.content}>
         {/* Continue Watching shelf */}
         <ContinueWatching server={activeServer} onPlayMedia={playMedia} />
+
+        {/* My Favorites shelf */}
+        <FavoritesShelf server={activeServer} onIdentifySuccess={handleIdentifySuccess} />
 
         {sectionsError && (
           <Alert icon={<IconAlertCircle size={16} />} title="Error loading libraries" mb="md" mx="1.5rem">

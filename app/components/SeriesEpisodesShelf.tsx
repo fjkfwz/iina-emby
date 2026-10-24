@@ -1,4 +1,5 @@
 import { type EmbyItemMetadata, type EmbyServer, formatEpisodeSubtitle } from "@shared";
+import { memo } from "react";
 import { MediaShelf } from "./MediaShelf";
 import { MediaThumb, MediaThumbSkeleton } from "./MediaThumb";
 import styles from "./SeriesEpisodesShelf.module.css";
@@ -15,7 +16,7 @@ export interface SeriesEpisodesShelfProps {
   onEpisodeClick: (episode: EmbyItemMetadata) => void;
 }
 
-export function SeriesEpisodesShelf({
+export const SeriesEpisodesShelf = memo(function SeriesEpisodesShelf({
   activeServer,
   seasons,
   selectedSeasonId,
@@ -73,4 +74,4 @@ export function SeriesEpisodesShelf({
       </MediaShelf>
     </section>
   );
-}
+});
