@@ -35,11 +35,12 @@
   top: 0;
   left: 0;
   right: 0;
-  height: min(56.25vw, 60vh);
+  height: min(56.25vw, 560px);
   overflow: hidden;
   z-index: 1;
   pointer-events: none;
-  mask-image: linear-gradient(180deg, var(--scrim-base) 70%, rgb(from var(--scrim-base) r g b / 70%) 75%, transparent 100%);
+  -webkit-mask-image: linear-gradient(180deg, #000 65%, rgba(0, 0, 0, 0.6) 80%, transparent 100%);
+  mask-image: linear-gradient(180deg, #000 65%, rgba(0, 0, 0, 0.6) 80%, transparent 100%);
 }
 
 .backdropImage {
