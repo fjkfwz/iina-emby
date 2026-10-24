@@ -89,6 +89,8 @@ const {
   consumeLaunchedFromBrowser,
   getPendingMediaTitle,
   getPendingStartPosition,
+  getPendingAudioIndex,
+  getPendingSubtitleIndex,
 } = createPlaybackCoordinator({
   core,
   mpv,
@@ -254,10 +256,75 @@ function onFileLoaded(fileUrl?: string): void {
       setupAutoplayForEpisode(reportServerBase, embyInfo.itemId, reportApiKey, reportUserId);
     }
 
+    // Apply user-selected audio track and subtitle track if specified from detail page
+    const pendingAudio = getPendingAudioIndex(embyInfo.itemId);
+    const pendingSubtitle = getPendingSubtitleIndex(embyInfo.itemId);
+
+    if (typeof pendingAudio === "number") {
+      try {
+        debugLog(`Applying user-selected audio track index: ${pendingAudio}`);
+        const trackList = mpv.getNative<Array<{ id: number; type: string; "src-id"?: number }>>("track-list");
+        if (Array.isArray(trackList)) {
+          const audioTracks = trackList.filter((t) => t.type === "audio");
+          const match = audioTracks.find((t) => t["src-id"] === pendingAudio || t.id === pendingAudio);
+          if (match && typeof match.id === "number") {
+            debugLog(`Matched mpv audio track id: ${match.id}`);
+            mpv.set("aid", match.id);
+          } else if (pendingAudio > 0 && pendingAudio <= audioTracks.length) {
+            mpv.set("aid", pendingAudio);
+          }
+        } else {
+          mpv.set("aid", pendingAudio);
+        }
+      } catch (err) {
+        debugLog("Failed to set audio track:", err);
+      }
+    }
+
+    if (typeof pendingSubtitle === "number") {
+      try {
+        if (pendingSubtitle === -1) {
+          debugLog("User selected to turn off subtitles");
+          mpv.set("sid", "no");
+          try {
+            core.subtitle.id = null;
+          } catch {
+            // Ignore
+          }
+        } else {
+          debugLog(`Applying user-selected subtitle track index: ${pendingSubtitle}`);
+          const trackList = mpv.getNative<Array<{ id: number; type: string; "src-id"?: number }>>("track-list");
+          if (Array.isArray(trackList)) {
+            const subTracks = trackList.filter((t) => t.type === "sub");
+            const match = subTracks.find((t) => t["src-id"] === pendingSubtitle || t.id === pendingSubtitle);
+            if (match && typeof match.id === "number") {
+              debugLog(`Matched mpv subtitle track id: ${match.id}`);
+              mpv.set("sid", match.id);
+            } else if (pendingSubtitle > 0 && pendingSubtitle <= subTracks.length) {
+              mpv.set("sid", pendingSubtitle);
+            }
+          } else {
+            mpv.set("sid", pendingSubtitle);
+          }
+        }
+      } catch (err) {
+        debugLog("Failed to set subtitle track:", err);
+      }
+    }
+
     // Only auto-download if enabled
     if (preferences.get("auto_download_enabled")) {
       debugLog(`Auto-downloading subtitles for: ${embyInfo.itemId}`);
       downloadAllSubtitles(reportServerBase, embyInfo.itemId, reportApiKey);
+      if (pendingSubtitle === -1) {
+        // Guarantee subtitles remain off even if external subtitles were loaded
+        try {
+          mpv.set("sid", "no");
+          core.subtitle.id = null;
+        } catch {
+          // Ignore
+        }
+      }
     } else {
       debugLog("Auto download disabled, but Emby URL stored for manual download");
     }

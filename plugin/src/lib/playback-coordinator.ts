@@ -61,6 +61,8 @@ export function createPlaybackCoordinator({
   let currentPlaybackTitle: string | null = null;
   let currentPlaybackItemId: string | null = null;
   let currentPlaybackStartPositionSeconds: number | null = null;
+  let currentPlaybackAudioIndex: number | null = null;
+  let currentPlaybackSubtitleIndex: number | null = null;
 
   function getPendingMediaTitle(itemId?: string): string | null {
     if (!currentPlaybackTitle) return null;
@@ -76,6 +78,22 @@ export function createPlaybackCoordinator({
       return null;
     }
     return currentPlaybackStartPositionSeconds;
+  }
+
+  function getPendingAudioIndex(itemId?: string): number | null {
+    if (typeof currentPlaybackAudioIndex !== "number") return null;
+    if (itemId && currentPlaybackItemId && currentPlaybackItemId !== itemId) {
+      return null;
+    }
+    return currentPlaybackAudioIndex;
+  }
+
+  function getPendingSubtitleIndex(itemId?: string): number | null {
+    if (typeof currentPlaybackSubtitleIndex !== "number") return null;
+    if (itemId && currentPlaybackItemId && currentPlaybackItemId !== itemId) {
+      return null;
+    }
+    return currentPlaybackSubtitleIndex;
   }
 
   function markReplacingPlayback(): void {
@@ -307,6 +325,15 @@ export function createPlaybackCoordinator({
 
     log(`Opening media: ${title} - ${streamUrl}`);
 
+    currentPlaybackAudioIndex = typeof message?.selectedAudioIndex === "number" ? message.selectedAudioIndex : null;
+    currentPlaybackSubtitleIndex = typeof message?.selectedSubtitleIndex === "number" ? message.selectedSubtitleIndex : null;
+    if (typeof currentPlaybackAudioIndex === "number") {
+      log(`Requested initial audio track index: ${currentPlaybackAudioIndex}`);
+    }
+    if (typeof currentPlaybackSubtitleIndex === "number") {
+      log(`Requested initial subtitle track index: ${currentPlaybackSubtitleIndex}`);
+    }
+
     const startPositionTicks = message?.startPositionTicks as number | undefined;
     const startPositionSeconds =
       typeof startPositionTicks === "number" && startPositionTicks > 0
@@ -374,5 +401,7 @@ export function createPlaybackCoordinator({
     handlePlayMedia,
     getPendingMediaTitle,
     getPendingStartPosition,
+    getPendingAudioIndex,
+    getPendingSubtitleIndex,
   };
 }

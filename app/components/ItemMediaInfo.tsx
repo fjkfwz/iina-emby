@@ -4,6 +4,10 @@ import styles from "./ItemMediaInfo.module.css";
 
 interface ItemMediaInfoProps {
   item?: EmbyItemMetadata;
+  selectedAudioIndex?: number;
+  onSelectAudioIndex?: (index: number) => void;
+  selectedSubtitleIndex?: number;
+  onSelectSubtitleIndex?: (index: number) => void;
 }
 
 const LANG_MAP: Record<string, string> = {
@@ -90,7 +94,13 @@ function formatFileSize(bytes?: number): string | null {
   return `${mb.toFixed(1)} MB`;
 }
 
-export function ItemMediaInfo({ item }: ItemMediaInfoProps) {
+export function ItemMediaInfo({
+  item,
+  selectedAudioIndex,
+  onSelectAudioIndex,
+  selectedSubtitleIndex,
+  onSelectSubtitleIndex,
+}: ItemMediaInfoProps) {
   if (!item) return null;
 
   const mediaSource = item.MediaSources?.[0];
@@ -194,6 +204,7 @@ export function ItemMediaInfo({ item }: ItemMediaInfoProps) {
             <div className={styles.cardHeader}>
               <IconVolume size={18} className={styles.iconAudio} />
               <span className={styles.cardTitle}>音频轨道 ({audioStreams.length})</span>
+              {onSelectAudioIndex && <span className={styles.cardHeaderRight}>点击切换播放</span>}
             </div>
             <div className={styles.streamList}>
               {audioStreams.map((audio, idx) => {
@@ -202,13 +213,22 @@ export function ItemMediaInfo({ item }: ItemMediaInfoProps) {
                 const channels = formatAudioChannels(audio.Channels as number | undefined, typeof audio.ChannelLayout === "string" ? audio.ChannelLayout : undefined);
                 const bitRate = formatBitrate(audio.BitRate as number | undefined);
                 const title = typeof audio.Title === "string" ? audio.Title : null;
+                const isSelected = selectedAudioIndex === audio.Index;
 
                 return (
-                  <div key={audio.Index ?? `audio-${idx}`} className={styles.streamItem}>
+                  <div
+                    key={audio.Index ?? `audio-${idx}`}
+                    className={`${styles.streamItem} ${onSelectAudioIndex ? styles.streamItemSelectable : ""} ${isSelected ? styles.streamItemSelectedAudio : ""}`}
+                    onClick={() => typeof audio.Index === "number" && onSelectAudioIndex?.(audio.Index)}
+                    role={onSelectAudioIndex ? "button" : undefined}
+                    tabIndex={onSelectAudioIndex ? 0 : undefined}
+                    title={onSelectAudioIndex ? `点击选择播放该音轨: ${lang}` : undefined}
+                  >
                     <div className={styles.streamMain}>
                       <span className={styles.streamLanguage}>{lang}</span>
                       {Boolean(audio.IsDefault) && <span className={styles.badgeDefault}>默认</span>}
                       {title && <span className={styles.streamNote}>{title}</span>}
+                      {isSelected && <span className={styles.badgeSelectedAudio}>✓ 已选</span>}
                     </div>
                     <div className={styles.streamMeta}>
                       <span>{codec}</span>
@@ -228,22 +248,49 @@ export function ItemMediaInfo({ item }: ItemMediaInfoProps) {
             <div className={styles.cardHeader}>
               <IconSubtitles size={18} className={styles.iconSubtitles} />
               <span className={styles.cardTitle}>字幕轨道 ({subtitleStreams.length})</span>
+              {onSelectSubtitleIndex && <span className={styles.cardHeaderRight}>点击切换播放</span>}
             </div>
             <div className={styles.streamList}>
+              {onSelectSubtitleIndex && (
+                <div
+                  className={`${styles.streamItem} ${styles.streamItemSelectable} ${selectedSubtitleIndex === -1 ? styles.streamItemSelectedSubtitle : ""}`}
+                  onClick={() => onSelectSubtitleIndex(-1)}
+                  role="button"
+                  tabIndex={0}
+                  title="点击关闭字幕播放"
+                >
+                  <div className={styles.streamMain}>
+                    <span className={styles.streamLanguage}>🚫 不显示字幕 (关闭字幕)</span>
+                    {selectedSubtitleIndex === -1 && <span className={styles.badgeSelectedSubtitle}>✓ 已选</span>}
+                  </div>
+                  <div className={styles.streamMeta}>
+                    <span>播放时不加载任何字幕</span>
+                  </div>
+                </div>
+              )}
               {subtitleStreams.map((sub, idx) => {
                 const lang = formatLanguage(sub.Language, typeof sub.DisplayLanguage === "string" ? sub.DisplayLanguage : undefined);
                 const format = sub.Codec?.toUpperCase() || "SRT";
                 const isExt = Boolean(sub.IsExternal);
                 const title = typeof sub.Title === "string" ? sub.Title : null;
+                const isSelected = selectedSubtitleIndex === sub.Index;
 
                 return (
-                  <div key={sub.Index ?? `sub-${idx}`} className={styles.streamItem}>
+                  <div
+                    key={sub.Index ?? `sub-${idx}`}
+                    className={`${styles.streamItem} ${onSelectSubtitleIndex ? styles.streamItemSelectable : ""} ${isSelected ? styles.streamItemSelectedSubtitle : ""}`}
+                    onClick={() => typeof sub.Index === "number" && onSelectSubtitleIndex?.(sub.Index)}
+                    role={onSelectSubtitleIndex ? "button" : undefined}
+                    tabIndex={onSelectSubtitleIndex ? 0 : undefined}
+                    title={onSelectSubtitleIndex ? `点击选择播放该字幕: ${lang}` : undefined}
+                  >
                     <div className={styles.streamMain}>
                       <span className={styles.streamLanguage}>{lang}</span>
                       {Boolean(sub.IsDefault) && <span className={styles.badgeDefault}>默认</span>}
                       <span className={isExt ? styles.badgeExternal : styles.badgeInternal}>{isExt ? "外挂" : "内置"}</span>
                       {format === "ASS" && <span className={styles.badgeAss}>特效</span>}
                       {title && title !== lang && <span className={styles.streamNote}>{title}</span>}
+                      {isSelected && <span className={styles.badgeSelectedSubtitle}>✓ 已选</span>}
                     </div>
                     <div className={styles.streamMeta}>
                       <span>格式: {format}</span>

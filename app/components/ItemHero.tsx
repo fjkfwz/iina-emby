@@ -19,6 +19,8 @@ export interface ItemHeroProps {
   onBack: () => void;
   onRefresh?: () => void;
   isRefreshing?: boolean;
+  selectedAudioLabel?: string;
+  selectedSubtitleLabel?: string;
 }
 
 export function ItemHero({
@@ -30,6 +32,8 @@ export function ItemHero({
   onBack,
   onRefresh,
   isRefreshing = false,
+  selectedAudioLabel,
+  selectedSubtitleLabel,
 }: ItemHeroProps) {
   const [logoError, setLogoError] = useState(false);
   const [isIdentifyOpen, setIsIdentifyOpen] = useState(false);
@@ -267,6 +271,52 @@ export function ItemHero({
             </div>
           </GlassElement>
         </div>
+
+        {/* Selected Tracks Status Pills */}
+        {(selectedAudioLabel || selectedSubtitleLabel) && (
+          <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", marginTop: "-6px", marginBottom: "2px" }}>
+            {selectedAudioLabel && (
+              <span
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  background: "rgba(56, 189, 248, 0.12)",
+                  color: "#38bdf8",
+                  border: "1px solid rgba(56, 189, 248, 0.3)",
+                  borderRadius: "6px",
+                  padding: "2px 8px",
+                  fontSize: "0.75rem",
+                  fontWeight: 500,
+                  marginRight: "8px",
+                  marginBottom: "4px",
+                }}
+              >
+                <span style={{ marginRight: "4px" }}>🔊</span>
+                <span>音轨: {selectedAudioLabel}</span>
+              </span>
+            )}
+            {selectedSubtitleLabel && (
+              <span
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  background: "rgba(192, 132, 252, 0.12)",
+                  color: "#c084fc",
+                  border: "1px solid rgba(192, 132, 252, 0.3)",
+                  borderRadius: "6px",
+                  padding: "2px 8px",
+                  fontSize: "0.75rem",
+                  fontWeight: 500,
+                  marginRight: "8px",
+                  marginBottom: "4px",
+                }}
+              >
+                <span style={{ marginRight: "4px" }}>💬</span>
+                <span>字幕: {selectedSubtitleLabel}</span>
+              </span>
+            )}
+          </div>
+        )}
 
         {/* Overview / Synopsis */}
         {overviewText ? (

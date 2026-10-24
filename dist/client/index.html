@@ -11749,7 +11749,7 @@ function CastSection({ people, server }) {
     ]
   });
 }
-function MediaInfoSection({ item: it }) {
+function MediaInfoSection({ item: it, selectedAudioIndex: sa, onSelectAudioIndex: ssa, selectedSubtitleIndex: ss, onSelectSubtitleIndex: sss }) {
   if (!it) return null;
   let ms = it.MediaStreams || it.MediaSources?.[0]?.MediaStreams || [];
   if (!Array.isArray(ms) || ms.length === 0) return null;
@@ -11822,44 +11822,74 @@ function MediaInfoSection({ item: it }) {
           audios.length > 0 ? (0, b.jsxs)("div", {
             className: "_mediaInfoCard_custom",
             children: [
-              (0, b.jsxs)("div", { className: "_mediaCardHeader_custom", children: [(0, b.jsx)("span", { style: { color: "#a78bfa" }, children: "🔊" }), (0, b.jsx)("span", { className: "_mediaCardTitle_custom", children: "音频轨道 (" + audios.length + ")" })] }),
+              (0, b.jsxs)("div", { className: "_mediaCardHeader_custom", children: [(0, b.jsx)("span", { style: { color: "#a78bfa" }, children: "🔊" }), (0, b.jsx)("span", { className: "_mediaCardTitle_custom", children: "音频轨道 (" + audios.length + ")" }), ssa ? (0, b.jsx)("span", { className: "_cardHeaderRight_custom", children: "点击切换播放" }) : null] }),
               (0, b.jsx)("div", { className: "_streamList_custom", children: audios.map((a, idx) => {
                 let l = getLang(a);
                 let c = getAudioCodec(a.Codec, a.Profile);
                 let ch = getChannels(a.Channels, a.ChannelLayout);
-                return (0, b.jsxs)("div", { key: a.Index ?? idx, className: "_streamItem_custom", children: [
-                  (0, b.jsxs)("div", { className: "_streamMain_custom", children: [
-                    (0, b.jsx)("span", { className: "_streamLang_custom", children: l }),
-                    a.IsDefault ? (0, b.jsx)("span", { className: "_badgeDef_custom", children: "默认" }) : null,
-                    a.Title && a.Title !== l ? (0, b.jsx)("span", { className: "_streamNote_custom", children: a.Title }) : null
-                  ] }),
-                  (0, b.jsxs)("div", { className: "_streamMeta_custom", children: [
-                    (0, b.jsx)("span", { children: c }),
-                    ch ? (0, b.jsx)("span", { children: " • " + ch }) : null
-                  ] })
-                ] });
+                let isSel = sa === a.Index;
+                return (0, b.jsxs)("div", {
+                  key: a.Index ?? idx,
+                  className: "_streamItem_custom _streamItemSelectable_custom" + (isSel ? " _streamItemSelectedAudio_custom" : ""),
+                  onClick: () => ssa && ssa(a.Index),
+                  style: { cursor: "pointer" },
+                  children: [
+                    (0, b.jsxs)("div", { className: "_streamMain_custom", children: [
+                      (0, b.jsx)("span", { className: "_streamLang_custom", children: l }),
+                      a.IsDefault ? (0, b.jsx)("span", { className: "_badgeDef_custom", children: "默认" }) : null,
+                      a.Title && a.Title !== l ? (0, b.jsx)("span", { className: "_streamNote_custom", children: a.Title }) : null,
+                      isSel ? (0, b.jsx)("span", { className: "_badgeSelectedAudio_custom", children: "✓ 已选" }) : null
+                    ] }),
+                    (0, b.jsxs)("div", { className: "_streamMeta_custom", children: [
+                      (0, b.jsx)("span", { children: c }),
+                      ch ? (0, b.jsx)("span", { children: " • " + ch }) : null
+                    ] })
+                  ]
+                });
               }) })
             ]
           }) : null,
           subs.length > 0 ? (0, b.jsxs)("div", {
             className: "_mediaInfoCard_custom",
             children: [
-              (0, b.jsxs)("div", { className: "_mediaCardHeader_custom", children: [(0, b.jsx)("span", { style: { color: "#fb923c" }, children: "💬" }), (0, b.jsx)("span", { className: "_mediaCardTitle_custom", children: "字幕轨道 (" + subs.length + ")" })] }),
-              (0, b.jsx)("div", { className: "_streamList_custom", children: subs.map((s, idx) => {
-                let l = getLang(s);
-                let fmt = (s.Codec || "SRT").toUpperCase();
-                let isExt = Boolean(s.IsExternal);
-                return (0, b.jsxs)("div", { key: s.Index ?? idx, className: "_streamItem_custom", children: [
-                  (0, b.jsxs)("div", { className: "_streamMain_custom", children: [
-                    (0, b.jsx)("span", { className: "_streamLang_custom", children: l }),
-                    s.IsDefault ? (0, b.jsx)("span", { className: "_badgeDef_custom", children: "默认" }) : null,
-                    (0, b.jsx)("span", { className: isExt ? "_badgeExt_custom" : "_badgeInt_custom", children: isExt ? "外挂" : "内置" }),
-                    fmt === "ASS" ? (0, b.jsx)("span", { className: "_badgeAss_custom", children: "特效" }) : null,
-                    s.Title && s.Title !== l ? (0, b.jsx)("span", { className: "_streamNote_custom", children: s.Title }) : null
-                  ] }),
-                  (0, b.jsx)("div", { className: "_streamMeta_custom", children: (0, b.jsx)("span", { children: "格式: " + fmt }) })
-                ] });
-              }) })
+              (0, b.jsxs)("div", { className: "_mediaCardHeader_custom", children: [(0, b.jsx)("span", { style: { color: "#fb923c" }, children: "💬" }), (0, b.jsx)("span", { className: "_mediaCardTitle_custom", children: "字幕轨道 (" + subs.length + ")" }), sss ? (0, b.jsx)("span", { className: "_cardHeaderRight_custom", children: "点击切换播放" }) : null] }),
+              (0, b.jsxs)("div", { className: "_streamList_custom", children: [
+                sss ? (0, b.jsxs)("div", {
+                  className: "_streamItem_custom _streamItemSelectable_custom" + (ss === -1 ? " _streamItemSelectedSubtitle_custom" : ""),
+                  onClick: () => sss(-1),
+                  style: { cursor: "pointer" },
+                  children: [
+                    (0, b.jsxs)("div", { className: "_streamMain_custom", children: [
+                      (0, b.jsx)("span", { className: "_streamLang_custom", children: "🚫 不显示字幕 (关闭字幕)" }),
+                      ss === -1 ? (0, b.jsx)("span", { className: "_badgeSelectedSubtitle_custom", children: "✓ 已选" }) : null
+                    ] }),
+                    (0, b.jsx)("div", { className: "_streamMeta_custom", children: (0, b.jsx)("span", { children: "播放时不加载任何字幕" }) })
+                  ]
+                }) : null,
+                subs.map((s, idx) => {
+                  let l = getLang(s);
+                  let fmt = (s.Codec || "SRT").toUpperCase();
+                  let isExt = Boolean(s.IsExternal);
+                  let isSel = ss === s.Index;
+                  return (0, b.jsxs)("div", {
+                    key: s.Index ?? idx,
+                    className: "_streamItem_custom _streamItemSelectable_custom" + (isSel ? " _streamItemSelectedSubtitle_custom" : ""),
+                    onClick: () => sss && sss(s.Index),
+                    style: { cursor: "pointer" },
+                    children: [
+                      (0, b.jsxs)("div", { className: "_streamMain_custom", children: [
+                        (0, b.jsx)("span", { className: "_streamLang_custom", children: l }),
+                        s.IsDefault ? (0, b.jsx)("span", { className: "_badgeDef_custom", children: "默认" }) : null,
+                        (0, b.jsx)("span", { className: isExt ? "_badgeExt_custom" : "_badgeInt_custom", children: isExt ? "外挂" : "内置" }),
+                        fmt === "ASS" ? (0, b.jsx)("span", { className: "_badgeAss_custom", children: "特效" }) : null,
+                        s.Title && s.Title !== l ? (0, b.jsx)("span", { className: "_streamNote_custom", children: s.Title }) : null,
+                        isSel ? (0, b.jsx)("span", { className: "_badgeSelectedSubtitle_custom", children: "✓ 已选" }) : null
+                      ] }),
+                      (0, b.jsx)("div", { className: "_streamMeta_custom", children: (0, b.jsx)("span", { children: "格式: " + fmt }) })
+                    ]
+                  });
+                })
+              ] })
             ]
           }) : null
         ]
@@ -11867,7 +11897,7 @@ function MediaInfoSection({ item: it }) {
     ]
   });
 }
-function es({ item: e2, nextUpEpisode: t2, activeServer: n2, isPlaying: r2 = false, onPlay: i2, onBack: a2, onRefresh: o2, isRefreshing: s2 = false }) {
+function es({ item: e2, nextUpEpisode: t2, activeServer: n2, isPlaying: r2 = false, onPlay: i2, onBack: a2, onRefresh: o2, isRefreshing: s2 = false, selectedAudioLabel: sal, selectedSubtitleLabel: ssl, selectedAudioIndex: sa, onSelectAudioIndex: ssa, selectedSubtitleIndex: ss, onSelectSubtitleIndex: sss }) {
   let [c2, l2] = (0, _.useState)(false), [u2, d2] = (0, _.useState)(false), [favUpdating, setFavUpdating] = (0, _.useState)(false), f2 = !!n2.user?.Policy?.IsAdministrator && ea(e2?.Type), p2 = e2?.Type === `Series`, m2 = p2 ? t2 : e2, h2 = !!e2?.isIdentifying, g2 = e2?.pendingImageUrl, v2 = g2 || (e2 ? xi(n2.serverUrl, e2, { prefer: `backdrop`, maxWidth: 2560, accessToken: n2.accessToken }) : void 0), y2 = e2?.ImageTags?.Logo, x2 = !c2 && !g2 && y2 && e2 ? yi(n2.serverUrl, e2.Id, { imageType: `Logo`, maxWidth: 600, tag: y2, accessToken: n2.accessToken }) : void 0, S2 = typeof e2?.CommunityRating == `number` && e2.CommunityRating > 0 ? e2.CommunityRating.toFixed(1) : null, C2 = e2?.OfficialRating || null, ee2 = (Array.isArray(e2?.Genres) && e2.Genres.length > 0 ? e2.Genres : Array.isArray(e2?.GenreItems) ? e2.GenreItems.map((e3) => e3.Name) : []).join(` \u2022 `), { durationText: w2, premiereDateText: te2, resolutionBadge: T2, hdrBadge: E2, fpsBadge: ne2, sizeBadge: re2 } = $o(m2 || void 0, e2), ie2 = m2?.UserData?.PlaybackPositionTicks, D2 = Qo(ie2), ae2 = null;
   if (p2 && t2) {
     let n3 = t2.ParentIndexNumber ?? 1, r3 = t2.IndexNumber ?? 1;
@@ -11932,9 +11962,22 @@ function es({ item: e2, nextUpEpisode: t2, activeServer: n2, isPlaying: r2 = fal
     h2 && (0, b.jsxs)(`span`, { className: H.syncingBadge, title: `Metadata is syncing with server...`, children: [(0, b.jsx)(`span`, { className: H.syncDot }), (0, b.jsx)(`span`, { children: `Syncing with server` })] })
   ] }),
   (0, b.jsx)(`div`, { style: { minWidth: "180px", marginTop: "6px", marginBottom: "4px" }, children: (0, b.jsx)(_o, { variant: `primary`, size: `lg`, shape: `rounded`, onClick: i2, disabled: r2 || p2 && !t2, "aria-label": `Play`, leftSection: (0, b.jsx)(Ha, { size: 18 }), children: (0, b.jsxs)(`span`, { children: [p2 && t2 ? `播放 S${t2.ParentIndexNumber ?? 1}:E${t2.IndexNumber ?? 1}${D2 ? ` (${D2})` : ``}` : `Play${D2 ? ` ${D2}` : ``}`] }) }) }),
+  (sal || ssl) ? (0, b.jsxs)(`div`, {
+    style: { display: "flex", alignItems: "center", flexWrap: "wrap", marginTop: "2px", marginBottom: "4px" },
+    children: [
+      sal ? (0, b.jsxs)(`span`, {
+        style: { display: "inline-flex", alignItems: "center", background: "rgba(56, 189, 248, 0.12)", color: "#38bdf8", border: "1px solid rgba(56, 189, 248, 0.3)", borderRadius: "6px", padding: "2px 8px", fontSize: "0.75rem", fontWeight: 500, marginRight: "8px", marginBottom: "4px" },
+        children: [(0, b.jsx)(`span`, { style: { marginRight: "4px" }, children: `🔊` }), (0, b.jsx)(`span`, { children: `音轨: ` + sal })]
+      }) : null,
+      ssl ? (0, b.jsxs)(`span`, {
+        style: { display: "inline-flex", alignItems: "center", background: "rgba(192, 132, 252, 0.12)", color: "#c084fc", border: "1px solid rgba(192, 132, 252, 0.3)", borderRadius: "6px", padding: "2px 8px", fontSize: "0.75rem", fontWeight: 500, marginRight: "8px", marginBottom: "4px" },
+        children: [(0, b.jsx)(`span`, { style: { marginRight: "4px" }, children: `💬` }), (0, b.jsx)(`span`, { children: `字幕: ` + ssl })]
+      }) : null
+    ]
+  }) : null,
   oe2 ? (0, b.jsxs)(`p`, { className: H.overview, children: [ae2 ? (0, b.jsxs)(`strong`, { className: H.overviewPrefix, children: [ae2, ` \u2022 `] }) : null, oe2] }) : null,
   e2?.People && e2.People.length > 0 ? (0, b.jsx)(CastSection, { people: e2.People, server: n2 }) : null,
-  (0, b.jsx)(MediaInfoSection, { item: m2 || e2 })
+  (0, b.jsx)(MediaInfoSection, { item: m2 || e2, selectedAudioIndex: sa, onSelectAudioIndex: ssa, selectedSubtitleIndex: ss, onSelectSubtitleIndex: sss })
 ] }), f2 && e2 && u2 && (0, b.jsx)(Vo, { opened: u2, onClose: () => d2(false), item: e2, server: n2, onSuccess: (t3) => {
     if (console.log(`[ItemHero:Identify] Identify completed for "${e2.Name}" (${e2.Id}) with:`, t3), t3 && n2) {
       let r3 = t3.ImageUrl || t3.ThumbnailUrl;
@@ -11983,7 +12026,20 @@ function as() {
   let { isSeries: m2, nextUpEpisode: h2, seasons: g2, selectedSeasonId: v2, setSelectedSeasonId: y2, episodes: x2, isEpisodesLoading: S2 } = rs(r2, d2);
   if (!r2) return null;
   let C2 = m2 ? h2 || x2[0] : d2;
-  return (0, b.jsxs)(`div`, { className: is.container, children: [(0, b.jsx)(es, { item: d2, nextUpEpisode: h2, activeServer: r2, isPlaying: o2, onPlay: () => {
+  let [selAudio, setSelAudio] = (0, _.useState)(void 0);
+  let [selSub, setSelSub] = (0, _.useState)(void 0);
+  let curStreams = (C2 || d2)?.MediaStreams || (C2 || d2)?.MediaSources?.[0]?.MediaStreams || [];
+  let aStreams = Array.isArray(curStreams) ? curStreams.filter((s) => s.Type === "Audio") : [];
+  let sStreams = Array.isArray(curStreams) ? curStreams.filter((s) => s.Type === "Subtitle") : [];
+  let effAudio = selAudio !== void 0 ? selAudio : (aStreams.find((s) => s.IsDefault) || aStreams[0])?.Index;
+  let effSub = selSub !== void 0 ? selSub : (sStreams.find((s) => s.IsDefault) || sStreams[0])?.Index;
+
+  let activeAudioStream = aStreams.find((s) => s.Index === effAudio);
+  let activeSubStream = sStreams.find((s) => s.Index === effSub);
+  let audioLabel = activeAudioStream ? (activeAudioStream.DisplayLanguage || activeAudioStream.Language || "Audio") + (activeAudioStream.ChannelLayout ? " • " + activeAudioStream.ChannelLayout : "") : void 0;
+  let subLabel = effSub === -1 ? "关闭字幕" : activeSubStream ? (activeSubStream.DisplayLanguage || activeSubStream.Language || "Sub") + " (" + (activeSubStream.Codec || "SRT").toUpperCase() + ")" : void 0;
+
+  return (0, b.jsxs)(`div`, { className: is.container, children: [(0, b.jsx)(es, { item: d2, nextUpEpisode: h2, activeServer: r2, isPlaying: o2, selectedAudioLabel: audioLabel, selectedSubtitleLabel: subLabel, selectedAudioIndex: effAudio, onSelectAudioIndex: setSelAudio, selectedSubtitleIndex: effSub, onSelectSubtitleIndex: setSelSub, onPlay: () => {
     if (C2 && !o2) {
       if (C2.Type === `Series`) {
         console.warn(`Cannot stream a Series container directly without an episode`);
@@ -11992,14 +12048,14 @@ function as() {
       try {
         s2(true);
         let e3 = C2.Name || `Media`;
-        d2?.Type === `Series` && (e3 = Di(d2.Name, C2.ParentIndexNumber ?? 1, C2.IndexNumber, C2.Name)), i2({ title: e3, streamUrl: Ki(r2, C2.Id), startPositionTicks: C2.UserData?.PlaybackPositionTicks });
+        d2?.Type === `Series` && (e3 = Di(d2.Name, C2.ParentIndexNumber ?? 1, C2.IndexNumber, C2.Name)), i2({ title: e3, streamUrl: Ki(r2, C2.Id), startPositionTicks: C2.UserData?.PlaybackPositionTicks, selectedAudioIndex: effAudio, selectedSubtitleIndex: effSub });
       } finally {
         s2(false);
       }
     }
   }, onBack: () => t2(-1), onRefresh: p2, isRefreshing: f2 }), m2 && (0, b.jsx)(ns, { activeServer: r2, seasons: g2, selectedSeasonId: v2, onSelectSeason: (e3) => y2(e3), episodes: x2, isLoading: S2, onPlayEpisode: (e3) => {
     let t3 = Di(d2?.Name, e3.ParentIndexNumber, e3.IndexNumber, e3.Name);
-    i2({ title: t3, streamUrl: Ki(r2, e3.Id), startPositionTicks: e3.UserData?.PlaybackPositionTicks });
+    i2({ title: t3, streamUrl: Ki(r2, e3.Id), startPositionTicks: e3.UserData?.PlaybackPositionTicks, selectedAudioIndex: effAudio, selectedSubtitleIndex: effSub });
   }, onEpisodeClick: l2 }), (0, b.jsx)(Yo, { episode: c2, onClose: () => l2(null) })] });
 }
 var os = { toolbar: `_toolbar_jur9t_1`, leftGroup: `_leftGroup_jur9t_10`, centerGroup: `_centerGroup_jur9t_18`, searchWrapper: `_searchWrapper_jur9t_28`, searchIcon: `_searchIcon_jur9t_52`, searchInput: `_searchInput_jur9t_59`, clearBtn: `_clearBtn_jur9t_77`, rightGroup: `_rightGroup_jur9t_99` }, ss = [{ value: `all`, label: `All` }, { value: `unplayed`, label: `Unplayed` }, { value: `inprogress`, label: `In Progress` }, { value: `played`, label: `Played` }], cs = [{ value: `name`, label: `Name` }, { value: `date`, label: `Date Added` }, { value: `year`, label: `Release Year` }, { value: `rating`, label: `Rating` }];
@@ -13503,11 +13559,57 @@ html, body {
 ._streamItem_custom {
   display: flex !important;
   flex-direction: column !important;
-  gap: 0.25rem !important;
   padding: 0.5rem 0.625rem !important;
   background: rgba(255, 255, 255, 0.03) !important;
   border-radius: 6px !important;
-  border: 1px solid rgba(255, 255, 255, 0.04) !important;
+  border: 1px solid rgba(255, 255, 255, 0.06) !important;
+  margin-bottom: 0.5rem !important;
+}
+._streamItemSelectable_custom {
+  cursor: pointer !important;
+  transition: all 0.18s ease !important;
+  user-select: none !important;
+}
+._streamItemSelectable_custom:hover {
+  background: rgba(255, 255, 255, 0.08) !important;
+  border-color: rgba(255, 255, 255, 0.22) !important;
+  transform: translateY(-1px) !important;
+}
+._streamItemSelectedAudio_custom {
+  background: rgba(56, 189, 248, 0.14) !important;
+  border-color: rgba(56, 189, 248, 0.55) !important;
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.18) !important;
+}
+._streamItemSelectedSubtitle_custom {
+  background: rgba(192, 132, 252, 0.14) !important;
+  border-color: rgba(192, 132, 252, 0.55) !important;
+  box-shadow: 0 0 10px rgba(192, 132, 252, 0.18) !important;
+}
+._badgeSelectedAudio_custom {
+  background: #38bdf8 !important;
+  color: #082f49 !important;
+  border-radius: 4px !important;
+  padding: 1px 6px !important;
+  font-size: 0.6875rem !important;
+  font-weight: 700 !important;
+  line-height: 1.4 !important;
+  margin-left: auto !important;
+}
+._badgeSelectedSubtitle_custom {
+  background: #c084fc !important;
+  color: #3b0764 !important;
+  border-radius: 4px !important;
+  padding: 1px 6px !important;
+  font-size: 0.6875rem !important;
+  font-weight: 700 !important;
+  line-height: 1.4 !important;
+  margin-left: auto !important;
+}
+._cardHeaderRight_custom {
+  margin-left: auto !important;
+  font-size: 0.6875rem !important;
+  color: rgba(255, 255, 255, 0.45) !important;
+  font-weight: 500 !important;
 }
 ._streamMain_custom {
   display: flex !important;

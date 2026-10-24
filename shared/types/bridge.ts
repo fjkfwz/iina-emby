@@ -19,6 +19,8 @@ export interface PlayMediaPayload {
   title?: string;
   startPositionTicks?: number;
   startPositionSeconds?: number;
+  selectedAudioIndex?: number;
+  selectedSubtitleIndex?: number;
   [key: string]: unknown;
 }
 

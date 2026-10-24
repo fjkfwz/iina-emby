@@ -127,7 +127,61 @@
   padding: 0.5rem 0.625rem;
   background: rgba(255, 255, 255, 0.03);
   border-radius: 6px;
-  border: 1px solid rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  margin-bottom: 0.5rem;
+}
+
+.streamItemSelectable {
+  cursor: pointer;
+  transition: all 0.18s ease;
+  user-select: none;
+}
+
+.streamItemSelectable:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.2);
+  transform: translateY(-1px);
+}
+
+.streamItemSelectedAudio {
+  background: rgba(56, 189, 248, 0.14) !important;
+  border-color: rgba(56, 189, 248, 0.5) !important;
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.15) !important;
+}
+
+.streamItemSelectedSubtitle {
+  background: rgba(192, 132, 252, 0.14) !important;
+  border-color: rgba(192, 132, 252, 0.5) !important;
+  box-shadow: 0 0 10px rgba(192, 132, 252, 0.15) !important;
+}
+
+.badgeSelectedAudio {
+  background: #38bdf8;
+  color: #082f49;
+  border-radius: 4px;
+  padding: 1px 6px;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  line-height: 1.4;
+  margin-left: auto;
+}
+
+.badgeSelectedSubtitle {
+  background: #c084fc;
+  color: #3b0764;
+  border-radius: 4px;
+  padding: 1px 6px;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  line-height: 1.4;
+  margin-left: auto;
+}
+
+.cardHeaderRight {
+  margin-left: auto;
+  font-size: 0.6875rem;
+  color: rgba(255, 255, 255, 0.45);
+  font-weight: 500;
 }
 
 .streamMain {

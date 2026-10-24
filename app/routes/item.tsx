@@ -70,6 +70,38 @@ export default function ItemDetailRoute() {
 
   const playTarget = isSeries ? nextUpEpisode || episodes[0] : item;
 
+  const mediaStreams =
+    (playTarget || item)?.MediaStreams || (playTarget || item)?.MediaSources?.[0]?.MediaStreams || [];
+  const audioStreams = Array.isArray(mediaStreams) ? mediaStreams.filter((s) => s.Type === "Audio") : [];
+  const subtitleStreams = Array.isArray(mediaStreams) ? mediaStreams.filter((s) => s.Type === "Subtitle") : [];
+
+  const [selectedAudioIndex, setSelectedAudioIndex] = useState<number | undefined>(undefined);
+  const [selectedSubtitleIndex, setSelectedSubtitleIndex] = useState<number | undefined>(undefined);
+
+  const effectiveAudioIndex =
+    selectedAudioIndex !== undefined
+      ? selectedAudioIndex
+      : (audioStreams.find((s) => s.IsDefault) || audioStreams[0])?.Index;
+
+  const effectiveSubtitleIndex =
+    selectedSubtitleIndex !== undefined
+      ? selectedSubtitleIndex
+      : (subtitleStreams.find((s) => s.IsDefault) || subtitleStreams[0])?.Index;
+
+  const selectedAudioStream = audioStreams.find((s) => s.Index === effectiveAudioIndex);
+  const selectedSubtitleStream = subtitleStreams.find((s) => s.Index === effectiveSubtitleIndex);
+
+  const selectedAudioLabel = selectedAudioStream
+    ? `${selectedAudioStream.DisplayLanguage || selectedAudioStream.Language || "Audio"}${selectedAudioStream.ChannelLayout ? ` • ${selectedAudioStream.ChannelLayout}` : ""}`
+    : undefined;
+
+  const selectedSubtitleLabel =
+    effectiveSubtitleIndex === -1
+      ? "关闭字幕"
+      : selectedSubtitleStream
+        ? `${selectedSubtitleStream.DisplayLanguage || selectedSubtitleStream.Language || "Sub"} (${selectedSubtitleStream.Codec?.toUpperCase() || "SRT"})`
+        : undefined;
+
   // Main hero playback execution
   const handlePlay = () => {
     if (!playTarget || isPlaying) return;
@@ -92,6 +124,8 @@ export default function ItemDetailRoute() {
         title: playTitle,
         streamUrl: buildStreamUrl(activeServer, playTarget.Id),
         startPositionTicks: playTarget.UserData?.PlaybackPositionTicks,
+        selectedAudioIndex: effectiveAudioIndex,
+        selectedSubtitleIndex: effectiveSubtitleIndex,
       });
     } finally {
       setIsPlaying(false);
@@ -106,6 +140,8 @@ export default function ItemDetailRoute() {
       title: playTitle,
       streamUrl: buildStreamUrl(activeServer, ep.Id),
       startPositionTicks: ep.UserData?.PlaybackPositionTicks,
+      selectedAudioIndex: effectiveAudioIndex,
+      selectedSubtitleIndex: effectiveSubtitleIndex,
     });
   };
 
@@ -120,6 +156,8 @@ export default function ItemDetailRoute() {
         onBack={() => navigate(-1)}
         onRefresh={handleRefresh}
         isRefreshing={isRefreshing}
+        selectedAudioLabel={selectedAudioLabel}
+        selectedSubtitleLabel={selectedSubtitleLabel}
       />
 
       {isSeries && (
@@ -135,7 +173,13 @@ export default function ItemDetailRoute() {
         />
       )}
 
-      <ItemMediaInfo item={playTarget || item} />
+      <ItemMediaInfo
+        item={playTarget || item}
+        selectedAudioIndex={effectiveAudioIndex}
+        onSelectAudioIndex={setSelectedAudioIndex}
+        selectedSubtitleIndex={effectiveSubtitleIndex}
+        onSelectSubtitleIndex={setSelectedSubtitleIndex}
+      />
 
       <EpisodeDetailModal episode={detailEpisode} onClose={() => setDetailEpisode(null)} onPlay={handlePlayEpisode} />
     </div>
