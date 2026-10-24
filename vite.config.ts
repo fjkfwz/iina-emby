@@ -22,6 +22,15 @@ export default defineConfig({
     viteSingleFile({
       removeViteModuleLoader: true,
     }),
+    {
+      name: "remove-module-type",
+      enforce: "post",
+      transformIndexHtml(html) {
+        return html
+          .replace(/<script type="module" crossorigin>/gi, "<script>")
+          .replace(/<script type="module">/gi, "<script>");
+      },
+    },
   ],
   build: {
     outDir: "dist/client",
