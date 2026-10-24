@@ -1,5 +1,5 @@
 import { type EmbyItemMetadata, type EmbyPerson, type EmbyServer, getEmbyImageUrl, getItemImageUrl } from "@shared";
-import { IconFingerprint, IconPlayerPlayFilled } from "@tabler/icons-react";
+import { IconFingerprint, IconHeart, IconHeartFilled, IconPlayerPlayFilled } from "@tabler/icons-react";
 import { useState } from "react";
 import { isIdentifySupported } from "../lib/emby-library-client";
 import { formatResumeTime, getMediaBadges } from "../lib/media-formatters";
@@ -33,6 +33,44 @@ export function ItemHero({
 }: ItemHeroProps) {
   const [logoError, setLogoError] = useState(false);
   const [isIdentifyOpen, setIsIdentifyOpen] = useState(false);
+  const [favUpdating, setFavUpdating] = useState(false);
+
+  const isFavorite = Boolean(item?.UserData?.IsFavorite);
+
+  const toggleFavorite = async () => {
+    if (!item?.Id || favUpdating) return;
+    setFavUpdating(true);
+    try {
+      const base = activeServer.serverUrl.replace(/\/+$/, "");
+      const url = `${base}/Users/${encodeURIComponent(activeServer.userId)}/FavoriteItems/${encodeURIComponent(item.Id)}`;
+      const resp = await fetch(url, {
+        method: isFavorite ? "DELETE" : "POST",
+        headers: {
+          "X-Emby-Token": activeServer.accessToken,
+          Accept: "application/json",
+        },
+      });
+      if (resp.ok) {
+        const updatedUserData = await resp.json();
+        queryClient.setQueryData<EmbyItemMetadata>(embyKeys.item(activeServer.id, item.Id), (old) => {
+          if (!old) return old;
+          return {
+            ...old,
+            UserData: {
+              ...old.UserData,
+              ...updatedUserData,
+              IsFavorite: !isFavorite,
+            },
+          };
+        });
+        queryClient.invalidateQueries({ queryKey: [...embyKeys.server(activeServer.id), "favorites"] });
+      }
+    } catch (err) {
+      console.error("Toggle favorite failed:", err);
+    } finally {
+      setFavUpdating(false);
+    }
+  };
 
   const canIdentify = Boolean(activeServer.user?.Policy?.IsAdministrator) && isIdentifySupported(item?.Type);
   const isSeries = item?.Type === "Series";
@@ -138,19 +176,35 @@ export function ItemHero({
           isRefreshing={isRefreshing}
           className={styles.pageHeader}
           rightSection={
-            canIdentify ? (
+            <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
               <GlassElement
-                variant="glass"
+                variant={isFavorite ? "primary" : "glass"}
                 shape="rounded"
                 size="sm"
-                isIconOnly
-                onClick={() => setIsIdentifyOpen(true)}
-                title="Identify"
-                aria-label="Identify metadata"
+                onClick={toggleFavorite}
+                disabled={favUpdating}
+                title={isFavorite ? "取消收藏" : "加入收藏"}
+                aria-label={isFavorite ? "取消收藏" : "加入收藏"}
               >
-                <IconFingerprint size={16} />
+                <div style={{ display: "flex", alignItems: "center", gap: "5px", padding: "0 4px" }}>
+                  {isFavorite ? <IconHeartFilled size={15} color="#ff4757" /> : <IconHeart size={15} />}
+                  <span style={{ fontSize: "0.78rem", fontWeight: 500 }}>{isFavorite ? "已收藏" : "收藏"}</span>
+                </div>
               </GlassElement>
-            ) : undefined
+              {canIdentify ? (
+                <GlassElement
+                  variant="glass"
+                  shape="rounded"
+                  size="sm"
+                  isIconOnly
+                  onClick={() => setIsIdentifyOpen(true)}
+                  title="Identify"
+                  aria-label="Identify metadata"
+                >
+                  <IconFingerprint size={16} />
+                </GlassElement>
+              ) : null}
+            </div>
           }
         />
       </div>
