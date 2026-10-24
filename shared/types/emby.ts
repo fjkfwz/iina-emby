@@ -157,6 +157,15 @@ export interface EmbyMediaSource {
   [key: string]: unknown;
 }
 
+export interface EmbyPerson {
+  Id?: string;
+  Name?: string;
+  Role?: string;
+  Type?: "Actor" | "Director" | "Writer" | "Producer" | string;
+  PrimaryImageTag?: string;
+  [key: string]: unknown;
+}
+
 export interface EmbyItemMetadata {
   Id: string;
   Name?: string;
@@ -178,6 +187,7 @@ export interface EmbyItemMetadata {
   OfficialRating?: string;
   Genres?: string[];
   GenreItems?: Array<{ Name: string; Id?: string | number }>;
+  People?: EmbyPerson[];
   MediaStreams?: EmbyMediaStream[];
   UserData?: EmbyUserData;
   MediaSources?: EmbyMediaSource[];

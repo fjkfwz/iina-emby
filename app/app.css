@@ -16,10 +16,16 @@ body {
   min-height: 100vh;
 }
 
-/* Custom scrollbars matching macOS dark vibrancy */
-/*::-webkit-scrollbar {
-  width: 0.5rem;
-  height: 0.5rem;
+/* Subtle, Inconspicuous Custom Scrollbars matching dark theme */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.18) transparent;
+}
+
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+  background: transparent;
 }
 
 ::-webkit-scrollbar-track {
@@ -27,10 +33,25 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--bg-control);
-  border-radius: var(--radius-m);
+  background: rgba(255, 255, 255, 0.18);
+  border-radius: 999px;
+  transition: background 0.2s ease;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--bg-control-active);
-}*/
+  background: rgba(255, 255, 255, 0.38);
+}
+
+::-webkit-scrollbar-thumb:active {
+  background: rgba(255, 255, 255, 0.55);
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+::-webkit-scrollbar-button {
+  display: none;
+  width: 0;
+  height: 0;
+}

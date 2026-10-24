@@ -35,6 +35,8 @@ export default function ItemDetailRoute() {
       return fetchItemDetails(activeServer, id, signal, true);
     },
     placeholderData: stateItem,
+    staleTime: 0,
+    refetchOnMount: true,
     enabled: Boolean(activeServer?.id && id),
   });
 

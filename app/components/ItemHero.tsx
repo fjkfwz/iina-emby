@@ -1,4 +1,4 @@
-import { type EmbyItemMetadata, type EmbyServer, getEmbyImageUrl, getItemImageUrl } from "@shared";
+import { type EmbyItemMetadata, type EmbyPerson, type EmbyServer, getEmbyImageUrl, getItemImageUrl } from "@shared";
 import { IconFingerprint, IconPlayerPlayFilled } from "@tabler/icons-react";
 import { useState } from "react";
 import { isIdentifySupported } from "../lib/emby-library-client";
@@ -215,6 +215,9 @@ export function ItemHero({
             ) : null}
           </div>
         </div>
+
+        {/* Row 3: Full-width Cast & Crew Section */}
+        {item?.People && item.People.length > 0 && <CastSection people={item.People} server={activeServer} />}
       </main>
 
       {canIdentify && item && isIdentifyOpen && (
@@ -245,5 +248,69 @@ export function ItemHero({
         />
       )}
     </>
+  );
+}
+
+interface CastSectionProps {
+  people: EmbyPerson[];
+  server: EmbyServer;
+}
+
+function CastSection({ people, server }: CastSectionProps) {
+  if (!people || people.length === 0) return null;
+  const list = people.slice(0, 30);
+
+  return (
+    <section className={styles.castSection}>
+      <div className={styles.castHeader}>
+        <h3 className={styles.castTitle}>演职人员</h3>
+      </div>
+      <div className={styles.castScroller}>
+        {list.map((p, idx) => {
+          const avatarUrl =
+            p.PrimaryImageTag && server
+              ? getEmbyImageUrl(server.serverUrl, p.Id || "", {
+                  imageType: "Primary",
+                  maxWidth: 160,
+                  maxHeight: 160,
+                  tag: p.PrimaryImageTag,
+                  accessToken: server.accessToken,
+                })
+              : null;
+          const role =
+            (p.Role && p.Role !== "None"
+              ? p.Role
+              : p.Type === "Director"
+                ? "导演"
+                : p.Type === "Actor"
+                  ? "演员"
+                  : p.Type === "Writer"
+                    ? "编剧"
+                    : p.Type) || "";
+
+          return (
+            <div key={p.Id || `person-${idx}`} className={styles.castCard}>
+              <div className={styles.castAvatarWrapper}>
+                {avatarUrl ? (
+                  <img src={avatarUrl} alt={p.Name || ""} className={styles.castAvatar} loading="lazy" />
+                ) : (
+                  <div className={styles.castAvatarPlaceholder}>
+                    <span>{p.Name ? p.Name.charAt(0).toUpperCase() : "?"}</span>
+                  </div>
+                )}
+              </div>
+              <span className={styles.castName} title={p.Name}>
+                {p.Name}
+              </span>
+              {role ? (
+                <span className={styles.castRole} title={role}>
+                  {role}
+                </span>
+              ) : null}
+            </div>
+          );
+        })}
+      </div>
+    </section>
   );
 }

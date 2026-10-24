@@ -200,3 +200,20 @@ global.onMessage("create-player", (data: CreatePlayerData, player?: string) => {
 });
 
 debugLog("Global entry message listeners registered");
+
+// Auto-open Emby Browser on IINA launch
+try {
+  const shouldAutoOpen = preferences.get("auto_open_on_launch") !== false;
+  if (shouldAutoOpen) {
+    debugLog("Auto-opening Emby standalone browser on IINA launch");
+    setTimeout(() => {
+      try {
+        openEmbyStandaloneWindow();
+      } catch (err: unknown) {
+        console.error(`[iina-emby] Error auto-opening standalone window: ${err instanceof Error ? err.message : String(err)}`);
+      }
+    }, 500);
+  }
+} catch (e: unknown) {
+  debugLog(`Error in auto_open_on_launch: ${e instanceof Error ? e.message : String(e)}`);
+}

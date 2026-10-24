@@ -45,11 +45,14 @@ export interface MediaBadges {
 }
 
 export function getMediaBadges(targetItem?: EmbyItemMetadata, fallbackItem?: EmbyItemMetadata): MediaBadges {
-  const activeMediaStreams: EmbyMediaStream[] = Array.isArray(targetItem?.MediaStreams)
-    ? (targetItem.MediaStreams as EmbyMediaStream[])
-    : [];
+  const activeMediaStreams: EmbyMediaStream[] =
+    Array.isArray(targetItem?.MediaStreams) && targetItem.MediaStreams.length > 0
+      ? (targetItem.MediaStreams as EmbyMediaStream[])
+      : Array.isArray(fallbackItem?.MediaStreams)
+        ? (fallbackItem.MediaStreams as EmbyMediaStream[])
+        : [];
   const videoStream = activeMediaStreams.find((s) => s.Type === "Video");
-  const mediaSource = targetItem?.MediaSources?.[0];
+  const mediaSource = targetItem?.MediaSources?.[0] || fallbackItem?.MediaSources?.[0];
 
   const durationText = formatDuration(targetItem?.RunTimeTicks || fallbackItem?.RunTimeTicks);
   const premiereDateText = formatPremiereDate(
@@ -86,7 +89,7 @@ export function getMediaBadges(targetItem?: EmbyItemMetadata, fallbackItem?: Emb
   }
 
   let sizeBadge: string | null = null;
-  const fileSize = mediaSource?.Size as number | undefined;
+  const fileSize = mediaSource?.Size ?? (targetItem?.Size as number | undefined) ?? (fallbackItem?.Size as number | undefined);
   if (fileSize && fileSize > 0) {
     sizeBadge = `${(fileSize / (1024 * 1024 * 1024)).toFixed(2)}G`;
   }

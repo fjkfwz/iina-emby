@@ -3,7 +3,7 @@
 // shared/constants.ts
 var CLIENT_NAME = "IINA Emby Plugin";
 var DEVICE_NAME = "IINA";
-var CLIENT_VERSION = true ? "0.6.1" : "0.1.0";
+var CLIENT_VERSION = true ? "0.6.2" : "0.1.0";
 var WINDOW_DIMENSIONS = {
   DEFAULT_WIDTH: 960,
   DEFAULT_HEIGHT: 680,
@@ -919,3 +919,18 @@ global.onMessage("create-player", (data, player) => {
   }
 });
 debugLog("Global entry message listeners registered");
+try {
+  const shouldAutoOpen = preferences.get("auto_open_on_launch") !== false;
+  if (shouldAutoOpen) {
+    debugLog("Auto-opening Emby standalone browser on IINA launch");
+    setTimeout(() => {
+      try {
+        openEmbyStandaloneWindow();
+      } catch (err) {
+        console.error(`[iina-emby] Error auto-opening standalone window: ${err instanceof Error ? err.message : String(err)}`);
+      }
+    }, 500);
+  }
+} catch (e) {
+  debugLog(`Error in auto_open_on_launch: ${e instanceof Error ? e.message : String(e)}`);
+}
