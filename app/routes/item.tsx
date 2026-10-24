@@ -129,7 +129,7 @@ export default function ItemDetailRoute() {
         />
       )}
 
-      <EpisodeDetailModal episode={detailEpisode} onClose={() => setDetailEpisode(null)} />
+      <EpisodeDetailModal episode={detailEpisode} onClose={() => setDetailEpisode(null)} onPlay={handlePlayEpisode} />
     </div>
   );
 }

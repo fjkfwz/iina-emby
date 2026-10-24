@@ -67,7 +67,7 @@ export const SeriesEpisodesShelf = memo(function SeriesEpisodesShelf({
                   subtitle={ep.Overview || undefined}
                   subtitleLines={3}
                   onPlay={() => onPlayEpisode(ep)}
-                  onClick={() => onEpisodeClick(ep)}
+                  onClick={() => onPlayEpisode(ep)}
                 />
               );
             })}

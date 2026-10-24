@@ -90,28 +90,34 @@
 .dropdown {
   outline: none;
   position: fixed;
+  z-index: 9999;
   inset: auto;
   margin: 0;
   min-width: 11rem;
   padding: 0.3125rem;
-  background: var(--bg-dialog);
+  background: var(--bg-dialog, rgba(30, 30, 34, 0.96));
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   color: var(--text-primary);
-  border: 1px solid var(--border-control);
+  border: 1px solid var(--border-control, rgba(255, 255, 255, 0.15));
   border-radius: var(--radius-l);
-  box-shadow: var(--shadow-dialog);
+  box-shadow: var(--shadow-dialog, 0 10px 30px rgba(0, 0, 0, 0.5));
   max-height: 18rem;
   overflow-y: auto;
   box-sizing: border-box;
   opacity: 0;
+  pointer-events: none;
   transform: scale(0.97);
   transform-origin: top left;
   transition:
     opacity 0.12s ease,
-    transform 0.12s ease,
-    overlay 0.12s allow-discrete,
-    display 0.12s allow-discrete;
+    transform 0.12s ease;
+}
+
+.dropdownOpen {
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  transform: scale(1) !important;
 }
 
 .dropdown[data-align="end"] {

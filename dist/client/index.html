@@ -11352,25 +11352,39 @@ var vo = { inputWrapper: `_inputWrapper_9z26l_1`, inputWrapperSm: `_inputWrapper
       `.trim(), children: [n2 && (0, b.jsx)(`span`, { className: vo.leftSection, children: n2 }), (0, b.jsx)(`input`, { ref: c2, disabled: o2, className: `${vo.input} ${i2}`.trim(), ...s2 }), r2 && (0, b.jsx)(`span`, { className: vo.rightSection, children: r2 })] });
 }), bo = { container: `_container_4xks8_1`, trigger: `_trigger_4xks8_6`, triggerSm: `_triggerSm_4xks8_30`, triggerLeft: `_triggerLeft_4xks8_54`, triggerIcon: `_triggerIcon_4xks8_62`, value: `_value_4xks8_70`, chevron: `_chevron_4xks8_76`, chevronOpen: `_chevronOpen_4xks8_85`, dropdown: `_dropdown_4xks8_90`, item: `_item_4xks8_150`, itemIcon: `_itemIcon_4xks8_184`, itemSelected: `_itemSelected_4xks8_192`, label: `_label_4xks8_201`, checkIcon: `_checkIcon_4xks8_220` };
 function xo({ data: e2, value: t2, onChange: n2, allowDeselect: r2 = false, className: i2, placeholder: a2 = `Select...`, icon: o2, size: s2 = `md`, disabled: c2 = false, placement: l2 = `bottom-start` }) {
-  let u2 = (0, _.useId)(), d2 = (0, _.useRef)(null), f2 = (0, _.useRef)(null), [p2, m2] = (0, _.useState)(false), h2 = (0, _.useRef)(false), g2 = (0, _.useRef)(``), v2 = (0, _.useRef)(null), y2 = e2.map((e3) => typeof e3 == `string` ? { value: e3, label: e3 } : e3), x2 = y2.find((e3) => e3.value === t2), S2 = o2 ?? x2?.icon, { updatePosition: C2 } = to({ triggerRef: d2, popoverRef: f2, placement: l2, offset: 4 }), ee2 = (0, _.useCallback)(() => {
-    f2.current?.hidePopover();
+  let u2 = (0, _.useId)(), d2 = (0, _.useRef)(null), f2 = (0, _.useRef)(null), [p2, m2] = (0, _.useState)(false), g2 = (0, _.useRef)(``), v2 = (0, _.useRef)(null), y2 = e2.map((e3) => typeof e3 == `string` ? { value: e3, label: e3 } : e3), x2 = y2.find((e3) => e3.value === t2), S2 = o2 ?? x2?.icon, { updatePosition: C2 } = to({ triggerRef: d2, popoverRef: f2, placement: l2, offset: 4 }), ee2 = (0, _.useCallback)(() => {
+    m2(false);
   }, []);
-  (0, _.useLayoutEffect)(() => {
-    let e3 = f2.current;
-    if (!e3) return;
-    let t3 = (t4) => {
-      let n3 = t4.newState === `open`;
-      if (m2(n3), !n3) {
-        let t5 = document.activeElement;
-        if (t5 && t5 !== document.body && !e3.contains(t5)) return;
+
+  (0, _.useEffect)(() => {
+    if (!p2) return;
+    let onDocClick = (ev) => {
+      let target = ev.target;
+      if (f2.current && !f2.current.contains(target) && d2.current && !d2.current.contains(target)) {
+        m2(false);
+      }
+    };
+    let onKey = (ev) => {
+      if (ev.key === `Escape`) {
+        m2(false);
         d2.current?.focus({ preventScroll: true });
       }
     };
-    return e3.addEventListener(`toggle`, t3), () => e3.removeEventListener(`toggle`, t3);
-  }, []), (0, _.useLayoutEffect)(() => {
+    document.addEventListener(`mousedown`, onDocClick);
+    document.addEventListener(`touchstart`, onDocClick);
+    document.addEventListener(`keydown`, onKey);
+    return () => {
+      document.removeEventListener(`mousedown`, onDocClick);
+      document.removeEventListener(`touchstart`, onDocClick);
+      document.removeEventListener(`keydown`, onKey);
+    };
+  }, [p2]);
+
+  (0, _.useLayoutEffect)(() => {
     if (!p2) return;
     let e3 = f2.current, t3 = d2.current;
-    e3 && t3 && (e3.style.minWidth = `${t3.offsetWidth}px`), C2();
+    e3 && t3 && (e3.style.minWidth = `${t3.offsetWidth}px`);
+    C2();
     let n3 = e3?.querySelector(`[role="option"][aria-selected="true"]`), r3 = e3?.querySelector(`[role="option"]:not([aria-disabled="true"])`), i3 = n3 ?? r3;
     i3 && (i3.focus({ preventScroll: true }), i3.scrollIntoView({ block: `nearest` }));
     let a3 = () => ee2();
@@ -11378,20 +11392,24 @@ function xo({ data: e2, value: t2, onChange: n2, allowDeselect: r2 = false, clas
       window.removeEventListener(`resize`, a3), window.removeEventListener(`scroll`, a3, true);
     };
   }, [p2, C2, ee2]);
+
   let w2 = (e3) => {
-    r2 && e3 === t2 ? n2?.(null) : n2?.(e3), ee2();
+    r2 && e3 === t2 ? n2?.(null) : n2?.(e3);
+    m2(false);
   };
+
   return (0, b.jsxs)(`div`, { className: `${bo.container} ${i2 || ``}`, children: [(0, b.jsxs)(`button`, { ref: d2, type: `button`, className: `${bo.trigger} ${s2 === `sm` ? bo.triggerSm : ``}`, onClick: (e3) => {
-    if (e3.stopPropagation(), e3.preventDefault(), c2) return;
-    let t3 = f2.current;
-    if (!t3) return;
-    let n3 = h2.current || t3.matches(`:popover-open`);
-    h2.current = false, n3 ? t3.hidePopover() : t3.showPopover();
-  }, onPointerDown: () => {
-    h2.current = !!f2.current?.matches(`:popover-open`);
+    e3.stopPropagation();
+    e3.preventDefault();
+    if (c2) return;
+    m2(!p2);
   }, onKeyDown: (e3) => {
-    c2 || (e3.key === `ArrowDown` || e3.key === `ArrowUp` || e3.key === `Enter` || e3.key === ` `) && (e3.preventDefault(), f2.current?.showPopover());
-  }, "aria-haspopup": `listbox`, "aria-expanded": p2, "aria-controls": u2, disabled: c2, children: [(0, b.jsxs)(`span`, { className: bo.triggerLeft, children: [S2 && (0, b.jsx)(`span`, { className: bo.triggerIcon, children: S2 }), (0, b.jsx)(`span`, { className: bo.value, children: x2 ? x2.label : a2 })] }), (0, b.jsx)(`span`, { className: `${bo.chevron} ${p2 ? bo.chevronOpen : ``}`, children: (0, b.jsx)(ma, { size: 14, stroke: 2 }) })] }), (0, b.jsx)(`div`, { ref: f2, id: u2, popover: `auto`, role: `listbox`, "aria-label": a2, tabIndex: -1, className: bo.dropdown, onKeyDown: (e3) => {
+    if (c2) return;
+    if (e3.key === `ArrowDown` || e3.key === `ArrowUp` || e3.key === `Enter` || e3.key === ` `) {
+      e3.preventDefault();
+      m2(true);
+    }
+  }, "aria-haspopup": `listbox`, "aria-expanded": p2, "aria-controls": u2, disabled: c2, children: [(0, b.jsxs)(`span`, { className: bo.triggerLeft, children: [S2 && (0, b.jsx)(`span`, { className: bo.triggerIcon, children: S2 }), (0, b.jsx)(`span`, { className: bo.value, children: x2 ? x2.label : a2 })] }), (0, b.jsx)(`span`, { className: `${bo.chevron} ${p2 ? bo.chevronOpen : ``}`, children: (0, b.jsx)(ma, { size: 14, stroke: 2 }) })] }), (0, b.jsx)(`div`, { ref: f2, id: u2, role: `listbox`, "aria-label": a2, tabIndex: -1, className: bo.dropdown, style: { display: p2 ? `block` : `none`, opacity: p2 ? 1 : 0, pointerEvents: p2 ? `auto` : `none`, zIndex: 99999, transform: `scale(1)` }, onKeyDown: (e3) => {
     let t3 = Array.from(f2.current?.querySelectorAll(`[role="option"]:not([aria-disabled="true"])`) ?? []);
     if (!t3.length) return;
     let n3 = t3.indexOf(document.activeElement);
@@ -11945,7 +11963,7 @@ function ns({ activeServer: e2, seasons: t2, selectedSeasonId: n2, onSelectSeaso
     e3 && r2(e3);
   }, allowDeselect: false, className: ts.seasonSelect })] }), itemWidth: 300, gap: 16, emptyText: a2 ? void 0 : `No episodes available for this season.`, children: a2 && i2.length === 0 ? [1, 2, 3, 4, 5].map((e3) => (0, b.jsx)(Do, {}, e3)) : i2.map((t3) => {
     let n3 = Oi(t3.ParentIndexNumber, t3.IndexNumber, t3.Name || `Episode`);
-    return (0, b.jsx)(Oo, { item: t3, server: e2, title: n3, subtitle: t3.Overview || void 0, subtitleLines: 3, onPlay: () => o2(t3), onClick: () => s2(t3) }, t3.Id);
+    return (0, b.jsx)(Oo, { item: t3, server: e2, title: n3, subtitle: t3.Overview || void 0, subtitleLines: 3, onPlay: () => o2(t3), onClick: () => o2(t3) }, t3.Id);
   }) }) });
 }
 function rs(e2, t2) {

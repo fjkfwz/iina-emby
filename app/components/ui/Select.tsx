@@ -1,6 +1,6 @@
 import { IconCheck, IconChevronDown } from "@tabler/icons-react";
 import type React from "react";
-import { useCallback, useId, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { type PopoverPlacement, usePopoverPosition } from "../../hooks/usePopoverPosition";
 import classes from "./Select.module.css";
 
@@ -60,27 +60,38 @@ export function Select({
   });
 
   const close = useCallback(() => {
-    menuRef.current?.hidePopover();
+    setIsOpen(false);
   }, []);
 
-  // Sync React state with native popover state (light-dismiss, Esc, etc.)
-  useLayoutEffect(() => {
-    const m = menuRef.current;
-    if (!m) return;
-    const onToggle = (e: Event) => {
-      const open = (e as ToggleEvent).newState === "open";
-      setIsOpen(open);
-      if (!open) {
-        const active = document.activeElement;
-        if (active && active !== document.body && !m.contains(active)) {
-          return;
-        }
+  // Click outside to close (compatible with all WebKit / Safari versions)
+  useEffect(() => {
+    if (!isOpen) return;
+    const onPointerDown = (e: MouseEvent | TouchEvent) => {
+      const target = e.target as Node;
+      if (
+        menuRef.current &&
+        !menuRef.current.contains(target) &&
+        triggerRef.current &&
+        !triggerRef.current.contains(target)
+      ) {
+        setIsOpen(false);
+      }
+    };
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setIsOpen(false);
         triggerRef.current?.focus({ preventScroll: true });
       }
     };
-    m.addEventListener("toggle", onToggle);
-    return () => m.removeEventListener("toggle", onToggle);
-  }, []);
+    document.addEventListener("mousedown", onPointerDown);
+    document.addEventListener("touchstart", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", onPointerDown);
+      document.removeEventListener("touchstart", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [isOpen]);
 
   // Sync position and focus active item when opened
   useLayoutEffect(() => {
@@ -124,22 +135,14 @@ export function Select({
     e.stopPropagation();
     e.preventDefault();
     if (disabled) return;
-    const m = menuRef.current;
-    if (!m) return;
-    const wasOpen = wasOpenOnPointerDown.current || m.matches(":popover-open");
-    wasOpenOnPointerDown.current = false;
-    if (wasOpen) {
-      m.hidePopover();
-    } else {
-      m.showPopover();
-    }
+    setIsOpen((prev) => !prev);
   };
 
   const handleTriggerKeyDown = (e: React.KeyboardEvent) => {
     if (disabled) return;
     if (e.key === "ArrowDown" || e.key === "ArrowUp" || e.key === "Enter" || e.key === " ") {
       e.preventDefault();
-      menuRef.current?.showPopover();
+      setIsOpen(true);
     }
   };
 
@@ -210,9 +213,6 @@ export function Select({
         type="button"
         className={`${classes.trigger} ${size === "sm" ? classes.triggerSm : ""}`}
         onClick={handleTriggerClick}
-        onPointerDown={() => {
-          wasOpenOnPointerDown.current = !!menuRef.current?.matches(":popover-open");
-        }}
         onKeyDown={handleTriggerKeyDown}
         aria-haspopup="listbox"
         aria-expanded={isOpen}
@@ -231,11 +231,10 @@ export function Select({
       <div
         ref={menuRef}
         id={id}
-        popover="auto"
         role="listbox"
         aria-label={placeholder}
         tabIndex={-1}
-        className={classes.dropdown}
+        className={`${classes.dropdown} ${isOpen ? classes.dropdownOpen : ""}`}
         onKeyDown={handleMenuKeyDown}
         onClick={(e) => e.stopPropagation()}
       >
