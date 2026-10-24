@@ -59,8 +59,8 @@ export function createBrowserWindowManager({ core, sidebar, standaloneWindow, pr
           }
         });
 
-        // Register bridge handlers with auto-close on media play
-        registerBridgeHandlers(standaloneWindow, bridgeDeps, { closeOnPlay: true, isStandalone: true });
+        // Register bridge handlers (keep standalone window open on media play)
+        registerBridgeHandlers(standaloneWindow, bridgeDeps, { closeOnPlay: false, isStandalone: true });
       }
 
       // Open the window

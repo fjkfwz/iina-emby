@@ -229,7 +229,7 @@ function createBrowserWindowManager({ core, sidebar, standaloneWindow: standalon
             log(`Saved standalone window size: ${w}x${h}`);
           }
         });
-        registerBridgeHandlers(standaloneWindow2, bridgeDeps2, { closeOnPlay: true, isStandalone: true });
+        registerBridgeHandlers(standaloneWindow2, bridgeDeps2, { closeOnPlay: false, isStandalone: true });
       }
       standaloneWindow2.open();
       standaloneWindow2.postMessage("window-context", { isStandalone: true });
