@@ -9,7 +9,6 @@
 .shelfHeader {
   display: flex;
   align-items: center;
-  gap: 1rem;
 }
 
 .shelfTitle {
@@ -21,5 +20,6 @@
 }
 
 .seasonSelect {
+  margin-left: 1.25rem;
   width: 12rem;
 }
