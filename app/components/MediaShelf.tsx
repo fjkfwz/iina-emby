@@ -39,7 +39,8 @@ export function MediaShelf({ title, rightSection, children, itemWidth = 260, gap
     });
   }, []);
 
-  const childCount = React.Children.count(children);
+  const validChildren = React.Children.toArray(children).filter(Boolean);
+  const childCount = validChildren.length;
 
   useEffect(() => {
     if (childCount > 0) {
@@ -117,15 +118,19 @@ export function MediaShelf({ title, rightSection, children, itemWidth = 260, gap
       )}
 
       {childCount > 0 ? (
-        <div ref={scrollRef} className={classes.scroller} style={{ gap }} onScroll={checkScroll}>
-          {React.Children.map(children, (child) => {
-            if (!child) return null;
-            return (
-              <div className={classes.itemWrapper} style={{ width: itemWidth }}>
-                {child}
-              </div>
-            );
-          })}
+        <div ref={scrollRef} className={classes.scroller} onScroll={checkScroll}>
+          {validChildren.map((child, index) => (
+            <div
+              key={index}
+              className={classes.itemWrapper}
+              style={{
+                width: itemWidth,
+                marginRight: index < childCount - 1 ? gap : 0,
+              }}
+            >
+              {child}
+            </div>
+          ))}
         </div>
       ) : emptyText ? (
         <div className={classes.emptyText}>{emptyText}</div>

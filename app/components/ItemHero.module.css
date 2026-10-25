@@ -23,6 +23,10 @@
 
 .backdropOverlay {
   position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
   inset: 0;
   background: linear-gradient(180deg, rgba(22, 22, 26, 0.1) 0%, rgba(22, 22, 26, 0.45) 55%, rgba(22, 22, 26, 0.98) 100%),
               linear-gradient(90deg, rgba(22, 22, 26, 0.8) 0%, rgba(22, 22, 26, 0.3) 50%, transparent 100%);

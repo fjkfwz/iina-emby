@@ -18,6 +18,10 @@
 .header::before {
   content: "";
   position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
   inset: 0;
   z-index: -1;
   pointer-events: none;
@@ -57,6 +61,11 @@
   gap: 0.625rem;
   -webkit-app-region: no-drag;
   flex-shrink: 0;
+}
+
+.headerLeft > * + *,
+.headerRight > * + * {
+  margin-left: 0.625rem;
 }
 
 .headerCenter {

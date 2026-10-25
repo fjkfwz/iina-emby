@@ -28,6 +28,10 @@
 .header::before {
   content: "";
   position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
   inset: 0;
   z-index: -1;
   pointer-events: none;
@@ -66,6 +70,11 @@
   align-items: center;
   gap: 0.625rem;
   -webkit-app-region: no-drag;
+}
+
+.headerLeft > * + *,
+.headerRight > * + * {
+  margin-left: 0.625rem;
 }
 
 .serverBadge {
@@ -118,6 +127,14 @@
   flex-direction: column;
   gap: 1.75rem;
   box-sizing: border-box;
+}
+
+.content > * {
+  margin-bottom: 1.75rem;
+}
+
+.content > *:last-child {
+  margin-bottom: 0;
 }
 
 .alert {
