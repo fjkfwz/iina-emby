@@ -31,9 +31,6 @@ body {
   overscroll-behavior: none;
   background: var(--bg-window);
   position: relative;
-  will-change: scroll-position;
-  transform: translateZ(0);
-  -webkit-transform: translateZ(0);
 }
 
 /* Completely Transparent / Zero-Width Scrollbars (Zero Gutter) */

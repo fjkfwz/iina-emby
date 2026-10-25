@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import classes from "./ScrollProgress.module.css";
 
 export function ScrollProgress() {
@@ -161,7 +162,11 @@ export function ScrollProgress() {
 
   const isActive = isScrolling || isHovered || isDragging;
 
-  return (
+  if (typeof document === "undefined" || !document.body) {
+    return null;
+  }
+
+  return createPortal(
     <div
       ref={trackRef}
       className={`${classes.track} ${isActive ? classes.active : ""} ${!isScrollable ? classes.hidden : ""}`}
@@ -186,6 +191,7 @@ export function ScrollProgress() {
         onMouseDown={handleThumbMouseDown}
         onClick={(e) => e.stopPropagation()}
       />
-    </div>
+    </div>,
+    document.body
   );
 }
