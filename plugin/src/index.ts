@@ -103,6 +103,9 @@ const {
   getPendingIsExternalSubtitle,
   getPendingSubtitlePath,
   getPendingSubtitleCodec,
+  clearPendingSubtitle,
+  clearPendingAudio,
+  clearPendingTracks,
   setPendingPlaybackData,
 } = createPlaybackCoordinator({
   core,
@@ -148,6 +151,7 @@ if (iinaGlobal && typeof iinaGlobal.onMessage === "function") {
   iinaGlobal.onMessage("apply-pending-media", (data?: PlayMediaMessage) => {
     debugLog("Received apply-pending-media from global entry", data);
     if (!data) return;
+    markLaunchedFromBrowser();
     setPendingPlaybackData(data);
 
     if (typeof data.startPositionSeconds === "number" && data.startPositionSeconds > 0) {
@@ -159,23 +163,6 @@ if (iinaGlobal && typeof iinaGlobal.onMessage === "function") {
         }
       } catch {
         // Ignore
-      }
-    }
-
-    const resolvedUrl = getEffectiveFileUrl();
-    if (resolvedUrl) {
-      const embyInfo = parseEmbyUrl(resolvedUrl);
-      if (embyInfo) {
-        let reportServerBase = embyInfo.serverBase;
-        let reportApiKey = embyInfo.apiKey;
-        const session = getStoredEmbySession();
-        if (preferences.get("use_connected_account") && session?.accessToken && isSameEmbyHost(session.serverUrl, embyInfo.serverBase)) {
-          reportServerBase = session.serverUrl;
-          reportApiKey = session.accessToken;
-        }
-
-        applySelectedAudioTrack(embyInfo.itemId);
-        applySelectedSubtitleTrack(reportServerBase, embyInfo.itemId, reportApiKey);
       }
     }
   });
@@ -223,18 +210,15 @@ function applySelectedAudioTrack(itemId: string): void {
   try {
     debugLog(`Applying user-selected audio track: Index=${pendingAudio}, TrackNum=${pendingAudioTrackNum}, Lang=${pendingAudioLang}`);
     const trackList = mpv.getNative<Array<{ id: number; type: string; "src-id"?: number; "ff-index"?: number; lang?: string; title?: string }>>("track-list");
-    if (!Array.isArray(trackList)) {
-      if (typeof pendingAudioTrackNum === "number" && pendingAudioTrackNum > 0) {
-        mpv.set("aid", pendingAudioTrackNum);
-      } else if (typeof pendingAudio === "number") {
-        mpv.set("aid", pendingAudio);
-      }
+    if (!Array.isArray(trackList) || trackList.length === 0) {
+      // Tracks not ready yet, will be applied on tracks-changed
       return;
     }
 
     const audioTracks = trackList.filter((t) => t.type === "audio");
     if (audioTracks.length === 0) {
       debugLog("No audio tracks found in mpv track-list");
+      clearPendingAudio(itemId);
       return;
     }
 
@@ -264,17 +248,18 @@ function applySelectedAudioTrack(itemId: string): void {
 
     const targetAid = match && typeof match.id === "number" ? match.id : typeof pendingAudioTrackNum === "number" && pendingAudioTrackNum > 0 ? pendingAudioTrackNum : null;
     if (targetAid !== null) {
-      debugLog(`Applying audio track id: ${targetAid}`);
-      try {
-        core.audio.id = targetAid;
-      } catch (e) {
-        debugLog("core.audio.id assignment:", e);
+      const currentAid = mpv.getNumber("aid");
+      if (currentAid === targetAid) {
+        debugLog(`Audio track ${targetAid} is already active`);
+      } else {
+        debugLog(`Setting audio track id: ${targetAid}`);
+        try {
+          mpv.set("aid", targetAid);
+        } catch (e) {
+          debugLog("mpv.set aid:", e);
+        }
       }
-      try {
-        mpv.set("aid", targetAid);
-      } catch (e) {
-        debugLog("mpv.set aid:", e);
-      }
+      clearPendingAudio(itemId);
     }
   } catch (err) {
     debugLog("Failed to set audio track:", err);
@@ -301,11 +286,14 @@ async function applySelectedSubtitleTrack(
   if (pendingSubtitle === -1) {
     debugLog("User selected to turn off subtitles");
     try {
-      mpv.set("sid", "no");
-      core.subtitle.id = null;
+      const currentSid = mpv.getString("sid");
+      if (currentSid !== "no" && currentSid !== "0") {
+        mpv.set("sid", "no");
+      }
     } catch {
       // Ignore
     }
+    clearPendingSubtitle(itemId);
     return;
   }
 
@@ -325,6 +313,7 @@ async function applySelectedSubtitleTrack(
       );
       if (loaded) {
         debugLog("External subtitle loaded successfully via MPV");
+        clearPendingSubtitle(itemId);
         return;
       }
     } catch (err) {
@@ -336,18 +325,15 @@ async function applySelectedSubtitleTrack(
   try {
     debugLog(`Applying embedded subtitle track: Index=${pendingSubtitle}, TrackNum=${pendingSubTrackNum}, Lang=${pendingSubLang}`);
     const trackList = mpv.getNative<Array<{ id: number; type: string; "src-id"?: number; "ff-index"?: number; lang?: string; title?: string }>>("track-list");
-    if (!Array.isArray(trackList)) {
-      if (typeof pendingSubTrackNum === "number" && pendingSubTrackNum > 0) {
-        mpv.set("sid", pendingSubTrackNum);
-      } else if (typeof pendingSubtitle === "number" && pendingSubtitle > 0) {
-        mpv.set("sid", pendingSubtitle);
-      }
+    if (!Array.isArray(trackList) || trackList.length === 0) {
+      // Tracks not ready yet, will be applied on tracks-changed
       return;
     }
 
     const subTracks = trackList.filter((t) => t.type === "sub");
     if (subTracks.length === 0) {
       debugLog("No subtitle tracks found in mpv track-list");
+      clearPendingSubtitle(itemId);
       return;
     }
 
@@ -377,17 +363,18 @@ async function applySelectedSubtitleTrack(
 
     const targetSid = match && typeof match.id === "number" ? match.id : typeof pendingSubTrackNum === "number" && pendingSubTrackNum > 0 ? pendingSubTrackNum : null;
     if (targetSid !== null) {
-      debugLog(`Applying subtitle track id: ${targetSid}`);
-      try {
-        core.subtitle.id = targetSid;
-      } catch (e) {
-        debugLog("core.subtitle.id assignment:", e);
+      const currentSid = mpv.getNumber("sid");
+      if (currentSid === targetSid) {
+        debugLog(`Subtitle track ${targetSid} is already active`);
+      } else {
+        debugLog(`Setting subtitle track id: ${targetSid}`);
+        try {
+          mpv.set("sid", targetSid);
+        } catch (e) {
+          debugLog("mpv.set sid:", e);
+        }
       }
-      try {
-        mpv.set("sid", targetSid);
-      } catch (e) {
-        debugLog("mpv.set sid:", e);
-      }
+      clearPendingSubtitle(itemId);
     }
   } catch (err) {
     debugLog("Failed to set subtitle track:", err);
@@ -513,11 +500,14 @@ function onFileLoaded(fileUrl?: string): void {
     } else if (pendingSubtitle === -1) {
       debugLog("Subtitles turned off by user, skipping auto-download of external subtitles");
       try {
-        mpv.set("sid", "no");
-        core.subtitle.id = null;
+        const currentSid = mpv.getString("sid");
+        if (currentSid !== "no" && currentSid !== "0") {
+          mpv.set("sid", "no");
+        }
       } catch {
         // Ignore
       }
+      clearPendingSubtitle(embyInfo.itemId);
     }
 
     if (iinaGlobal && typeof iinaGlobal.postMessage === "function") {

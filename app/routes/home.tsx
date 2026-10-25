@@ -9,6 +9,7 @@ import { LibraryShelf, LibraryShelfSkeleton } from "../components/LibraryShelf";
 import { PageHeader } from "../components/PageHeader";
 import { SearchResultsView } from "../components/SearchResultsView";
 import { Alert } from "../components/ui";
+import { useHomeModulesConfig } from "../hooks/useHomeModulesConfig";
 import { useIINABridge, useOnWindowReopen } from "../hooks/useIINABridge";
 import { useLibrarySections } from "../hooks/useLibrarySections";
 import { queryClient } from "../lib/query-client";
@@ -25,6 +26,7 @@ export default function HomeRoute() {
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   const { activeServer, servers, isLoading, playMedia } = useIINABridge();
+  const { config: modulesConfig } = useHomeModulesConfig();
   const { sections, isLoading: isSectionsLoading, error: sectionsError } = useLibrarySections(activeServer);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -268,16 +270,16 @@ export default function HomeRoute() {
         ) : (
           <>
             {/* Top Featured Hero Banner */}
-            <HomeHero server={activeServer} />
+            {modulesConfig.hero && <HomeHero server={activeServer} />}
 
             {/* Categories / Libraries shelf */}
-            <CategoriesShelf server={activeServer} />
+            {modulesConfig.categories && <CategoriesShelf server={activeServer} />}
 
             {/* Continue Watching shelf */}
-            <ContinueWatching server={activeServer} onPlayMedia={playMedia} />
+            {modulesConfig.continueWatching && <ContinueWatching server={activeServer} onPlayMedia={playMedia} />}
 
             {/* My Favorites shelf */}
-            <FavoritesShelf server={activeServer} onIdentifySuccess={handleIdentifySuccess} />
+            {modulesConfig.favorites && <FavoritesShelf server={activeServer} onIdentifySuccess={handleIdentifySuccess} />}
 
             {sectionsError && (
               <Alert icon={<IconAlertCircle size={16} />} title="Error loading libraries" mb="md" mx="1.5rem">
@@ -286,22 +288,24 @@ export default function HomeRoute() {
             )}
 
             {/* Library shelves (Movies, TV shows, etc.) */}
-            {sections.length === 0 && isSectionsLoading ? (
-              <>
-                <LibraryShelfSkeleton shelfId="init-1" titleWidth={100} />
-                <LibraryShelfSkeleton shelfId="init-2" titleWidth={120} />
-              </>
-            ) : (
-              sections.map(({ view, items, isLoading: isShelfLoading }) => (
-                <LibraryShelf
-                  key={view.Id}
-                  view={view}
-                  items={items}
-                  server={activeServer}
-                  isLoading={isShelfLoading}
-                  onIdentifySuccess={handleIdentifySuccess}
-                />
-              ))
+            {modulesConfig.librarySections && (
+              sections.length === 0 && isSectionsLoading ? (
+                <>
+                  <LibraryShelfSkeleton shelfId="init-1" titleWidth={100} />
+                  <LibraryShelfSkeleton shelfId="init-2" titleWidth={120} />
+                </>
+              ) : (
+                sections.map(({ view, items, isLoading: isShelfLoading }) => (
+                  <LibraryShelf
+                    key={view.Id}
+                    view={view}
+                    items={items}
+                    server={activeServer}
+                    isLoading={isShelfLoading}
+                    onIdentifySuccess={handleIdentifySuccess}
+                  />
+                ))
+              )
             )}
           </>
         )}

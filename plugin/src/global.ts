@@ -171,6 +171,7 @@ function handleGlobalPlayMediaList(data?: PlayMediaListMessage): void {
 }
 
 const bridgeDeps = createBridgeDeps({
+  preferences,
   utils,
   log: debugLog,
   getClientIdentity,

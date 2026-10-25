@@ -85,6 +85,22 @@ export interface ServerSwitchedPayload {
   activeServerId: string;
 }
 
+export interface PluginPreferencesPayload {
+  auto_open_on_launch?: boolean;
+  open_in_new_window?: boolean;
+  sync_playback_progress?: boolean;
+  reopen_browser_on_playback_end?: boolean;
+  autoplay_next_episode?: boolean;
+  auto_download_enabled?: boolean;
+  debug_logging?: boolean;
+  [key: string]: unknown;
+}
+
+export interface SetPreferencePayload {
+  key: string;
+  value: unknown;
+}
+
 /**
  * Messages sent from IINA plugin to WebView (inbound to React)
  */
@@ -99,6 +115,7 @@ export interface BridgeInboundMap {
   "window-context": WindowContextPayload;
   "window-reopened": WindowReopenedPayload;
   "playback-progress-updated": PlaybackProgressUpdatedPayload;
+  "preferences-data": PluginPreferencesPayload;
 }
 
 /**
@@ -107,6 +124,8 @@ export interface BridgeInboundMap {
 export interface BridgeOutboundMap {
   "get-window-context": undefined;
   "get-client-identity": undefined;
+  "get-preferences": undefined;
+  "set-preference": SetPreferencePayload;
   "get-servers": undefined;
   "get-session": undefined;
   "clear-session": undefined;

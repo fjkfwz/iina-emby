@@ -193,6 +193,28 @@ export function createPlaybackCoordinator({
     return currentPlaybackSubtitleCodec;
   }
 
+  function clearPendingSubtitle(itemId?: string): void {
+    if (!isItemMatching(itemId)) return;
+    currentPlaybackSubtitleIndex = null;
+    currentPlaybackSubtitleTrackNumber = null;
+    currentPlaybackSubtitleLanguage = null;
+    currentPlaybackIsExternalSubtitle = null;
+    currentPlaybackSubtitlePath = null;
+    currentPlaybackSubtitleCodec = null;
+  }
+
+  function clearPendingAudio(itemId?: string): void {
+    if (!isItemMatching(itemId)) return;
+    currentPlaybackAudioIndex = null;
+    currentPlaybackAudioTrackNumber = null;
+    currentPlaybackAudioLanguage = null;
+  }
+
+  function clearPendingTracks(itemId?: string): void {
+    clearPendingSubtitle(itemId);
+    clearPendingAudio(itemId);
+  }
+
   function markReplacingPlayback(): void {
     replacingPlaybackAt = Date.now();
   }
@@ -509,5 +531,8 @@ export function createPlaybackCoordinator({
     getPendingIsExternalSubtitle,
     getPendingSubtitlePath,
     getPendingSubtitleCodec,
+    clearPendingSubtitle,
+    clearPendingAudio,
+    clearPendingTracks,
   };
 }

@@ -8,6 +8,7 @@ import { ItemMediaInfo } from "../components/ItemMediaInfo";
 import { SeriesEpisodesShelf } from "../components/SeriesEpisodesShelf";
 import { useIINABridge, useOnWindowReopen } from "../hooks/useIINABridge";
 import { useSeriesEpisodes } from "../hooks/useSeriesEpisodes";
+import { useTranslation } from "../lib/i18n";
 import { buildStreamUrl, fetchItemDetails } from "../lib/emby-library-client";
 import { embyKeys } from "../lib/query-keys";
 import styles from "./item.module.css";
@@ -22,6 +23,7 @@ export default function ItemDetailRoute() {
   const location = useLocation();
   const queryClient = useQueryClient();
   const { activeServer, playMedia } = useIINABridge();
+  const { t } = useTranslation();
 
   const stateItem = location.state?.item as EmbyItemMetadata | undefined;
   const [isPlaying, setIsPlaying] = useState(false);
@@ -103,7 +105,7 @@ export default function ItemDetailRoute() {
 
   const selectedSubtitleLabel =
     effectiveSubtitleIndex === -1
-      ? "关闭字幕"
+      ? t("subtitlesOff", "关闭字幕")
       : selectedSubtitleStream
         ? `${selectedSubtitleStream.DisplayLanguage || selectedSubtitleStream.Language || "Sub"} (${selectedSubtitleStream.Codec?.toUpperCase() || "SRT"})`
         : undefined;

@@ -87,6 +87,7 @@ function sanitizeStreamUrl(rawUrl) {
 
 // plugin/src/lib/webview-bridge.ts
 function createBridgeDeps({
+  preferences: preferences2,
   utils: utils2,
   log,
   getClientIdentity: getClientIdentity2,
@@ -97,6 +98,7 @@ function createBridgeDeps({
 }) {
   return {
     core,
+    preferences: preferences2,
     utils: utils2,
     log,
     getClientIdentity: getClientIdentity2,
@@ -113,6 +115,28 @@ function createBridgeDeps({
   };
 }
 function registerBridgeHandlers(view, deps, options) {
+  function getPreferencesPayload() {
+    if (!deps.preferences) return {};
+    return {
+      auto_open_on_launch: deps.preferences.get("auto_open_on_launch") !== false,
+      open_in_new_window: Boolean(deps.preferences.get("open_in_new_window")),
+      sync_playback_progress: deps.preferences.get("sync_playback_progress") !== false,
+      reopen_browser_on_playback_end: deps.preferences.get("reopen_browser_on_playback_end") !== false,
+      autoplay_next_episode: deps.preferences.get("autoplay_next_episode") !== false,
+      auto_download_enabled: deps.preferences.get("auto_download_enabled") !== false,
+      debug_logging: Boolean(deps.preferences.get("debug_logging"))
+    };
+  }
+  view.onMessage("get-preferences", () => {
+    view.postMessage("preferences-data", getPreferencesPayload());
+  });
+  view.onMessage("set-preference", (data) => {
+    if (deps.preferences && data?.key) {
+      deps.log(`Setting preference: ${data.key} = ${data.value}`);
+      deps.preferences.set(data.key, data.value);
+      view.postMessage("preferences-data", getPreferencesPayload());
+    }
+  });
   view.onMessage("get-window-context", () => {
     view.postMessage("window-context", { isStandalone: Boolean(options?.isStandalone) });
   });
@@ -208,6 +232,17 @@ function sendInitialBridgeState(view, deps) {
   const sessionData = deps.getStoredEmbySession();
   if (sessionData) {
     view.postMessage("session-available", sessionData);
+  }
+  if (deps.preferences) {
+    view.postMessage("preferences-data", {
+      auto_open_on_launch: deps.preferences.get("auto_open_on_launch") !== false,
+      open_in_new_window: Boolean(deps.preferences.get("open_in_new_window")),
+      sync_playback_progress: deps.preferences.get("sync_playback_progress") !== false,
+      reopen_browser_on_playback_end: deps.preferences.get("reopen_browser_on_playback_end") !== false,
+      autoplay_next_episode: deps.preferences.get("autoplay_next_episode") !== false,
+      auto_download_enabled: deps.preferences.get("auto_download_enabled") !== false,
+      debug_logging: Boolean(deps.preferences.get("debug_logging"))
+    });
   }
 }
 
@@ -1033,6 +1068,7 @@ function handleGlobalPlayMediaList(data) {
   }
 }
 var bridgeDeps = createBridgeDeps({
+  preferences,
   utils,
   log: debugLog,
   getClientIdentity,

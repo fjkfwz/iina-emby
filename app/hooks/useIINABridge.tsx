@@ -2,6 +2,7 @@ import {
   type EmbyServer,
   type PlaybackProgressUpdatedPayload,
   type PlayMediaPayload,
+  type PluginPreferencesPayload,
   type TypedIinaBridge,
   WINDOW_DIMENSIONS,
 } from "@shared";
@@ -34,6 +35,8 @@ export interface IINABridgeContextType {
   selectServer: (serverId: string) => void;
   removeServer: (serverId: string) => void;
   playMedia: (payload: PlayMediaPayload) => void;
+  preferences: PluginPreferencesPayload;
+  setPreference: (key: string, value: unknown) => void;
 }
 
 const IINABridgeContext = createContext<IINABridgeContextType | null>(null);
@@ -63,6 +66,22 @@ export function IINABridgeProvider({ children }: { children: React.ReactNode }) 
   const [isLoading, setIsLoading] = useState<boolean>(() => hasIina && servers.length === 0);
   const [reopenCount, setReopenCount] = useState<number>(0);
   const [progressUpdateCount, setProgressUpdateCount] = useState<number>(0);
+  const [preferences, setPreferences] = useState<PluginPreferencesPayload>(() => ({
+    auto_open_on_launch: true,
+    open_in_new_window: false,
+    sync_playback_progress: true,
+    reopen_browser_on_playback_end: true,
+    autoplay_next_episode: true,
+    auto_download_enabled: true,
+    debug_logging: false,
+  }));
+
+  const setPreference = useCallback((key: string, value: unknown) => {
+    setPreferences((prev) => ({ ...prev, [key]: value }));
+    if (window?.iina?.postMessage) {
+      window.iina.postMessage("set-preference", { key, value });
+    }
+  }, []);
 
   const activeServer = servers.find((s) => s.id === activeServerId) || servers[0] || null;
   const activeServerRef = useRef<EmbyServer | null>(activeServer);
@@ -206,10 +225,17 @@ export function IINABridgeProvider({ children }: { children: React.ReactNode }) 
         });
       });
 
-      // Request window context, identity, and servers list on mount
+      window.iina.onMessage("preferences-data", (data?: PluginPreferencesPayload) => {
+        if (data && typeof data === "object") {
+          setPreferences((prev) => ({ ...prev, ...data }));
+        }
+      });
+
+      // Request window context, identity, servers list, and preferences on mount
       window.iina.postMessage("get-window-context");
       window.iina.postMessage("get-client-identity");
       window.iina.postMessage("get-servers");
+      window.iina.postMessage("get-preferences");
 
       // Retry get-servers after a short tick in case the bridge message listener was registering
       const retryTimer = setTimeout(() => {
@@ -435,6 +461,8 @@ export function IINABridgeProvider({ children }: { children: React.ReactNode }) 
     selectServer,
     removeServer,
     playMedia,
+    preferences,
+    setPreference,
   };
 
   return <IINABridgeContext.Provider value={value}>{children}</IINABridgeContext.Provider>;

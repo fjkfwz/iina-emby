@@ -1,6 +1,7 @@
 import { type EmbyItemMetadata, type EmbyPerson, type EmbyServer, getEmbyImageUrl, getItemImageUrl } from "@shared";
 import { IconFingerprint, IconHeart, IconHeartFilled, IconPlayerPlayFilled } from "@tabler/icons-react";
 import { useState } from "react";
+import { useTranslation } from "../lib/i18n";
 import { embyFetch, isIdentifySupported } from "../lib/emby-library-client";
 import { formatResumeTime, getMediaBadges } from "../lib/media-formatters";
 import { queryClient } from "../lib/query-client";
@@ -35,6 +36,7 @@ export function ItemHero({
   selectedAudioLabel,
   selectedSubtitleLabel,
 }: ItemHeroProps) {
+  const { t } = useTranslation();
   const [logoError, setLogoError] = useState(false);
   const [isIdentifyOpen, setIsIdentifyOpen] = useState(false);
   const [favUpdating, setFavUpdating] = useState(false);
@@ -228,10 +230,10 @@ export function ItemHero({
           >
             <span>
               {isSeries && nextUpEpisode
-                ? `播放 S${nextUpEpisode.ParentIndexNumber ?? 1}:E${nextUpEpisode.IndexNumber ?? 1}${resumeTimeClock ? ` (${resumeTimeClock} · ${Math.round(progressPercent)}%)` : ""}`
+                ? `${t("play", "播放")} S${nextUpEpisode.ParentIndexNumber ?? 1}:E${nextUpEpisode.IndexNumber ?? 1}${resumeTimeClock ? ` (${resumeTimeClock} · ${Math.round(progressPercent)}%)` : ""}`
                 : hasProgress
-                  ? `继续播放 (${resumeTimeClock} · ${Math.round(progressPercent)}%)`
-                  : `播放`}
+                  ? `${t("resume", "继续播放")} (${resumeTimeClock} · ${Math.round(progressPercent)}%)`
+                  : t("play", "播放")}
             </span>
             {hasProgress && (
               <div className={styles.playButtonProgressBarTrack}>
@@ -278,7 +280,7 @@ export function ItemHero({
                 }}
               >
                 <span style={{ marginRight: "4px" }}>🔊</span>
-                <span>音轨: {selectedAudioLabel}</span>
+                <span>{t("audio", "音轨")}: {selectedAudioLabel}</span>
               </span>
             )}
             {selectedSubtitleLabel && (
@@ -298,7 +300,7 @@ export function ItemHero({
                 }}
               >
                 <span style={{ marginRight: "4px" }}>💬</span>
-                <span>字幕: {selectedSubtitleLabel}</span>
+                <span>{t("subtitle", "字幕")}: {selectedSubtitleLabel}</span>
               </span>
             )}
           </div>

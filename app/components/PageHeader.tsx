@@ -1,6 +1,7 @@
 import { IconChevronLeft, IconReload, IconSearch, IconSettings2 } from "@tabler/icons-react";
 import { forwardRef, type ReactNode, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router";
+import { useTranslation } from "../lib/i18n";
 import styles from "./PageHeader.module.css";
 import { GlassElement } from "./ui/GlassElement";
 
@@ -23,7 +24,7 @@ export interface PageHeaderProps {
 export const PageHeader = forwardRef<HTMLElement, PageHeaderProps>(function PageHeader(
   {
     onBack,
-    backTitle = "Back",
+    backTitle: backTitleProp,
     title,
     showActiveDot = false,
     onRefresh,
@@ -38,6 +39,8 @@ export const PageHeader = forwardRef<HTMLElement, PageHeaderProps>(function Page
   },
   ref,
 ) {
+  const { t } = useTranslation();
+  const backTitle = backTitleProp || t("back", "Back");
   const navigate = useNavigate();
   const location = useLocation();
 

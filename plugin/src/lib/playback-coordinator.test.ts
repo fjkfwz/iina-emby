@@ -114,4 +114,26 @@ describe("playback-coordinator", () => {
     expect(coordinator.getPendingSubtitleTrackNumber("item-play")).toBe(1);
     expect(coordinator.getPendingStartPosition("item-play")).toBe(10);
   });
+
+  it("clears pending audio and subtitle tracks once handled", () => {
+    const coordinator = createTestCoordinator();
+
+    coordinator.setPendingPlaybackData({
+      streamUrl: "http://localhost:8096/Videos/item-clear/stream?static=true",
+      title: "Episode To Clear",
+      selectedAudioIndex: 3,
+      selectedSubtitleIndex: 2,
+      audioTrackNumber: 2,
+      subtitleTrackNumber: 1,
+    });
+
+    expect(coordinator.getPendingSubtitleIndex("item-clear")).toBe(2);
+    coordinator.clearPendingSubtitle("item-clear");
+    expect(coordinator.getPendingSubtitleIndex("item-clear")).toBeNull();
+    expect(coordinator.getPendingSubtitleTrackNumber("item-clear")).toBeNull();
+
+    expect(coordinator.getPendingAudioIndex("item-clear")).toBe(3);
+    coordinator.clearPendingAudio("item-clear");
+    expect(coordinator.getPendingAudioIndex("item-clear")).toBeNull();
+  });
 });

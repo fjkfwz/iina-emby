@@ -20,6 +20,7 @@ export interface WebviewTarget {
 
 export interface WebviewBridgeDeps {
   core?: typeof iina.core;
+  preferences?: typeof iina.preferences;
   utils: typeof iina.utils;
   log: DebugLogger;
   getClientIdentity: () => ClientIdentity;
@@ -36,6 +37,7 @@ export interface WebviewBridgeDeps {
 }
 
 export interface CreateBridgeDepsParams {
+  preferences?: typeof iina.preferences;
   utils: typeof iina.utils;
   log: DebugLogger;
   getClientIdentity: () => ClientIdentity;
@@ -55,6 +57,7 @@ export interface CreateBridgeDepsParams {
 }
 
 export function createBridgeDeps({
+  preferences,
   utils,
   log,
   getClientIdentity,
@@ -65,6 +68,7 @@ export function createBridgeDeps({
 }: CreateBridgeDepsParams): WebviewBridgeDeps {
   return {
     core,
+    preferences,
     utils,
     log,
     getClientIdentity,
@@ -90,6 +94,31 @@ export interface SetupBridgeOptions {
  * Registers common message handlers on any Webview target (sidebar or standalone window).
  */
 export function registerBridgeHandlers(view: WebviewTarget, deps: WebviewBridgeDeps, options?: SetupBridgeOptions): void {
+  function getPreferencesPayload(): Record<string, unknown> {
+    if (!deps.preferences) return {};
+    return {
+      auto_open_on_launch: deps.preferences.get("auto_open_on_launch") !== false,
+      open_in_new_window: Boolean(deps.preferences.get("open_in_new_window")),
+      sync_playback_progress: deps.preferences.get("sync_playback_progress") !== false,
+      reopen_browser_on_playback_end: deps.preferences.get("reopen_browser_on_playback_end") !== false,
+      autoplay_next_episode: deps.preferences.get("autoplay_next_episode") !== false,
+      auto_download_enabled: deps.preferences.get("auto_download_enabled") !== false,
+      debug_logging: Boolean(deps.preferences.get("debug_logging")),
+    };
+  }
+
+  view.onMessage("get-preferences", () => {
+    view.postMessage("preferences-data", getPreferencesPayload());
+  });
+
+  view.onMessage("set-preference", (data?: { key?: string; value?: unknown }) => {
+    if (deps.preferences && data?.key) {
+      deps.log(`Setting preference: ${data.key} = ${data.value}`);
+      deps.preferences.set(data.key, data.value);
+      view.postMessage("preferences-data", getPreferencesPayload());
+    }
+  });
+
   view.onMessage("get-window-context", () => {
     view.postMessage("window-context", { isStandalone: Boolean(options?.isStandalone) });
   });
@@ -199,5 +228,16 @@ export function sendInitialBridgeState(view: WebviewTarget, deps: WebviewBridgeD
   const sessionData = deps.getStoredEmbySession();
   if (sessionData) {
     view.postMessage("session-available", sessionData);
+  }
+  if (deps.preferences) {
+    view.postMessage("preferences-data", {
+      auto_open_on_launch: deps.preferences.get("auto_open_on_launch") !== false,
+      open_in_new_window: Boolean(deps.preferences.get("open_in_new_window")),
+      sync_playback_progress: deps.preferences.get("sync_playback_progress") !== false,
+      reopen_browser_on_playback_end: deps.preferences.get("reopen_browser_on_playback_end") !== false,
+      autoplay_next_episode: deps.preferences.get("autoplay_next_episode") !== false,
+      auto_download_enabled: deps.preferences.get("auto_download_enabled") !== false,
+      debug_logging: Boolean(deps.preferences.get("debug_logging")),
+    });
   }
 }

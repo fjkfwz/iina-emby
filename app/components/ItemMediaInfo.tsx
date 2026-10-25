@@ -1,5 +1,6 @@
 import type { EmbyItemMetadata, EmbyMediaStream } from "@shared";
 import { IconDeviceTv, IconFileInfo, IconMovie, IconSubtitles, IconVolume } from "@tabler/icons-react";
+import { useTranslation } from "../lib/i18n";
 import styles from "./ItemMediaInfo.module.css";
 
 interface ItemMediaInfoProps {
@@ -101,6 +102,7 @@ export function ItemMediaInfo({
   selectedSubtitleIndex,
   onSelectSubtitleIndex,
 }: ItemMediaInfoProps) {
+  const { t } = useTranslation();
   if (!item) return null;
 
   const mediaSource = item.MediaSources?.[0];
@@ -247,8 +249,8 @@ export function ItemMediaInfo({
           <div className={styles.card}>
             <div className={styles.cardHeader}>
               <IconSubtitles size={18} className={styles.iconSubtitles} />
-              <span className={styles.cardTitle}>字幕轨道 ({subtitleStreams.length})</span>
-              {onSelectSubtitleIndex && <span className={styles.cardHeaderRight}>点击切换播放</span>}
+              <span className={styles.cardTitle}>{t("subtitle", "字幕")} ({subtitleStreams.length})</span>
+              {onSelectSubtitleIndex && <span className={styles.cardHeaderRight}>{t("details", "点击切换")}</span>}
             </div>
             <div className={styles.streamList}>
               {onSelectSubtitleIndex && (
@@ -257,14 +259,14 @@ export function ItemMediaInfo({
                   onClick={() => onSelectSubtitleIndex(-1)}
                   role="button"
                   tabIndex={0}
-                  title="点击关闭字幕播放"
+                  title="关闭字幕"
                 >
                   <div className={styles.streamMain}>
-                    <span className={styles.streamLanguage}>🚫 不显示字幕 (关闭字幕)</span>
-                    {selectedSubtitleIndex === -1 && <span className={styles.badgeSelectedSubtitle}>✓ 已选</span>}
+                    <span className={styles.streamLanguage}>🚫 {t("subtitlesOff", "不显示字幕 (关闭字幕)")}</span>
+                    {selectedSubtitleIndex === -1 && <span className={styles.badgeSelectedSubtitle}>✓ {t("selected", "已选")}</span>}
                   </div>
                   <div className={styles.streamMeta}>
-                    <span>播放时不加载任何字幕</span>
+                    <span>{t("disabled", "关闭字幕")}</span>
                   </div>
                 </div>
               )}
@@ -290,7 +292,7 @@ export function ItemMediaInfo({
                       <span className={isExt ? styles.badgeExternal : styles.badgeInternal}>{isExt ? "外挂" : "内置"}</span>
                       {format === "ASS" && <span className={styles.badgeAss}>特效</span>}
                       {title && title !== lang && <span className={styles.streamNote}>{title}</span>}
-                      {isSelected && <span className={styles.badgeSelectedSubtitle}>✓ 已选</span>}
+                      {isSelected && <span className={styles.badgeSelectedSubtitle}>✓ {t("selected", "已选")}</span>}
                     </div>
                     <div className={styles.streamMeta}>
                       <span>格式: {format}</span>
