@@ -220,11 +220,13 @@ function createBrowserWindowManager({ core, sidebar, standaloneWindow: standalon
       if (!standaloneInitialized) {
         standaloneInitialized = true;
         standaloneWindow2.loadFile("dist/client/index.html");
+        let windowX = preferences2.get("window_x") ?? 120;
+        let windowY = preferences2.get("window_y") ?? 145;
         const savedWidth = preferences2.get(WINDOW_PREF_KEYS.WIDTH);
         const savedHeight = preferences2.get(WINDOW_PREF_KEYS.HEIGHT);
         const width = typeof savedWidth === "number" && savedWidth >= WINDOW_DIMENSIONS.MIN_WIDTH ? savedWidth : WINDOW_DIMENSIONS.DEFAULT_WIDTH;
         const height = typeof savedHeight === "number" && savedHeight >= WINDOW_DIMENSIONS.MIN_HEIGHT ? savedHeight : WINDOW_DIMENSIONS.DEFAULT_HEIGHT;
-        standaloneWindow2.setFrame(width, height, null, null);
+        standaloneWindow2.setFrame(width, height, Math.round(windowX), Math.round(windowY));
         const saWithProps = standaloneWindow2;
         if (typeof saWithProps.setProperty === "function") {
           saWithProps.setProperty({
@@ -235,6 +237,21 @@ function createBrowserWindowManager({ core, sidebar, standaloneWindow: standalon
             enableWebInspector: true
           });
         }
+        standaloneWindow2.onMessage("move-window", (data) => {
+          if (typeof data?.dx === "number" && typeof data?.dy === "number") {
+            windowX += data.dx;
+            windowY -= data.dy;
+            standaloneWindow2.setFrame(null, null, Math.round(windowX), Math.round(windowY));
+            preferences2.set("window_x", Math.round(windowX));
+            preferences2.set("window_y", Math.round(windowY));
+          } else if (typeof data?.x === "number" && typeof data?.y === "number") {
+            windowX = data.x;
+            windowY = data.y;
+            standaloneWindow2.setFrame(null, null, Math.round(windowX), Math.round(windowY));
+            preferences2.set("window_x", Math.round(windowX));
+            preferences2.set("window_y", Math.round(windowY));
+          }
+        });
         standaloneWindow2.onMessage("save-window-size", (data) => {
           if (data?.width && data?.height && data.width >= WINDOW_DIMENSIONS.MIN_WIDTH && data.height >= WINDOW_DIMENSIONS.MIN_HEIGHT) {
             const w = Math.round(data.width);

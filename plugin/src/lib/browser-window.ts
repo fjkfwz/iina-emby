@@ -25,6 +25,9 @@ export function createBrowserWindowManager({ core, sidebar, standaloneWindow, pr
         // Load the React SPA HTML in standalone window
         standaloneWindow.loadFile("dist/client/index.html");
 
+        let windowX = (preferences.get("window_x") as number | undefined) ?? 120;
+        let windowY = (preferences.get("window_y") as number | undefined) ?? 145;
+
         // Restore previously saved window dimensions or use default dimensions
         const savedWidth = preferences.get(WINDOW_PREF_KEYS.WIDTH) as number | undefined;
         const savedHeight = preferences.get(WINDOW_PREF_KEYS.HEIGHT) as number | undefined;
@@ -33,8 +36,8 @@ export function createBrowserWindowManager({ core, sidebar, standaloneWindow, pr
         const height =
           typeof savedHeight === "number" && savedHeight >= WINDOW_DIMENSIONS.MIN_HEIGHT ? savedHeight : WINDOW_DIMENSIONS.DEFAULT_HEIGHT;
 
-        // setFrame takes (w, h, x, y). Passing null for x and y preserves position
-        standaloneWindow.setFrame(width, height, null, null);
+        // Position window at saved location
+        standaloneWindow.setFrame(width, height, Math.round(windowX), Math.round(windowY));
 
         const saWithProps = standaloneWindow as unknown as {
           setProperty?: (props: Record<string, unknown>) => void;
@@ -48,6 +51,24 @@ export function createBrowserWindowManager({ core, sidebar, standaloneWindow, pr
             enableWebInspector: true,
           });
         }
+
+        // Listen for window drag/move messages from the webview
+        standaloneWindow.onMessage("move-window", (data?: { dx?: number; dy?: number; x?: number; y?: number }) => {
+          if (typeof data?.dx === "number" && typeof data?.dy === "number") {
+            windowX += data.dx;
+            // dy > 0 means mouse moved down on screen; Cocoa Y origin is bottom of screen, so subtract dy
+            windowY -= data.dy;
+            standaloneWindow.setFrame(null, null, Math.round(windowX), Math.round(windowY));
+            preferences.set("window_x", Math.round(windowX));
+            preferences.set("window_y", Math.round(windowY));
+          } else if (typeof data?.x === "number" && typeof data?.y === "number") {
+            windowX = data.x;
+            windowY = data.y;
+            standaloneWindow.setFrame(null, null, Math.round(windowX), Math.round(windowY));
+            preferences.set("window_x", Math.round(windowX));
+            preferences.set("window_y", Math.round(windowY));
+          }
+        });
 
         // Listen for window resize events from the webview to persist size
         standaloneWindow.onMessage("save-window-size", (data?: { width?: number; height?: number }) => {

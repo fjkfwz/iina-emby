@@ -7,15 +7,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 2.25rem 1.5rem 1.25rem;
-  background: linear-gradient(
-    180deg,
-    rgba(32, 32, 38, 0.98) 0%,
-    rgba(32, 32, 38, 0.94) 50%,
-    rgba(32, 32, 38, 0.75) 80%,
-    rgba(32, 32, 38, 0) 100%
-  );
-  -webkit-backdrop-filter: blur(16px);
-  backdrop-filter: blur(16px);
+  background: transparent;
   border: none;
   -webkit-app-region: drag;
   user-select: none;
@@ -23,12 +15,61 @@
   pointer-events: auto;
 }
 
+.header::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: linear-gradient(
+    180deg,
+    rgba(32, 32, 38, 0.98) 0%,
+    rgba(32, 32, 38, 0.92) 50%,
+    rgba(32, 32, 38, 0.7) 75%,
+    rgba(32, 32, 38, 0) 100%
+  );
+  -webkit-backdrop-filter: blur(24px);
+  backdrop-filter: blur(24px);
+  -webkit-mask-image: linear-gradient(
+    180deg,
+    rgba(0, 0, 0, 1) 0%,
+    rgba(0, 0, 0, 1) 45%,
+    rgba(0, 0, 0, 0.75) 70%,
+    rgba(0, 0, 0, 0.25) 88%,
+    rgba(0, 0, 0, 0) 100%
+  );
+  mask-image: linear-gradient(
+    180deg,
+    rgba(0, 0, 0, 1) 0%,
+    rgba(0, 0, 0, 1) 45%,
+    rgba(0, 0, 0, 0.75) 70%,
+    rgba(0, 0, 0, 0.25) 88%,
+    rgba(0, 0, 0, 0) 100%
+  );
+}
+
 .headerLeft,
 .headerRight {
+  position: relative;
+  z-index: 1;
   display: flex;
   align-items: center;
   gap: 0.625rem;
   -webkit-app-region: no-drag;
+  flex-shrink: 0;
+}
+
+.headerCenter {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  max-width: 520px;
+  margin: 0 1rem;
+  -webkit-app-region: no-drag;
+  pointer-events: auto;
 }
 
 .badge {

@@ -153,48 +153,46 @@ export function ItemHero({
       ) : null}
 
       {/* Top Floating Navigation Bar with Back & Refresh */}
-      <div className={styles.headerSpacer}>
-        <PageHeader
-          onBack={onBack}
-          backTitle="Back"
-          onRefresh={onRefresh}
-          isRefreshing={isRefreshing}
-          className={styles.pageHeader}
-          rightSection={
-            <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+      <PageHeader
+        onBack={onBack}
+        backTitle="Back"
+        onRefresh={onRefresh}
+        isRefreshing={isRefreshing}
+        className={styles.pageHeader}
+        rightSection={
+          <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+            <GlassElement
+              variant={isFavorite ? "primary" : "glass"}
+              shape="rounded"
+              size="sm"
+              onClick={toggleFavorite}
+              disabled={favUpdating}
+              title={isFavorite ? "Remove from Favorites" : "Add to Favorites"}
+              aria-label={isFavorite ? "Remove from Favorites" : "Add to Favorites"}
+            >
+              <div style={{ display: "flex", alignItems: "center", padding: "0 6px" }}>
+                <span style={{ display: "inline-flex", alignItems: "center", marginRight: "8px" }}>
+                  {isFavorite ? <IconHeartFilled size={15} color="#ff4757" /> : <IconHeart size={15} />}
+                </span>
+                <span style={{ fontSize: "0.82rem", fontWeight: 500 }}>{isFavorite ? "Favorited" : "Favorite"}</span>
+              </div>
+            </GlassElement>
+            {canIdentify ? (
               <GlassElement
-                variant={isFavorite ? "primary" : "glass"}
+                variant="glass"
                 shape="rounded"
                 size="sm"
-                onClick={toggleFavorite}
-                disabled={favUpdating}
-                title={isFavorite ? "Remove from Favorites" : "Add to Favorites"}
-                aria-label={isFavorite ? "Remove from Favorites" : "Add to Favorites"}
+                isIconOnly
+                onClick={() => setIsIdentifyOpen(true)}
+                title="Identify"
+                aria-label="Identify metadata"
               >
-                <div style={{ display: "flex", alignItems: "center", padding: "0 6px" }}>
-                  <span style={{ display: "inline-flex", alignItems: "center", marginRight: "8px" }}>
-                    {isFavorite ? <IconHeartFilled size={15} color="#ff4757" /> : <IconHeart size={15} />}
-                  </span>
-                  <span style={{ fontSize: "0.82rem", fontWeight: 500 }}>{isFavorite ? "Favorited" : "Favorite"}</span>
-                </div>
+                <IconFingerprint size={16} />
               </GlassElement>
-              {canIdentify ? (
-                <GlassElement
-                  variant="glass"
-                  shape="rounded"
-                  size="sm"
-                  isIconOnly
-                  onClick={() => setIsIdentifyOpen(true)}
-                  title="Identify"
-                  aria-label="Identify metadata"
-                >
-                  <IconFingerprint size={16} />
-                </GlassElement>
-              ) : null}
-            </div>
-          }
-        />
-      </div>
+            ) : null}
+          </div>
+        }
+      />
 
       {/* Hero Layout */}
       <main className={styles.heroContent}>

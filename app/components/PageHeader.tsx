@@ -12,8 +12,10 @@ export interface PageHeaderProps {
   showActiveDot?: boolean;
   onRefresh?: () => void;
   isRefreshing?: boolean;
+  centerSection?: ReactNode;
   rightSection?: ReactNode;
   showSettings?: boolean;
+  hideSearch?: boolean;
   className?: string;
 }
 
@@ -24,8 +26,10 @@ export function PageHeader({
   showActiveDot = false,
   onRefresh,
   isRefreshing = false,
+  centerSection,
   rightSection,
   showSettings,
+  hideSearch = false,
   className,
 }: PageHeaderProps) {
   const navigate = useNavigate();
@@ -36,7 +40,7 @@ export function PageHeader({
   const canSearch = !isSettingsRoute && location.pathname !== "/search";
 
   useEffect(() => {
-    if (!canSearch) return;
+    if (!canSearch || hideSearch) return;
     const handleKey = (e: KeyboardEvent) => {
       const target = document.activeElement as HTMLElement | null;
       const isInput = target?.tagName === "INPUT" || target?.tagName === "TEXTAREA";
@@ -47,10 +51,10 @@ export function PageHeader({
     };
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
-  }, [canSearch, navigate]);
+  }, [canSearch, hideSearch, navigate]);
 
   return (
-    <header className={`${styles.header} ${className || ""}`}>
+    <header className={`${styles.header} ${className || ""}`} data-window-drag>
       <div className={styles.headerLeft}>
         {onBack && (
           <GlassElement variant="glass" shape="rounded" size="sm" isIconOnly onClick={onBack} title={backTitle} aria-label={backTitle}>
@@ -73,8 +77,10 @@ export function PageHeader({
         )}
       </div>
 
+      {centerSection && <div className={styles.headerCenter}>{centerSection}</div>}
+
       <div className={styles.headerRight}>
-        {canSearch && (
+        {canSearch && !hideSearch && (
           <GlassElement
             variant="glass"
             shape="rounded"

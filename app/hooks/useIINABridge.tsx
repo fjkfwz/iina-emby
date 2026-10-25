@@ -219,6 +219,104 @@ export function IINABridgeProvider({ children }: { children: React.ReactNode }) 
     };
   }, [isIinaAvailable, isStandalone]);
 
+  // Enable window dragging for frameless standalone window
+  useEffect(() => {
+    if (!isIinaAvailable || !isStandalone || typeof window === "undefined") {
+      return;
+    }
+
+    let isDragging = false;
+    let lastMouseX = 0;
+    let lastMouseY = 0;
+    let animFrameId: number | null = null;
+    let accumulatedDx = 0;
+    let accumulatedDy = 0;
+
+    const handleMouseDown = (e: MouseEvent) => {
+      if (e.button !== 0) return;
+      const target = e.target as HTMLElement | null;
+      if (!target) return;
+
+      // Do NOT drag if interacting with controls, inputs, buttons, links, etc.
+      if (
+        target.closest(
+          'button, input, select, textarea, a, [data-no-drag], [role="button"], [tabindex]:not([tabindex="-1"])'
+        )
+      ) {
+        return;
+      }
+
+      // Check if clicked inside header or window drag region
+      const dragRegion = target.closest("header, [data-window-drag]");
+      if (!dragRegion) return;
+
+      isDragging = true;
+      lastMouseX = e.screenX;
+      lastMouseY = e.screenY;
+      accumulatedDx = 0;
+      accumulatedDy = 0;
+
+      document.body.style.userSelect = "none";
+    };
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isDragging) return;
+
+      const dx = e.screenX - lastMouseX;
+      const dy = e.screenY - lastMouseY;
+      lastMouseX = e.screenX;
+      lastMouseY = e.screenY;
+
+      accumulatedDx += dx;
+      accumulatedDy += dy;
+
+      if (animFrameId === null) {
+        animFrameId = window.requestAnimationFrame(() => {
+          animFrameId = null;
+          if (accumulatedDx !== 0 || accumulatedDy !== 0) {
+            const sendDx = accumulatedDx;
+            const sendDy = accumulatedDy;
+            accumulatedDx = 0;
+            accumulatedDy = 0;
+            if (window.iina?.postMessage) {
+              window.iina.postMessage("move-window", { dx: sendDx, dy: sendDy });
+            }
+          }
+        });
+      }
+    };
+
+    const handleMouseUp = () => {
+      if (isDragging) {
+        isDragging = false;
+        document.body.style.userSelect = "";
+        if (animFrameId !== null) {
+          window.cancelAnimationFrame(animFrameId);
+          animFrameId = null;
+        }
+        if (accumulatedDx !== 0 || accumulatedDy !== 0) {
+          const sendDx = accumulatedDx;
+          const sendDy = accumulatedDy;
+          accumulatedDx = 0;
+          accumulatedDy = 0;
+          if (window.iina?.postMessage) {
+            window.iina.postMessage("move-window", { dx: sendDx, dy: sendDy });
+          }
+        }
+      }
+    };
+
+    window.addEventListener("mousedown", handleMouseDown, { capture: true });
+    window.addEventListener("mousemove", handleMouseMove, { passive: true });
+    window.addEventListener("mouseup", handleMouseUp);
+
+    return () => {
+      window.removeEventListener("mousedown", handleMouseDown, { capture: true });
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+    };
+  }, [isIinaAvailable, isStandalone]);
+
   const saveServer = useCallback((server: EmbyServer) => {
     setServers((prev) => {
       const idx = prev.findIndex((s) => {

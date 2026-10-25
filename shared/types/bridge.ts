@@ -108,6 +108,7 @@ export interface BridgeOutboundMap {
   "play-media-list": PlayMediaListPayload;
   "open-external-url": OpenExternalUrlPayload;
   "save-window-size": WindowSizePayload;
+  "move-window": { dx?: number; dy?: number; x?: number; y?: number };
 }
 
 export interface TypedIinaBridge {

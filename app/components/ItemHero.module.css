@@ -29,21 +29,12 @@
   pointer-events: none;
 }
 
-/* Top Floating Nav Bar Container */
-.headerSpacer {
-  height: 90px;
-  min-height: 80px;
-  flex-shrink: 0;
-  pointer-events: none;
-  position: relative;
-  z-index: 10;
-}
-
-.headerSpacer .pageHeader {
+.pageHeader {
   position: sticky;
   top: 0;
   left: 0;
   right: 0;
+  z-index: 100;
   pointer-events: auto;
 }
 
