@@ -198,6 +198,45 @@ export async function fetchFavoriteItems(
 }
 
 /**
+ * Fetch featured hero carousel items for the home page.
+ */
+export async function fetchHeroItems(
+  server: EmbyServer,
+  limit = 10,
+  signal?: AbortSignal,
+  bypassCache = false,
+): Promise<EmbyItemMetadata[]> {
+  const base = server.serverUrl.replace(/\/+$/, "");
+  const cacheKey = `${base}:${server.userId}:hero:${limit}`;
+
+  return getOrFetchCached(cacheKey, DEFAULT_CACHE_TTL_MS, bypassCache, async () => {
+    const query = new URLSearchParams({
+      SortBy: "DateCreated",
+      SortOrder: "Descending",
+      IncludeItemTypes: "Movie,Series",
+      Recursive: "true",
+      ImageTypes: "Backdrop",
+      HasOverview: "true",
+      Limit: String(limit),
+      Fields: "Overview,CommunityRating,ProductionYear,Genres,BackdropImageTags,ImageTags,UserData",
+    });
+
+    const url = `${base}/Users/${encodeURIComponent(server.userId)}/Items?${query.toString()}`;
+    const response = await embyFetch(server, url, {
+      signal,
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch hero items: ${response.status} ${response.statusText}`);
+    }
+
+    const data = (await response.json()) as EmbyItemsResponse<EmbyItemMetadata>;
+    return (data.Items || []).filter((item) => item.BackdropImageTags && item.BackdropImageTags.length > 0);
+  });
+}
+
+
+/**
  * Fetch latest items for a specific library (ParentId).
  */
 export async function fetchLatestItems(

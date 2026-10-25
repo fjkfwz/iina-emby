@@ -2,6 +2,7 @@ export const embyKeys = {
   all: ["emby"] as const,
   server: (serverId: string) => [...embyKeys.all, serverId] as const,
   userViews: (serverId: string) => [...embyKeys.server(serverId), "views"] as const,
+  hero: (serverId: string) => [...embyKeys.server(serverId), "hero"] as const,
   librarySections: (serverId: string) => [...embyKeys.server(serverId), "librarySections"] as const,
   continueWatching: (serverId: string) => [...embyKeys.server(serverId), "continueWatching"] as const,
   favorites: (serverId: string) => [...embyKeys.server(serverId), "favorites"] as const,

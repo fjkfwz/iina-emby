@@ -4,6 +4,7 @@ import { Navigate, useNavigate, useSearchParams } from "react-router";
 import { CategoriesShelf } from "../components/CategoriesShelf";
 import { ContinueWatching } from "../components/ContinueWatching";
 import { FavoritesShelf } from "../components/FavoritesShelf";
+import { HomeHero } from "../components/HomeHero";
 import { LibraryShelf, LibraryShelfSkeleton } from "../components/LibraryShelf";
 import { PageHeader } from "../components/PageHeader";
 import { SearchResultsView } from "../components/SearchResultsView";
@@ -212,6 +213,9 @@ export default function HomeRoute() {
           </div>
         ) : (
           <>
+            {/* Top Featured Hero Banner */}
+            <HomeHero server={activeServer} />
+
             {/* Categories / Libraries shelf */}
             <CategoriesShelf server={activeServer} />
 
