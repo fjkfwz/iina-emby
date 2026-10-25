@@ -12,11 +12,12 @@ import {
   ticksToSeconds,
 } from "@shared";
 import type { DebugLogger } from "./debug-log";
+import type { SafeHttp } from "./safe-http";
 
 export type { ClientIdentity, EmbyItemMetadata, EmbyPlaybackInfo, ParsedEmbyUrl };
 
 export interface EmbyApiDeps {
-  http: typeof iina.http;
+  http: typeof iina.http | SafeHttp;
   preferences: typeof iina.preferences;
   log: DebugLogger;
 }

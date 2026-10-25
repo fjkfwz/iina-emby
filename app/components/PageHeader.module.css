@@ -25,6 +25,8 @@
   inset: 0;
   z-index: -1;
   pointer-events: none;
+  opacity: var(--header-shadow-opacity, 1);
+  will-change: opacity;
   background: linear-gradient(
     180deg,
     rgba(32, 32, 38, 0.98) 0%,
@@ -50,6 +52,30 @@
     rgba(0, 0, 0, 0.25) 88%,
     rgba(0, 0, 0, 0) 100%
   );
+}
+
+.header::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  inset: 0;
+  z-index: -2;
+  pointer-events: none;
+  opacity: calc(1 - var(--header-shadow-opacity, 1));
+  will-change: opacity;
+  background: linear-gradient(
+    180deg,
+    rgba(0, 0, 0, 0.45) 0%,
+    rgba(0, 0, 0, 0.2) 60%,
+    rgba(0, 0, 0, 0) 100%
+  );
+}
+
+.transparent {
+  --header-shadow-opacity: 0;
 }
 
 .headerLeft,

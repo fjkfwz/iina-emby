@@ -594,6 +594,102 @@ function createEmbyApi({ http: http2, preferences: preferences2, log }) {
   };
 }
 
+// plugin/src/lib/safe-http.ts
+function createSafeHttp(utils2, log) {
+  async function request(method, url, options) {
+    const timeout = options?.timeoutSeconds ?? 15;
+    let finalUrl = url;
+    if (options?.params) {
+      const q = Object.entries(options.params).map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`).join("&");
+      if (q) {
+        finalUrl += (finalUrl.includes("?") ? "&" : "?") + q;
+      }
+    }
+    const args = [
+      "-s",
+      "-S",
+      "-L",
+      "--max-time",
+      String(timeout),
+      "-X",
+      method
+    ];
+    if (options?.headers) {
+      for (const [k, v] of Object.entries(options.headers)) {
+        args.push("-H", `${k}: ${v}`);
+      }
+    }
+    if (options?.data !== void 0 && options?.data !== null) {
+      const payload = typeof options.data === "string" ? options.data : JSON.stringify(options.data);
+      args.push("-d", payload);
+    }
+    args.push("-w", "\n%{http_code}");
+    args.push(finalUrl);
+    if (log) {
+      log(`[safeHttp] ${method} ${finalUrl}`);
+    }
+    const res = await utils2.exec("/usr/bin/curl", args);
+    if (res.status !== 0 && !res.stdout) {
+      const errMsg = `curl ${method} failed with exit code ${res.status}: ${res.stderr || "unknown error"}`;
+      if (log) log.error(`[safeHttp] ${errMsg}`);
+      throw new Error(errMsg);
+    }
+    const stdout = res.stdout || "";
+    const lastNl = stdout.lastIndexOf("\n");
+    let body = stdout;
+    let statusCode = 200;
+    if (lastNl !== -1) {
+      body = stdout.substring(0, lastNl);
+      const codeStr = stdout.substring(lastNl + 1).trim();
+      const parsed = parseInt(codeStr, 10);
+      if (!isNaN(parsed) && parsed > 0) {
+        statusCode = parsed;
+      }
+    }
+    let data = body;
+    if (body) {
+      try {
+        data = JSON.parse(body);
+      } catch {
+      }
+    }
+    return {
+      status: statusCode,
+      data,
+      text: body
+    };
+  }
+  async function download(url, destPath, timeoutSeconds = 30) {
+    const resolved = typeof utils2.resolvePath === "function" ? utils2.resolvePath(destPath) : destPath;
+    if (log) {
+      log(`[safeHttp] Download ${url} -> ${resolved}`);
+    }
+    const args = [
+      "-s",
+      "-S",
+      "-L",
+      "--max-time",
+      String(timeoutSeconds),
+      "-o",
+      resolved,
+      url
+    ];
+    const res = await utils2.exec("/usr/bin/curl", args);
+    if (res.status !== 0) {
+      const errMsg = `curl download failed with exit code ${res.status}: ${res.stderr || "unknown error"}`;
+      if (log) log.error(`[safeHttp] ${errMsg}`);
+      throw new Error(errMsg);
+    }
+  }
+  return {
+    get: (url, opts) => request("GET", url, opts),
+    post: (url, opts) => request("POST", url, opts),
+    put: (url, opts) => request("PUT", url, opts),
+    delete: (url, opts) => request("DELETE", url, opts),
+    download
+  };
+}
+
 // plugin/src/lib/server-session-store.ts
 function createServerSessionStore({ preferences: preferences2, sidebar, standaloneWindow: standaloneWindow2, log }) {
   function notifyViews(name, data) {
@@ -807,8 +903,9 @@ var { global, console, preferences, standaloneWindow, utils, http, menu, file } 
 var debugLog = createDebugLogger(preferences, console, file);
 debugLog("Emby Plugin Global Entry loaded");
 console.log("[iina-emby] Global Entry initialized");
+var safeHttp = createSafeHttp(utils, debugLog);
 var { getClientIdentity } = createEmbyApi({
-  http,
+  http: safeHttp,
   preferences,
   log: debugLog
 });

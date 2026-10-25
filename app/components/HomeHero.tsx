@@ -1,4 +1,4 @@
-import type { EmbyItemMetadata, EmbyServer } from "@shared";
+import { type EmbyItemMetadata, type EmbyServer, getItemImageUrl } from "@shared";
 import { IconChevronLeft, IconChevronRight } from "@tabler/icons-react";
 import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
@@ -63,10 +63,14 @@ export const HomeHero = memo(function HomeHero({ server }: HomeHeroProps) {
   };
 
   const getBackdropUrl = (item: EmbyItemMetadata) => {
-    const base = server.serverUrl.replace(/\/+$/, "");
-    const tag = item.BackdropImageTags?.[0] ? `&tag=${item.BackdropImageTags[0]}` : "";
-    const token = server.accessToken ? `&api_key=${encodeURIComponent(server.accessToken)}` : "";
-    return `${base}/Items/${item.Id}/Images/Backdrop/0?maxWidth=1920&quality=85${tag}${token}`;
+    return (
+      getItemImageUrl(server.serverUrl, item, {
+        prefer: "backdrop",
+        maxWidth: 1920,
+        quality: 85,
+        accessToken: server.accessToken,
+      }) || ""
+    );
   };
 
   const rating =

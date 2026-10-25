@@ -9,6 +9,7 @@ import { createEmbyApi } from "./lib/emby-api";
 import { createMediaActionsManager } from "./lib/media-actions";
 import { createPlaybackCoordinator } from "./lib/playback-coordinator";
 import { createPlaybackTrackingManager } from "./lib/playback-tracking";
+import { createSafeHttp } from "./lib/safe-http";
 import { createServerSessionStore } from "./lib/server-session-store";
 import type { PlayMediaListMessage, PlayMediaMessage } from "./lib/webview-bridge";
 
@@ -16,8 +17,11 @@ const { core, console: iinaConsole, menu, event, http, utils, preferences, mpv, 
 
 const debugLog = createDebugLogger(preferences, iinaConsole, file);
 
+// Use safe HTTP wrapper (curl via utils.exec) to avoid IINA 1.5.0 crash on NSURLSession callbacks
+const safeHttp = createSafeHttp(utils, debugLog);
+
 const { buildEmbyHeaders, parseEmbyUrl, isEmbyUrl, fetchPlaybackInfo, fetchItemMetadata, secondsToTicks, ticksToSeconds } = createEmbyApi({
-  http,
+  http: safeHttp,
   preferences,
   log: debugLog,
 });
@@ -33,7 +37,7 @@ debugLog("Emby Plugin loaded");
 
 const { startPlaybackTracking, stopPlaybackTracking, handlePauseChange, getCurrentPlaybackSession } = createPlaybackTrackingManager({
   core,
-  http,
+  http: safeHttp,
   preferences,
   buildEmbyHeaders,
   fetchPlaybackInfo,
@@ -51,7 +55,7 @@ const { startPlaybackTracking, stopPlaybackTracking, handlePauseChange, getCurre
 let isWindowClosing = false;
 
 const { setupAutoplayForEpisode, resetForNewFile, clearQueuedFlag, isQueued } = createAutoplayManager({
-  http,
+  http: safeHttp,
   mpv,
   core,
   preferences,
@@ -67,7 +71,7 @@ const { setupAutoplayForEpisode, resetForNewFile, clearQueuedFlag, isQueued } = 
 const { setVideoTitleFromMetadata, downloadAllSubtitles, downloadExternalSubtitle, manualDownloadSubtitles, manualSetTitle, updateFromFileUrl } =
   createMediaActionsManager({
     core,
-    http,
+    http: safeHttp,
     utils,
     preferences,
     mpv,

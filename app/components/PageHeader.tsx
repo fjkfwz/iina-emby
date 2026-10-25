@@ -1,6 +1,5 @@
 import { IconChevronLeft, IconReload, IconSearch, IconSettings2 } from "@tabler/icons-react";
-import type { ReactNode } from "react";
-import { useEffect } from "react";
+import { forwardRef, type ReactNode, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router";
 import styles from "./PageHeader.module.css";
 import { GlassElement } from "./ui/GlassElement";
@@ -16,22 +15,29 @@ export interface PageHeaderProps {
   rightSection?: ReactNode;
   showSettings?: boolean;
   hideSearch?: boolean;
+  transparent?: boolean;
   className?: string;
+  style?: React.CSSProperties;
 }
 
-export function PageHeader({
-  onBack,
-  backTitle = "Back",
-  title,
-  showActiveDot = false,
-  onRefresh,
-  isRefreshing = false,
-  centerSection,
-  rightSection,
-  showSettings,
-  hideSearch = false,
-  className,
-}: PageHeaderProps) {
+export const PageHeader = forwardRef<HTMLElement, PageHeaderProps>(function PageHeader(
+  {
+    onBack,
+    backTitle = "Back",
+    title,
+    showActiveDot = false,
+    onRefresh,
+    isRefreshing = false,
+    centerSection,
+    rightSection,
+    showSettings,
+    hideSearch = false,
+    transparent = false,
+    className,
+    style,
+  },
+  ref,
+) {
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -54,7 +60,12 @@ export function PageHeader({
   }, [canSearch, hideSearch, navigate]);
 
   return (
-    <header className={`${styles.header} ${className || ""}`} data-window-drag>
+    <header
+      ref={ref}
+      style={style}
+      className={`${styles.header} ${transparent ? styles.transparent : ""} ${className || ""}`}
+      data-window-drag
+    >
       <div className={styles.headerLeft}>
         {onBack && (
           <GlassElement variant="glass" shape="rounded" size="sm" isIconOnly onClick={onBack} title={backTitle} aria-label={backTitle}>
@@ -131,4 +142,4 @@ export function PageHeader({
       </div>
     </header>
   );
-}
+});

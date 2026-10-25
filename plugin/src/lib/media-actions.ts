@@ -7,11 +7,12 @@ import {
   type ParsedEmbyUrl,
 } from "@shared";
 import type { DebugLogger } from "./debug-log";
+import type { SafeHttp } from "./safe-http";
 import type { StoredSessionData } from "./server-session-store";
 
 export interface MediaActionsDeps {
   core: typeof iina.core;
-  http: typeof iina.http;
+  http: typeof iina.http | SafeHttp;
   utils: typeof iina.utils;
   preferences: typeof iina.preferences;
   mpv: typeof iina.mpv;

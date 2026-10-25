@@ -122,8 +122,11 @@ export function ItemHero({
   // Technical specs & badges
   const { durationText, premiereDateText, resolutionBadge, hdrBadge, fpsBadge, sizeBadge } = getMediaBadges(targetItem || undefined, item);
 
-  // Resume position
-  const resumeTicks = targetItem?.UserData?.PlaybackPositionTicks;
+  // Resume position & progress
+  const resumeTicks = targetItem?.UserData?.PlaybackPositionTicks || 0;
+  const runtimeTicks = targetItem?.RunTimeTicks || item?.RunTimeTicks || 0;
+  const hasProgress = runtimeTicks > 0 && resumeTicks > 0;
+  const progressPercent = hasProgress ? Math.min(100, Math.max(0, (resumeTicks / runtimeTicks) * 100)) : 0;
   const resumeTimeClock = formatResumeTime(resumeTicks);
 
   // Overview / Synopsis with optional prefix
@@ -228,6 +231,11 @@ export function ItemHero({
                 ? `播放 S${nextUpEpisode.ParentIndexNumber ?? 1}:E${nextUpEpisode.IndexNumber ?? 1}${resumeTimeClock ? ` (${resumeTimeClock})` : ""}`
                 : `Play${resumeTimeClock ? ` ${resumeTimeClock}` : ""}`}
             </span>
+            {hasProgress && (
+              <div className={styles.playButtonProgressBarTrack}>
+                <div className={styles.playButtonProgressBarFill} style={{ width: `${progressPercent}%` }} />
+              </div>
+            )}
           </GlassElement>
 
           <GlassElement

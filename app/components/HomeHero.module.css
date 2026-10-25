@@ -1,12 +1,14 @@
 .container {
   position: relative;
   width: 100%;
-  height: clamp(340px, 46vh, 480px);
-  margin-top: -1.25rem;
-  margin-bottom: 1rem;
+  height: clamp(520px, 72vh, 640px);
+  margin-top: -6.875rem;
+  padding-top: 5.625rem;
+  margin-bottom: 1.5rem;
   overflow: hidden;
   user-select: none;
   background: #18181e;
+  box-sizing: border-box;
 }
 
 .slide {
@@ -48,9 +50,9 @@
   left: 0;
   inset: 0;
   background:
-    linear-gradient(180deg, rgba(32, 32, 38, 0.7) 0%, rgba(32, 32, 38, 0) 25%),
-    linear-gradient(0deg, var(--bg-window, #202026) 0%, rgba(32, 32, 38, 0.88) 22%, rgba(32, 32, 38, 0.3) 55%, rgba(32, 32, 38, 0) 80%),
-    radial-gradient(circle at center, transparent 40%, rgba(16, 16, 20, 0.5) 100%);
+    linear-gradient(180deg, rgba(0, 0, 0, 0.45) 0%, rgba(0, 0, 0, 0) 28%),
+    linear-gradient(0deg, var(--bg-window, #202026) 0%, rgba(32, 32, 38, 0.92) 20%, rgba(32, 32, 38, 0.25) 55%, rgba(32, 32, 38, 0) 80%),
+    radial-gradient(circle at center, transparent 40%, rgba(16, 16, 20, 0.4) 100%);
   pointer-events: none;
 }
 
@@ -136,9 +138,9 @@
 
 .navBtn {
   position: absolute;
-  top: 50%;
+  top: calc(5.625rem + (100% - 5.625rem) / 2);
   transform: translateY(-50%);
-  z-index: 10;
+  z-index: 20;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -207,8 +209,8 @@
 
 .skeleton {
   width: 100%;
-  height: clamp(340px, 46vh, 480px);
-  margin-top: -1.25rem;
-  margin-bottom: 1rem;
+  height: clamp(520px, 72vh, 640px);
+  margin-top: -6.875rem;
+  margin-bottom: 1.5rem;
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.03) 0%, rgba(0, 0, 0, 0.25) 100%), #1a1a20;
 }

@@ -115,6 +115,50 @@ export default function HomeRoute() {
   }, [activeServer]);
 
   const isSearching = Boolean(searchQuery.trim() || urlQ.trim());
+  const headerRef = useRef<HTMLElement>(null);
+
+  // Smoothly interpolate header gradient shadow opacity as user scrolls down
+  useEffect(() => {
+    const rootEl = document.getElementById("root");
+    let rafId: number | null = null;
+
+    const updateHeaderOpacity = (top: number) => {
+      if (!headerRef.current) return;
+      if (isSearching) {
+        headerRef.current.style.setProperty("--header-shadow-opacity", "1");
+        return;
+      }
+      // Gradually appear as you scroll down: 0 at top, reaching 1 at 180px
+      const progress = Math.min(1, Math.max(0, top / 180));
+      headerRef.current.style.setProperty("--header-shadow-opacity", progress.toFixed(3));
+    };
+
+    const handleScroll = () => {
+      if (rafId !== null) return;
+      rafId = requestAnimationFrame(() => {
+        rafId = null;
+        const top = rootEl ? rootEl.scrollTop : window.scrollY;
+        updateHeaderOpacity(top);
+      });
+    };
+
+    if (rootEl) {
+      rootEl.addEventListener("scroll", handleScroll, { passive: true });
+    }
+    window.addEventListener("scroll", handleScroll, { passive: true });
+
+    // Initial sync
+    const initialTop = rootEl ? rootEl.scrollTop : window.scrollY;
+    updateHeaderOpacity(initialTop);
+
+    return () => {
+      if (rafId !== null) cancelAnimationFrame(rafId);
+      if (rootEl) {
+        rootEl.removeEventListener("scroll", handleScroll);
+      }
+      window.removeEventListener("scroll", handleScroll);
+    };
+  }, [isSearching]);
 
   const handleClearSearch = useCallback(() => {
     setSearchQuery("");
@@ -153,6 +197,7 @@ export default function HomeRoute() {
   return (
     <div className={styles.container}>
       <PageHeader
+        ref={headerRef}
         onBack={handleBack}
         backTitle={isSearching ? "Home" : "Servers"}
         title={activeServer.serverName || "Emby"}

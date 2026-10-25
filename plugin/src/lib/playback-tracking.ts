@@ -1,9 +1,10 @@
 import type { EmbyItemMetadata, EmbyPlaybackInfo } from "@shared";
 import type { DebugLogger } from "./debug-log";
+import type { SafeHttp } from "./safe-http";
 
 export interface PlaybackTrackingDeps {
   core: typeof iina.core;
-  http: typeof iina.http;
+  http: typeof iina.http | SafeHttp;
   preferences: typeof iina.preferences;
   buildEmbyHeaders: (apiKey?: string, extraHeaders?: Record<string, string>) => Record<string, string>;
   fetchPlaybackInfo: (serverBase: string, itemId: string, apiKey: string) => Promise<EmbyPlaybackInfo>;

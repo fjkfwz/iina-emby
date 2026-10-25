@@ -8,6 +8,7 @@ import { sanitizeStreamUrl } from "@shared";
 import { createBrowserWindowManager } from "./lib/browser-window";
 import { createDebugLogger } from "./lib/debug-log";
 import { createEmbyApi } from "./lib/emby-api";
+import { createSafeHttp } from "./lib/safe-http";
 import { createServerSessionStore } from "./lib/server-session-store";
 import { createBridgeDeps, type PlayMediaListMessage, type PlayMediaMessage } from "./lib/webview-bridge";
 
@@ -18,9 +19,11 @@ const debugLog = createDebugLogger(preferences, console, file);
 debugLog("Emby Plugin Global Entry loaded");
 console.log("[iina-emby] Global Entry initialized");
 
+const safeHttp = createSafeHttp(utils, debugLog);
+
 // Shared API and Session Store
 const { getClientIdentity } = createEmbyApi({
-  http,
+  http: safeHttp,
   preferences,
   log: debugLog,
 });

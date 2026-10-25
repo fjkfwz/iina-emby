@@ -160,7 +160,30 @@
 }
 
 .playButton {
+  position: relative;
   min-width: 160px;
+  overflow: hidden;
+}
+
+.playButtonProgressBarTrack {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.25);
+  border-bottom-left-radius: inherit;
+  border-bottom-right-radius: inherit;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.playButtonProgressBarFill {
+  height: 100%;
+  background: #ffffff;
+  border-radius: 1.5px;
+  box-shadow: 0 0 6px rgba(255, 255, 255, 0.7);
+  transition: width 0.25s ease;
 }
 
 /* Overview / Synopsis */
