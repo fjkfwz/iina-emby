@@ -63,6 +63,62 @@ export function createPlaybackCoordinator({
   let currentPlaybackStartPositionSeconds: number | null = null;
   let currentPlaybackAudioIndex: number | null = null;
   let currentPlaybackSubtitleIndex: number | null = null;
+  let currentPlaybackAudioTrackNumber: number | null = null;
+  let currentPlaybackSubtitleTrackNumber: number | null = null;
+  let currentPlaybackAudioLanguage: string | null = null;
+  let currentPlaybackSubtitleLanguage: string | null = null;
+  let currentPlaybackIsExternalSubtitle: boolean | null = null;
+  let currentPlaybackSubtitlePath: string | null = null;
+  let currentPlaybackSubtitleCodec: string | null = null;
+
+  function setPendingPlaybackData(message?: PlayMediaMessage): void {
+    if (!message) return;
+    if (message.title) {
+      currentPlaybackTitle = message.title;
+    }
+    const streamUrl = message.streamUrl;
+    if (streamUrl) {
+      const match = (String(streamUrl).match(/\/(?:Items|Videos|Audio)\/([^/?]+)/) || [])[1];
+      if (match) {
+        currentPlaybackItemId = match;
+      }
+    }
+    const startPositionTicks = message.startPositionTicks as number | undefined;
+    const startPositionSeconds =
+      typeof startPositionTicks === "number" && startPositionTicks > 0
+        ? ticksToSeconds(startPositionTicks)
+        : (message.startPositionSeconds as number | undefined);
+    if (typeof startPositionSeconds === "number") {
+      currentPlaybackStartPositionSeconds = startPositionSeconds;
+    }
+    if (typeof message.selectedAudioIndex === "number") {
+      currentPlaybackAudioIndex = message.selectedAudioIndex;
+    }
+    if (typeof message.selectedSubtitleIndex === "number") {
+      currentPlaybackSubtitleIndex = message.selectedSubtitleIndex;
+    }
+    if (typeof message.audioTrackNumber === "number") {
+      currentPlaybackAudioTrackNumber = message.audioTrackNumber;
+    }
+    if (typeof message.subtitleTrackNumber === "number") {
+      currentPlaybackSubtitleTrackNumber = message.subtitleTrackNumber;
+    }
+    if (typeof message.audioLanguage === "string") {
+      currentPlaybackAudioLanguage = message.audioLanguage;
+    }
+    if (typeof message.subtitleLanguage === "string") {
+      currentPlaybackSubtitleLanguage = message.subtitleLanguage;
+    }
+    if (typeof message.isExternalSubtitle === "boolean") {
+      currentPlaybackIsExternalSubtitle = message.isExternalSubtitle;
+    }
+    if (typeof message.subtitlePath === "string") {
+      currentPlaybackSubtitlePath = message.subtitlePath;
+    }
+    if (typeof message.subtitleCodec === "string") {
+      currentPlaybackSubtitleCodec = message.subtitleCodec;
+    }
+  }
 
   function getPendingMediaTitle(itemId?: string): string | null {
     if (!currentPlaybackTitle) return null;
@@ -94,6 +150,62 @@ export function createPlaybackCoordinator({
       return null;
     }
     return currentPlaybackSubtitleIndex;
+  }
+
+  function getPendingAudioTrackNumber(itemId?: string): number | null {
+    if (typeof currentPlaybackAudioTrackNumber !== "number") return null;
+    if (itemId && currentPlaybackItemId && currentPlaybackItemId !== itemId) {
+      return null;
+    }
+    return currentPlaybackAudioTrackNumber;
+  }
+
+  function getPendingSubtitleTrackNumber(itemId?: string): number | null {
+    if (typeof currentPlaybackSubtitleTrackNumber !== "number") return null;
+    if (itemId && currentPlaybackItemId && currentPlaybackItemId !== itemId) {
+      return null;
+    }
+    return currentPlaybackSubtitleTrackNumber;
+  }
+
+  function getPendingAudioLanguage(itemId?: string): string | null {
+    if (!currentPlaybackAudioLanguage) return null;
+    if (itemId && currentPlaybackItemId && currentPlaybackItemId !== itemId) {
+      return null;
+    }
+    return currentPlaybackAudioLanguage;
+  }
+
+  function getPendingSubtitleLanguage(itemId?: string): string | null {
+    if (!currentPlaybackSubtitleLanguage) return null;
+    if (itemId && currentPlaybackItemId && currentPlaybackItemId !== itemId) {
+      return null;
+    }
+    return currentPlaybackSubtitleLanguage;
+  }
+
+  function getPendingIsExternalSubtitle(itemId?: string): boolean | null {
+    if (typeof currentPlaybackIsExternalSubtitle !== "boolean") return null;
+    if (itemId && currentPlaybackItemId && currentPlaybackItemId !== itemId) {
+      return null;
+    }
+    return currentPlaybackIsExternalSubtitle;
+  }
+
+  function getPendingSubtitlePath(itemId?: string): string | null {
+    if (!currentPlaybackSubtitlePath) return null;
+    if (itemId && currentPlaybackItemId && currentPlaybackItemId !== itemId) {
+      return null;
+    }
+    return currentPlaybackSubtitlePath;
+  }
+
+  function getPendingSubtitleCodec(itemId?: string): string | null {
+    if (!currentPlaybackSubtitleCodec) return null;
+    if (itemId && currentPlaybackItemId && currentPlaybackItemId !== itemId) {
+      return null;
+    }
+    return currentPlaybackSubtitleCodec;
   }
 
   function markReplacingPlayback(): void {
@@ -137,13 +249,13 @@ export function createPlaybackCoordinator({
   /**
    * Open media in a new IINA instance
    */
-  function openInNewInstance(streamUrl: string, title?: string, startPositionSeconds?: number): void {
+  function openInNewInstance(playData: PlayMediaMessage): void {
     if (iinaGlobal && typeof iinaGlobal.postMessage === "function") {
       log("Requesting new player instance from global entry");
-      iinaGlobal.postMessage("create-player", { url: streamUrl, title, startPositionSeconds });
+      iinaGlobal.postMessage("create-player", playData);
     } else {
       log("Global entry not available, opening in current window");
-      openInCurrentWindow(streamUrl, title, startPositionSeconds);
+      openInCurrentWindow(playData.streamUrl, playData.title, playData.startPositionSeconds);
     }
   }
 
@@ -314,6 +426,10 @@ export function createPlaybackCoordinator({
     log("handlePlayMedia called with message", {
       title: message?.title,
       streamUrl: message?.streamUrl,
+      selectedAudioIndex: message?.selectedAudioIndex,
+      selectedSubtitleIndex: message?.selectedSubtitleIndex,
+      audioTrackNumber: message?.audioTrackNumber,
+      subtitleTrackNumber: message?.subtitleTrackNumber,
     });
     const streamUrl = sanitizeStreamUrl(message?.streamUrl);
     const title = message?.title;
@@ -324,15 +440,7 @@ export function createPlaybackCoordinator({
     }
 
     log(`Opening media: ${title} - ${streamUrl}`);
-
-    currentPlaybackAudioIndex = typeof message?.selectedAudioIndex === "number" ? message.selectedAudioIndex : null;
-    currentPlaybackSubtitleIndex = typeof message?.selectedSubtitleIndex === "number" ? message.selectedSubtitleIndex : null;
-    if (typeof currentPlaybackAudioIndex === "number") {
-      log(`Requested initial audio track index: ${currentPlaybackAudioIndex}`);
-    }
-    if (typeof currentPlaybackSubtitleIndex === "number") {
-      log(`Requested initial subtitle track index: ${currentPlaybackSubtitleIndex}`);
-    }
+    setPendingPlaybackData({ ...message, streamUrl });
 
     const startPositionTicks = message?.startPositionTicks as number | undefined;
     const startPositionSeconds =
@@ -348,7 +456,7 @@ export function createPlaybackCoordinator({
       if (openInNewWindow) {
         log("Opening media in new instance: " + streamUrl);
         core.osd(`Opening in new window: ${title || ""}`);
-        openInNewInstance(streamUrl, title, startPositionSeconds);
+        openInNewInstance({ ...message, streamUrl, title, startPositionSeconds });
       } else {
         core.osd(`Opening: ${title || ""}`);
         openInCurrentWindow(streamUrl, title, startPositionSeconds);
@@ -399,9 +507,17 @@ export function createPlaybackCoordinator({
     flushPendingPlaylistQueue,
     handlePlayMediaList,
     handlePlayMedia,
+    setPendingPlaybackData,
     getPendingMediaTitle,
     getPendingStartPosition,
     getPendingAudioIndex,
     getPendingSubtitleIndex,
+    getPendingAudioTrackNumber,
+    getPendingSubtitleTrackNumber,
+    getPendingAudioLanguage,
+    getPendingSubtitleLanguage,
+    getPendingIsExternalSubtitle,
+    getPendingSubtitlePath,
+    getPendingSubtitleCodec,
   };
 }

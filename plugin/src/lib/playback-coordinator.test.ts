@@ -1,0 +1,117 @@
+import { describe, expect, it, vi } from "vitest";
+import { createPlaybackCoordinator } from "./playback-coordinator";
+
+describe("playback-coordinator", () => {
+  function createTestCoordinator() {
+    const mockCore = {
+      open: vi.fn(),
+      osd: vi.fn(),
+    } as unknown as typeof iina.core;
+
+    const mockMpv = {
+      command: vi.fn(),
+      set: vi.fn(),
+      getNumber: vi.fn().mockReturnValue(0),
+    } as unknown as typeof iina.mpv;
+
+    const mockPreferences = {
+      get: vi.fn().mockReturnValue(false),
+    } as unknown as typeof iina.preferences;
+
+    const mockLog = vi.fn() as unknown as any;
+    mockLog.error = vi.fn();
+
+    return createPlaybackCoordinator({
+      core: mockCore,
+      mpv: mockMpv,
+      preferences: mockPreferences,
+      getCurrentPlaybackSession: () => null,
+      clearQueuedFlag: vi.fn(),
+      log: mockLog,
+    });
+  }
+
+  it("stores and retrieves pending audio and subtitle tracks correctly", () => {
+    const coordinator = createTestCoordinator();
+
+    coordinator.setPendingPlaybackData({
+      streamUrl: "http://localhost:8096/Videos/item-123/stream?static=true",
+      title: "Test Movie",
+      selectedAudioIndex: 2,
+      selectedSubtitleIndex: 4,
+      audioTrackNumber: 2,
+      subtitleTrackNumber: 2,
+      audioLanguage: "chi",
+      subtitleLanguage: "chi",
+      isExternalSubtitle: false,
+      subtitleCodec: "subrip",
+    });
+
+    expect(coordinator.getPendingAudioIndex("item-123")).toBe(2);
+    expect(coordinator.getPendingSubtitleIndex("item-123")).toBe(4);
+    expect(coordinator.getPendingAudioTrackNumber("item-123")).toBe(2);
+    expect(coordinator.getPendingSubtitleTrackNumber("item-123")).toBe(2);
+    expect(coordinator.getPendingAudioLanguage("item-123")).toBe("chi");
+    expect(coordinator.getPendingSubtitleLanguage("item-123")).toBe("chi");
+    expect(coordinator.getPendingIsExternalSubtitle("item-123")).toBe(false);
+    expect(coordinator.getPendingSubtitleCodec("item-123")).toBe("subrip");
+
+    // Returns null for unrelated item
+    expect(coordinator.getPendingAudioIndex("item-other")).toBeNull();
+  });
+
+  it("handles turning off subtitles with selectedSubtitleIndex: -1", () => {
+    const coordinator = createTestCoordinator();
+
+    coordinator.setPendingPlaybackData({
+      streamUrl: "http://localhost:8096/Videos/item-456/stream?static=true",
+      title: "Movie Without Subtitles",
+      selectedAudioIndex: 1,
+      selectedSubtitleIndex: -1,
+      audioTrackNumber: 1,
+    });
+
+    expect(coordinator.getPendingSubtitleIndex("item-456")).toBe(-1);
+    expect(coordinator.getPendingSubtitleTrackNumber("item-456")).toBeNull();
+  });
+
+  it("correctly parses external subtitle properties", () => {
+    const coordinator = createTestCoordinator();
+
+    coordinator.setPendingPlaybackData({
+      streamUrl: "http://localhost:8096/Videos/item-789/stream?static=true",
+      title: "Movie With External Sub",
+      selectedAudioIndex: 1,
+      selectedSubtitleIndex: 5,
+      isExternalSubtitle: true,
+      subtitlePath: "/path/to/sub.zh.srt",
+      subtitleCodec: "srt",
+      subtitleLanguage: "zh",
+    });
+
+    expect(coordinator.getPendingIsExternalSubtitle("item-789")).toBe(true);
+    expect(coordinator.getPendingSubtitlePath("item-789")).toBe("/path/to/sub.zh.srt");
+    expect(coordinator.getPendingSubtitleCodec("item-789")).toBe("srt");
+    expect(coordinator.getPendingSubtitleLanguage("item-789")).toBe("zh");
+  });
+
+  it("handles playMedia storing track metadata before opening", () => {
+    const coordinator = createTestCoordinator();
+
+    coordinator.handlePlayMedia({
+      streamUrl: "http://localhost:8096/Videos/item-play/stream?static=true",
+      title: "Episode 1",
+      selectedAudioIndex: 3,
+      selectedSubtitleIndex: 2,
+      audioTrackNumber: 2,
+      subtitleTrackNumber: 1,
+      startPositionTicks: 100000000, // 10 seconds
+    });
+
+    expect(coordinator.getPendingAudioIndex("item-play")).toBe(3);
+    expect(coordinator.getPendingSubtitleIndex("item-play")).toBe(2);
+    expect(coordinator.getPendingAudioTrackNumber("item-play")).toBe(2);
+    expect(coordinator.getPendingSubtitleTrackNumber("item-play")).toBe(1);
+    expect(coordinator.getPendingStartPosition("item-play")).toBe(10);
+  });
+});

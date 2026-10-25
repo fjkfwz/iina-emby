@@ -91,6 +91,12 @@ export default function ItemDetailRoute() {
   const selectedAudioStream = audioStreams.find((s) => s.Index === effectiveAudioIndex);
   const selectedSubtitleStream = subtitleStreams.find((s) => s.Index === effectiveSubtitleIndex);
 
+  const audioStreamIndex = audioStreams.findIndex((s) => s.Index === effectiveAudioIndex);
+  const audioTrackNumber = audioStreamIndex !== -1 ? audioStreamIndex + 1 : undefined;
+
+  const subStreamIndex = subtitleStreams.findIndex((s) => s.Index === effectiveSubtitleIndex);
+  const subtitleTrackNumber = subStreamIndex !== -1 ? subStreamIndex + 1 : undefined;
+
   const selectedAudioLabel = selectedAudioStream
     ? `${selectedAudioStream.DisplayLanguage || selectedAudioStream.Language || "Audio"}${selectedAudioStream.ChannelLayout ? ` • ${selectedAudioStream.ChannelLayout}` : ""}`
     : undefined;
@@ -126,6 +132,13 @@ export default function ItemDetailRoute() {
         startPositionTicks: playTarget.UserData?.PlaybackPositionTicks,
         selectedAudioIndex: effectiveAudioIndex,
         selectedSubtitleIndex: effectiveSubtitleIndex,
+        audioTrackNumber,
+        subtitleTrackNumber,
+        audioLanguage: selectedAudioStream?.Language,
+        subtitleLanguage: selectedSubtitleStream?.Language,
+        isExternalSubtitle: selectedSubtitleStream?.IsExternal,
+        subtitlePath: selectedSubtitleStream?.Path,
+        subtitleCodec: selectedSubtitleStream?.Codec,
       });
     } finally {
       setIsPlaying(false);
@@ -136,12 +149,56 @@ export default function ItemDetailRoute() {
   const handlePlayEpisode = (ep: EmbyItemMetadata) => {
     const playTitle = formatFullEpisodeTitle(item?.Name, ep.ParentIndexNumber, ep.IndexNumber, ep.Name);
 
+    const epStreams = ep.MediaStreams || ep.MediaSources?.[0]?.MediaStreams;
+    let epAudioIndex = effectiveAudioIndex;
+    let epSubIndex = effectiveSubtitleIndex;
+    let epAudioTrackNum = audioTrackNumber;
+    let epSubTrackNum = subtitleTrackNumber;
+    let epSubExt = selectedSubtitleStream?.IsExternal;
+    let epSubPath = selectedSubtitleStream?.Path;
+    let epSubCodec = selectedSubtitleStream?.Codec;
+
+    if (Array.isArray(epStreams) && epStreams.length > 0) {
+      const epAudioStreams = epStreams.filter((s) => s.Type === "Audio");
+      const epSubStreams = epStreams.filter((s) => s.Type === "Subtitle");
+
+      if (selectedAudioStream?.Language) {
+        const langMatch = epAudioStreams.find(
+          (s) => s.Language?.toLowerCase() === selectedAudioStream.Language?.toLowerCase(),
+        );
+        if (langMatch) {
+          epAudioIndex = langMatch.Index;
+          epAudioTrackNum = epAudioStreams.indexOf(langMatch) + 1;
+        }
+      }
+
+      if (effectiveSubtitleIndex !== -1 && selectedSubtitleStream?.Language) {
+        const langMatch = epSubStreams.find(
+          (s) => s.Language?.toLowerCase() === selectedSubtitleStream.Language?.toLowerCase(),
+        );
+        if (langMatch) {
+          epSubIndex = langMatch.Index;
+          epSubTrackNum = epSubStreams.indexOf(langMatch) + 1;
+          epSubExt = langMatch.IsExternal;
+          epSubPath = langMatch.Path;
+          epSubCodec = langMatch.Codec;
+        }
+      }
+    }
+
     playMedia({
       title: playTitle,
       streamUrl: buildStreamUrl(activeServer, ep.Id),
       startPositionTicks: ep.UserData?.PlaybackPositionTicks,
-      selectedAudioIndex: effectiveAudioIndex,
-      selectedSubtitleIndex: effectiveSubtitleIndex,
+      selectedAudioIndex: epAudioIndex,
+      selectedSubtitleIndex: epSubIndex,
+      audioTrackNumber: epAudioTrackNum,
+      subtitleTrackNumber: epSubTrackNum,
+      audioLanguage: selectedAudioStream?.Language,
+      subtitleLanguage: selectedSubtitleStream?.Language,
+      isExternalSubtitle: epSubExt,
+      subtitlePath: epSubPath,
+      subtitleCodec: epSubCodec,
     });
   };
 

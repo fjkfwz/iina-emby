@@ -21,6 +21,13 @@ export interface PlayMediaPayload {
   startPositionSeconds?: number;
   selectedAudioIndex?: number;
   selectedSubtitleIndex?: number;
+  audioTrackNumber?: number;
+  subtitleTrackNumber?: number;
+  audioLanguage?: string;
+  subtitleLanguage?: string;
+  isExternalSubtitle?: boolean;
+  subtitlePath?: string;
+  subtitleCodec?: string;
   [key: string]: unknown;
 }
 

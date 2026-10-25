@@ -413,6 +413,7 @@ export function createMediaActionsManager({
   return {
     setVideoTitleFromMetadata,
     downloadAllSubtitles,
+    downloadExternalSubtitle,
     manualDownloadSubtitles,
     manualSetTitle,
     updateFromFileUrl,
