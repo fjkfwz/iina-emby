@@ -1,17 +1,26 @@
 .header {
-  height: var(--height-toolbar);
-  min-height: var(--height-toolbar);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-sizing: border-box;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 1.5rem 1.5rem 0.5rem;
-  background: transparent;
+  padding: 2.25rem 1.5rem 1.25rem;
+  background: linear-gradient(
+    180deg,
+    rgba(32, 32, 38, 0.98) 0%,
+    rgba(32, 32, 38, 0.94) 50%,
+    rgba(32, 32, 38, 0.75) 80%,
+    rgba(32, 32, 38, 0) 100%
+  );
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
   border: none;
   -webkit-app-region: drag;
   user-select: none;
   -webkit-user-select: none;
-  position: relative;
-  z-index: 10;
+  pointer-events: auto;
 }
 
 .headerLeft,
