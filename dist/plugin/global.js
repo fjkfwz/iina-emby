@@ -198,6 +198,18 @@ function registerBridgeHandlers(view, deps, options) {
     }
   });
 }
+function sendInitialBridgeState(view, deps) {
+  view.postMessage("client-identity", deps.getClientIdentity());
+  const servers = deps.loadStoredServers();
+  const activeServerId = deps.getActiveServerId();
+  if (servers.length > 0) {
+    view.postMessage("servers-list", { servers, activeServerId });
+  }
+  const sessionData = deps.getStoredEmbySession();
+  if (sessionData) {
+    view.postMessage("session-available", sessionData);
+  }
+}
 
 // plugin/src/lib/browser-window.ts
 function createBrowserWindowManager({ core, sidebar, standaloneWindow: standaloneWindow2, preferences: preferences2, bridgeDeps: bridgeDeps2, log }) {
@@ -255,6 +267,7 @@ function createBrowserWindowManager({ core, sidebar, standaloneWindow: standalon
       standaloneWindow2.open();
       standaloneWindow2.postMessage("window-context", { isStandalone: true });
       standaloneWindow2.postMessage("window-reopened", { timestamp: Date.now() });
+      sendInitialBridgeState(standaloneWindow2, bridgeDeps2);
       log("Standalone Emby browser window opened successfully");
       const sessionData = bridgeDeps2.getStoredEmbySession();
       if (core) {

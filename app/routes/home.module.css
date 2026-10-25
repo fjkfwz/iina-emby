@@ -227,3 +227,11 @@
   width: 100%;
   box-sizing: border-box;
 }
+
+.centerLoading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  min-height: 80vh;
+}

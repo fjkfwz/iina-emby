@@ -1,7 +1,7 @@
 import { WINDOW_DIMENSIONS, WINDOW_PREF_KEYS } from "@shared";
 import type { DebugLogger } from "./debug-log";
 import type { WebviewBridgeDeps } from "./webview-bridge";
-import { registerBridgeHandlers } from "./webview-bridge";
+import { registerBridgeHandlers, sendInitialBridgeState } from "./webview-bridge";
 
 export interface BrowserWindowDeps {
   core?: typeof iina.core;
@@ -90,6 +90,7 @@ export function createBrowserWindowManager({ core, sidebar, standaloneWindow, pr
       standaloneWindow.open();
       standaloneWindow.postMessage("window-context", { isStandalone: true });
       standaloneWindow.postMessage("window-reopened", { timestamp: Date.now() });
+      sendInitialBridgeState(standaloneWindow, bridgeDeps);
 
       log("Standalone Emby browser window opened successfully");
       const sessionData = bridgeDeps.getStoredEmbySession();

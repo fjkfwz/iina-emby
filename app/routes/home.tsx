@@ -112,16 +112,6 @@ export default function HomeRoute() {
     }
   }, [activeServer]);
 
-  // Wait for IINA bridge to report servers list before redirecting
-  if (isLoading) {
-    return null;
-  }
-
-  // If no server is connected or configured, redirect directly to servers page
-  if (servers.length === 0 || !activeServer) {
-    return <Navigate to="/servers" replace />;
-  }
-
   const isSearching = Boolean(searchQuery.trim() || urlQ.trim());
 
   const handleClearSearch = useCallback(() => {
@@ -142,6 +132,21 @@ export default function HomeRoute() {
     }
     navigate("/servers");
   }, [isSearching, handleClearSearch, navigate]);
+
+  // Wait for IINA bridge to report servers list before redirecting if no server is known yet
+  if (isLoading && !activeServer) {
+    return (
+      <div className={styles.container}>
+        <LibraryShelfSkeleton />
+        <LibraryShelfSkeleton />
+      </div>
+    );
+  }
+
+  // If no server is connected or configured, redirect directly to servers page
+  if (servers.length === 0 || !activeServer) {
+    return <Navigate to="/servers" replace />;
+  }
 
   return (
     <div className={styles.container}>

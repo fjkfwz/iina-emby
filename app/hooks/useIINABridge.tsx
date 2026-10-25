@@ -42,9 +42,6 @@ export function IINABridgeProvider({ children }: { children: React.ReactNode }) 
   const hasIina = typeof window !== "undefined" && Boolean(window?.iina?.postMessage);
 
   const [servers, setServers] = useState<EmbyServer[]>(() => {
-    if (hasIina) {
-      return [];
-    }
     try {
       const saved = localStorage.getItem(LOCAL_STORAGE_SERVERS_KEY);
       return saved ? JSON.parse(saved) : [];
@@ -54,15 +51,16 @@ export function IINABridgeProvider({ children }: { children: React.ReactNode }) 
   });
 
   const [activeServerId, setActiveServerId] = useState<string | null>(() => {
-    if (hasIina) {
+    try {
+      return localStorage.getItem(LOCAL_STORAGE_ACTIVE_KEY);
+    } catch {
       return null;
     }
-    return localStorage.getItem(LOCAL_STORAGE_ACTIVE_KEY);
   });
 
   const [isIinaAvailable, setIsIinaAvailable] = useState<boolean>(hasIina);
   const [isStandalone, setIsStandalone] = useState<boolean>(() => typeof window !== "undefined" && window.innerWidth >= 450);
-  const [isLoading, setIsLoading] = useState<boolean>(hasIina);
+  const [isLoading, setIsLoading] = useState<boolean>(() => hasIina && servers.length === 0);
   const [reopenCount, setReopenCount] = useState<number>(0);
   const [progressUpdateCount, setProgressUpdateCount] = useState<number>(0);
 
@@ -70,22 +68,21 @@ export function IINABridgeProvider({ children }: { children: React.ReactNode }) 
   const activeServerRef = useRef<EmbyServer | null>(activeServer);
   activeServerRef.current = activeServer;
 
-  // Standalone web dev fallback: synchronize servers and active server ID to localStorage only when NOT in IINA
+  // Synchronize servers and active server ID to localStorage as instant cache
   useEffect(() => {
-    if (isIinaAvailable) {
-      return;
-    }
     try {
-      localStorage.setItem(LOCAL_STORAGE_SERVERS_KEY, JSON.stringify(servers));
+      if (servers.length > 0) {
+        localStorage.setItem(LOCAL_STORAGE_SERVERS_KEY, JSON.stringify(servers));
+      }
       if (activeServerId) {
         localStorage.setItem(LOCAL_STORAGE_ACTIVE_KEY, activeServerId);
-      } else {
+      } else if (servers.length === 0) {
         localStorage.removeItem(LOCAL_STORAGE_ACTIVE_KEY);
       }
     } catch {
       // Ignore storage quota or disabled localStorage errors
     }
-  }, [servers, activeServerId, isIinaAvailable]);
+  }, [servers, activeServerId]);
 
   // Automatically clear library cache when active server changes
   const prevActiveServerIdRef = useRef<string | null>(activeServerId);
@@ -161,6 +158,10 @@ export function IINABridgeProvider({ children }: { children: React.ReactNode }) 
         setServers([]);
         setActiveServerId(null);
         setIsLoading(false);
+        try {
+          localStorage.removeItem(LOCAL_STORAGE_SERVERS_KEY);
+          localStorage.removeItem(LOCAL_STORAGE_ACTIVE_KEY);
+        } catch {}
       });
 
       window.iina.onMessage("playback-progress-updated", (data?: PlaybackProgressUpdatedPayload) => {
@@ -182,12 +183,20 @@ export function IINABridgeProvider({ children }: { children: React.ReactNode }) 
       window.iina.postMessage("get-client-identity");
       window.iina.postMessage("get-servers");
 
+      // Retry get-servers after a short tick in case the bridge message listener was registering
+      const retryTimer = setTimeout(() => {
+        window.iina?.postMessage("get-servers");
+      }, 400);
+
       // Timeout fallback to stop loading state if IINA takes too long
       const timer = setTimeout(() => {
         setIsLoading(false);
-      }, 3000);
+      }, 2000);
 
-      return () => clearTimeout(timer);
+      return () => {
+        clearTimeout(retryTimer);
+        clearTimeout(timer);
+      };
     }
 
     setIsLoading(false);

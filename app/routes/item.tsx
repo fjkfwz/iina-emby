@@ -64,6 +64,9 @@ export default function ItemDetailRoute() {
     item,
   );
 
+  const [selectedAudioIndex, setSelectedAudioIndex] = useState<number | undefined>(undefined);
+  const [selectedSubtitleIndex, setSelectedSubtitleIndex] = useState<number | undefined>(undefined);
+
   if (!activeServer) {
     return null;
   }
@@ -74,9 +77,6 @@ export default function ItemDetailRoute() {
     (playTarget || item)?.MediaStreams || (playTarget || item)?.MediaSources?.[0]?.MediaStreams || [];
   const audioStreams = Array.isArray(mediaStreams) ? mediaStreams.filter((s) => s.Type === "Audio") : [];
   const subtitleStreams = Array.isArray(mediaStreams) ? mediaStreams.filter((s) => s.Type === "Subtitle") : [];
-
-  const [selectedAudioIndex, setSelectedAudioIndex] = useState<number | undefined>(undefined);
-  const [selectedSubtitleIndex, setSelectedSubtitleIndex] = useState<number | undefined>(undefined);
 
   const effectiveAudioIndex =
     selectedAudioIndex !== undefined
