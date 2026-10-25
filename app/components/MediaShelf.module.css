@@ -63,6 +63,9 @@
   overscroll-behavior-x: contain;
   scrollbar-width: none;
   contain: none;
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+  will-change: scroll-position;
 }
 
 .scroller::-webkit-scrollbar {

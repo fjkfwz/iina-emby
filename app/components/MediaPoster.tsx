@@ -12,6 +12,8 @@ import { PlayedConfirmModal, PlayStatusMenuItems } from "./PlayedConfirmModal";
 import { DropdownMenu } from "./ui/DropdownMenu";
 import { Skeleton } from "./ui/Skeleton";
 
+const loadedPosterUrls = new Set<string>();
+
 export function MediaPosterSkeleton({ className }: { className?: string }) {
   return (
     <div className={`${classes.card} ${className || ""}`} aria-hidden="true">
@@ -102,6 +104,24 @@ export const MediaPoster = memo(function MediaPoster({
       })
     : undefined;
 
+  const isCached = Boolean(imageUrl && loadedPosterUrls.has(imageUrl));
+  const [isLoaded, setIsLoaded] = useState(isCached);
+
+  const handleImgLoad = useCallback(() => {
+    if (imageUrl) loadedPosterUrls.add(imageUrl);
+    setIsLoaded(true);
+  }, [imageUrl]);
+
+  const handleRef = useCallback(
+    (el: HTMLImageElement | null) => {
+      if (el && el.complete && el.naturalWidth > 0 && !isLoaded) {
+        if (imageUrl) loadedPosterUrls.add(imageUrl);
+        setIsLoaded(true);
+      }
+    },
+    [imageUrl, isLoaded],
+  );
+
   const rating = typeof item.CommunityRating === "number" && item.CommunityRating > 0 ? item.CommunityRating.toFixed(1) : null;
 
   const handleClick = (e: React.MouseEvent) => {
@@ -120,11 +140,18 @@ export const MediaPoster = memo(function MediaPoster({
       <div className={classes.posterWrapper}>
         {imageUrl ? (
           <img
+            ref={handleRef}
             key={retryCount}
             src={imageUrl}
-            alt={item.Name || "Media"}
+            alt=""
             className={classes.image}
+            loading={isCached || isLoaded ? "eager" : "lazy"}
             decoding="async"
+            style={{
+              opacity: isCached || isLoaded ? 1 : 0,
+              transition: isCached || isLoaded ? "opacity 0.2s ease" : "none",
+            }}
+            onLoad={handleImgLoad}
             onError={handleImgError}
           />
         ) : (

@@ -43,6 +43,8 @@ export function MediaThumbSkeleton({ className }: { className?: string }) {
   );
 }
 
+const loadedThumbUrls = new Set<string>();
+
 export interface MediaThumbProps {
   item: EmbyItemMetadata;
   server: EmbyServer;
@@ -126,6 +128,24 @@ export const MediaThumb = memo(function MediaThumb({
       })
     : undefined;
 
+  const isCached = Boolean(imageUrl && loadedThumbUrls.has(imageUrl));
+  const [isLoaded, setIsLoaded] = useState(isCached);
+
+  const handleImgLoad = useCallback(() => {
+    if (imageUrl) loadedThumbUrls.add(imageUrl);
+    setIsLoaded(true);
+  }, [imageUrl]);
+
+  const handleRef = useCallback(
+    (el: HTMLImageElement | null) => {
+      if (el && el.complete && el.naturalWidth > 0 && !isLoaded) {
+        if (imageUrl) loadedThumbUrls.add(imageUrl);
+        setIsLoaded(true);
+      }
+    },
+    [imageUrl, isLoaded],
+  );
+
   const currentSec = ticksToSeconds(playbackPositionTicks);
   const totalSec = ticksToSeconds(item.RunTimeTicks);
 
@@ -174,7 +194,21 @@ export const MediaThumb = memo(function MediaThumb({
           aria-label={`Play ${fullPlayTitle}`}
         ></button>
         {imageUrl ? (
-          <img key={retryCount} src={imageUrl} alt={title} className={classes.image} decoding="async" onError={handleImgError} />
+          <img
+            ref={handleRef}
+            key={retryCount}
+            src={imageUrl}
+            alt=""
+            className={classes.image}
+            loading={isCached || isLoaded ? "eager" : "lazy"}
+            decoding="async"
+            style={{
+              opacity: isCached || isLoaded ? 1 : 0,
+              transition: isCached || isLoaded ? "opacity 0.2s ease" : "none",
+            }}
+            onLoad={handleImgLoad}
+            onError={handleImgError}
+          />
         ) : (
           <div className={classes.placeholder}>
             <IconMovie size={38} stroke={1.5} />

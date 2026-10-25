@@ -11318,29 +11318,19 @@ function Eo({ label: e2, children: t2 }) {
 function Do({ className: e2 }) {
   return (0, b.jsxs)(`div`, { className: `${Ga.card} ${e2 || ``}`, "aria-hidden": `true`, children: [(0, b.jsx)(`div`, { className: Ga.preview, children: (0, b.jsx)(wo, { height: `100%`, radius: `var(--radius-l)` }) }), (0, b.jsxs)(`div`, { className: Ga.meta, children: [(0, b.jsx)(`span`, { className: Ga.title, children: (0, b.jsx)(wo, { width: `75%`, radius: `xs`, children: (0, b.jsx)(`span`, { children: `\xA0` }) }) }), (0, b.jsx)(`span`, { className: Ga.subtitle, children: (0, b.jsx)(wo, { width: `45%`, radius: `xs`, children: (0, b.jsx)(`span`, { children: `\xA0` }) }) })] })] });
 }
-function CachedImg(e) {
-  let { src: t, alt: a, className: s, loading: l, onError: r, onLoad: c, ...n } = e;
-  let [visible, setVisible] = (0, _.useState)(() => {
-    return l === `eager` || typeof IntersectionObserver === `undefined`;
-  });
-  let [retry, setRetry] = (0, _.useState)(0);
-  let ref = (0, _.useRef)(null);
+var __loadedImgUrls = window.__loadedImgUrls || (window.__loadedImgUrls = new Set());
 
-  (0, _.useEffect)(() => {
-    if (visible || !ref.current || typeof IntersectionObserver === `undefined`) return;
-    let rootEl = document.getElementById('root');
-    let obs = new IntersectionObserver((entries) => {
-      if (entries[0] && entries[0].isIntersecting) {
-        setVisible(true);
-        obs.disconnect();
-      }
-    }, {
-      root: rootEl || null,
-      rootMargin: `1200px 0px`
-    });
-    obs.observe(ref.current);
-    return () => { obs.disconnect(); };
-  }, [visible]);
+function CachedImg(e) {
+  let { src: t, alt: a, className: s, loading: l, onError: r, onLoad: c, style: st, ...n } = e;
+  let isCached = Boolean(t && __loadedImgUrls.has(t));
+  let [isLoaded, setIsLoaded] = (0, _.useState)(isCached);
+  let [retry, setRetry] = (0, _.useState)(0);
+
+  let handleLoad = (ev) => {
+    if (t) __loadedImgUrls.add(t);
+    setIsLoaded(true);
+    c && c(ev);
+  };
 
   let handleError = (ev) => {
     if (retry < 2) {
@@ -11352,15 +11342,31 @@ function CachedImg(e) {
     }
   };
 
+  let refCallback = (el) => {
+    if (el && el.complete && el.naturalWidth > 0 && !isLoaded) {
+      if (t) __loadedImgUrls.add(t);
+      setIsLoaded(true);
+    }
+  };
+
+  let effectiveLoading = (isCached || isLoaded) ? `eager` : (l || `lazy`);
+  let show = isCached || isLoaded;
+
   return (0, b.jsx)(`img`, {
-    ref,
+    ref: refCallback,
     ...n,
     key: retry,
-    src: visible ? t : void 0,
-    alt: a,
+    src: t,
+    alt: ``,
     className: s,
+    loading: effectiveLoading,
     decoding: `async`,
-    onLoad: c,
+    style: {
+      ...st,
+      opacity: show ? 1 : 0,
+      transition: show ? `opacity 0.2s ease` : `none`
+    },
+    onLoad: handleLoad,
     onError: handleError
   });
 }
@@ -13972,6 +13978,9 @@ html, body {
   overscroll-behavior: none !important;
   overscroll-behavior-y: none !important;
   position: relative !important;
+  will-change: scroll-position;
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
 }
 
 /* Page containers inside #root expand naturally to their full content height */
@@ -13989,6 +13998,14 @@ html, body {
   overflow-x: auto !important;
   overflow-y: hidden !important;
   contain: none !important;
+  -webkit-overflow-scrolling: touch !important;
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+  will-change: scroll-position;
+}
+
+img {
+  color: transparent !important;
 }
 
 /* Remove CSS containment and content-visibility so WebKit never drops or delays rendering cards */
@@ -14002,7 +14019,8 @@ html, body {
 }
 
 [class*="_posterWrapper_"], [class*="_preview_"] {
-  background-color: #14141a !important;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.02) 100%), #1c1c22 !important;
+  border: 1px solid rgba(255, 255, 255, 0.06);
 }
 </style>
 </head>
