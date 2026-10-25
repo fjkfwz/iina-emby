@@ -263,12 +263,49 @@ export async function fetchLatestItems(
       signal,
     });
 
-    if (!response.ok) {
-      throw new Error(`Failed to fetch latest items for library ${parentId}: ${response.status} ${response.statusText}`);
+    let latestItems: EmbyItemMetadata[] = [];
+    if (response.ok) {
+      const data = (await response.json()) as EmbyItemMetadata[];
+      if (Array.isArray(data)) {
+        latestItems = data;
+      }
     }
 
-    const data = (await response.json()) as EmbyItemMetadata[];
-    return Array.isArray(data) ? data : [];
+    // If /Items/Latest returned fewer items than the requested limit (or if a library hasn't had recent additions),
+    // fallback to /Items sorted by DateCreated descending to guarantee a full shelf.
+    if (latestItems.length < limit) {
+      try {
+        const fallbackQuery = new URLSearchParams({
+          ParentId: parentId,
+          SortBy: "DateCreated,SortName",
+          SortOrder: "Descending",
+          IncludeItemTypes: "Movie,Series",
+          Recursive: "true",
+          Limit: String(limit),
+          Fields: "CommunityRating,ProductionYear,ImageTags,BackdropImageTags,UserData,PrimaryImageAspectRatio,SeriesName,ProviderIds",
+          EnableImageTypes: "Primary,Backdrop,Thumb",
+          ImageTypeLimit: "1",
+        });
+        const fallbackUrl = `${base}/Users/${encodeURIComponent(server.userId)}/Items?${fallbackQuery.toString()}`;
+        const fallbackResp = await embyFetch(server, fallbackUrl, { signal });
+        if (fallbackResp.ok) {
+          const fallbackData = (await fallbackResp.json()) as { Items?: EmbyItemMetadata[] };
+          const fallbackItems = Array.isArray(fallbackData?.Items) ? fallbackData.Items : [];
+          const existingIds = new Set(latestItems.map((i) => i.Id));
+          for (const item of fallbackItems) {
+            if (!existingIds.has(item.Id)) {
+              latestItems.push(item);
+              existingIds.add(item.Id);
+              if (latestItems.length >= limit) break;
+            }
+          }
+        }
+      } catch (fallbackErr) {
+        console.debug("Fallback to /Items failed for parent:", parentId, fallbackErr);
+      }
+    }
+
+    return latestItems;
   });
 }
 

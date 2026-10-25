@@ -121,16 +121,25 @@ export default function HomeRoute() {
   useEffect(() => {
     const rootEl = document.getElementById("root");
     let rafId: number | null = null;
+    let lastOpacity = -1;
 
     const updateHeaderOpacity = (top: number) => {
       if (!headerRef.current) return;
       if (isSearching) {
-        headerRef.current.style.setProperty("--header-shadow-opacity", "1");
+        if (lastOpacity !== 1) {
+          headerRef.current.style.setProperty("--header-shadow-opacity", "1");
+          lastOpacity = 1;
+        }
         return;
       }
-      // Gradually appear as you scroll down: 0 at top, reaching 1 at 180px
-      const progress = Math.min(1, Math.max(0, top / 180));
-      headerRef.current.style.setProperty("--header-shadow-opacity", progress.toFixed(3));
+      // Gradually appear as you scroll down: 0 at top, reaching 1 at 140px
+      const progress = Math.min(1, Math.max(0, top / 140));
+      // Quantize to 0.02 increments to minimize style engine recalculations
+      const quantized = Math.round(progress * 50) / 50;
+      if (quantized !== lastOpacity) {
+        lastOpacity = quantized;
+        headerRef.current.style.setProperty("--header-shadow-opacity", quantized.toString());
+      }
     };
 
     const handleScroll = () => {

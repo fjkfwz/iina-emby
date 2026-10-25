@@ -21,18 +21,24 @@ export function useLibrarySections(server: EmbyServer | null) {
         (v) => !v.CollectionType || ["movies", "tvshows", "homevideos", "boxsets"].includes(v.CollectionType),
       );
 
-      // Fetch library shelves in parallel to load all libraries rapidly
-      const sectionResults = await Promise.all(
-        videoViews.map(async (view) => {
-          try {
-            const items = await fetchLatestItems(server, view.Id, 16, signal);
-            return { view, items, isLoading: false };
-          } catch (err: unknown) {
-            console.error(`Failed to fetch items for library "${view.Name}":`, err);
-            return { view, items: [], isLoading: false };
-          }
-        }),
-      );
+      // Fetch library shelves in batches of 4 to prevent socket pool saturation and connection drops
+      const BATCH_SIZE = 4;
+      const sectionResults: LibrarySectionData[] = [];
+      for (let i = 0; i < videoViews.length; i += BATCH_SIZE) {
+        const batch = videoViews.slice(i, i + BATCH_SIZE);
+        const batchResults = await Promise.all(
+          batch.map(async (view) => {
+            try {
+              const items = await fetchLatestItems(server, view.Id, 16, signal);
+              return { view, items, isLoading: false };
+            } catch (err: unknown) {
+              console.error(`Failed to fetch items for library "${view.Name}":`, err);
+              return { view, items: [], isLoading: false };
+            }
+          }),
+        );
+        sectionResults.push(...batchResults);
+      }
 
       return sectionResults.filter((s) => s.items.length > 0);
     },

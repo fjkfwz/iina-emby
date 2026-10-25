@@ -744,16 +744,24 @@ function createMediaActionsManager({
       const fileName = `emby_${sanitizedItemId}_${streamIndex}_${suffix}`;
       log(`Using filename: ${fileName}`);
       const localPath = `@tmp/${fileName}`;
-      log(`Downloading external subtitle: ${subtitleUrl}`);
+      log(`Loading external subtitle via MPV: ${subtitleUrl}`);
       log(`External subtitle path: ${subtitlePath}`);
       log(`Stream index: ${streamIndex}`);
       log(`Language: ${language}`);
       log(`Codec: ${codec} -> Extension: ${extension}`);
-      log(`Local filename: ${fileName}`);
-      await http2.download(subtitleUrl, localPath);
-      const resolvedPath = utils2.resolvePath(localPath);
-      core2.subtitle.loadTrack(resolvedPath);
-      log(`External subtitle loaded successfully: ${resolvedPath}`);
+      try {
+        mpv2.command("sub-add", subtitleUrl, "select");
+        log(`External subtitle loaded successfully via mpv sub-add: ${subtitleUrl}`);
+      } catch (subErr) {
+        log(`mpv.command sub-add error, trying core.subtitle.loadTrack:`, subErr);
+        try {
+          core2.subtitle.loadTrack(subtitleUrl);
+          log(`External subtitle loaded successfully via core.subtitle.loadTrack`);
+        } catch (coreErr) {
+          log(`core.subtitle.loadTrack also failed:`, coreErr);
+          return false;
+        }
+      }
       if (preferences2.get("show_notifications")) {
         core2.osd(`Loaded external ${language} subtitle`);
       }
@@ -2354,9 +2362,9 @@ async function applySelectedSubtitleTrack(serverBase, itemId, apiKey) {
     return;
   }
   if (isExternal && typeof pendingSubtitle === "number") {
-    debugLog(`Selected subtitle is external (Index: ${pendingSubtitle}). Downloading directly...`);
+    debugLog(`Selected subtitle is external (Index: ${pendingSubtitle}). Loading directly via MPV...`);
     try {
-      const downloaded = await downloadExternalSubtitle(
+      const loaded = await downloadExternalSubtitle(
         serverBase,
         itemId,
         null,
@@ -2366,12 +2374,12 @@ async function applySelectedSubtitleTrack(serverBase, itemId, apiKey) {
         pendingSubLang || "und",
         subCodec || "srt"
       );
-      if (downloaded) {
-        debugLog("External subtitle loaded successfully");
+      if (loaded) {
+        debugLog("External subtitle loaded successfully via MPV");
         return;
       }
     } catch (err) {
-      debugLog("Failed to download selected external subtitle:", err);
+      debugLog("Failed to load selected external subtitle:", err);
     }
   }
   try {

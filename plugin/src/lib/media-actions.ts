@@ -160,19 +160,26 @@ export function createMediaActionsManager({
 
       const localPath = `@tmp/${fileName}`;
 
-      log(`Downloading external subtitle: ${subtitleUrl}`);
+      log(`Loading external subtitle via MPV: ${subtitleUrl}`);
       log(`External subtitle path: ${subtitlePath}`);
       log(`Stream index: ${streamIndex}`);
       log(`Language: ${language}`);
       log(`Codec: ${codec} -> Extension: ${extension}`);
-      log(`Local filename: ${fileName}`);
 
-      await http.download(subtitleUrl, localPath);
-
-      const resolvedPath = utils.resolvePath(localPath);
-      core.subtitle.loadTrack(resolvedPath);
-
-      log(`External subtitle loaded successfully: ${resolvedPath}`);
+      // Use MPV's native sub-add command with direct stream URL to avoid blocking utils.exec / curl crashes
+      try {
+        mpv.command("sub-add", subtitleUrl, "select");
+        log(`External subtitle loaded successfully via mpv sub-add: ${subtitleUrl}`);
+      } catch (subErr) {
+        log(`mpv.command sub-add error, trying core.subtitle.loadTrack:`, subErr);
+        try {
+          core.subtitle.loadTrack(subtitleUrl);
+          log(`External subtitle loaded successfully via core.subtitle.loadTrack`);
+        } catch (coreErr) {
+          log(`core.subtitle.loadTrack also failed:`, coreErr);
+          return false;
+        }
+      }
 
       if (preferences.get("show_notifications")) {
         core.osd(`Loaded external ${language} subtitle`);

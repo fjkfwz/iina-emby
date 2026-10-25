@@ -2,6 +2,7 @@
   display: flex;
   flex-direction: column;
   width: 100%;
+  contain: content;
 }
 
 .header {
@@ -67,10 +68,9 @@
   scroll-padding: 0 1.5rem;
   overscroll-behavior-x: contain;
   scrollbar-width: none;
-  contain: none;
+  contain: layout;
   transform: translateZ(0);
   -webkit-transform: translateZ(0);
-  will-change: scroll-position;
 }
 
 .scroller::-webkit-scrollbar {
@@ -80,7 +80,7 @@
 .itemWrapper {
   flex: 0 0 auto;
   scroll-snap-align: start;
-  contain: none;
+  contain: layout style;
 }
 
 .itemWrapper:last-child {

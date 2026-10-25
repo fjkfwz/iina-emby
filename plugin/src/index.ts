@@ -311,9 +311,9 @@ async function applySelectedSubtitleTrack(
 
   // 2. External subtitle selected
   if (isExternal && typeof pendingSubtitle === "number") {
-    debugLog(`Selected subtitle is external (Index: ${pendingSubtitle}). Downloading directly...`);
+    debugLog(`Selected subtitle is external (Index: ${pendingSubtitle}). Loading directly via MPV...`);
     try {
-      const downloaded = await downloadExternalSubtitle(
+      const loaded = await downloadExternalSubtitle(
         serverBase,
         itemId,
         null,
@@ -323,12 +323,12 @@ async function applySelectedSubtitleTrack(
         pendingSubLang || "und",
         subCodec || "srt",
       );
-      if (downloaded) {
-        debugLog("External subtitle loaded successfully");
+      if (loaded) {
+        debugLog("External subtitle loaded successfully via MPV");
         return;
       }
     } catch (err) {
-      debugLog("Failed to download selected external subtitle:", err);
+      debugLog("Failed to load selected external subtitle:", err);
     }
   }
 
