@@ -3,8 +3,11 @@
   <head>
 
 
+
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="dark" />
+    <meta name="theme-color" content="#202026" />
     <title>IINA Emby</title>
     <script>
 window.addEventListener('error', function(e) {
@@ -11317,30 +11320,48 @@ function Do({ className: e2 }) {
 }
 function CachedImg(e) {
   let { src: t, alt: a, className: s, loading: l, onError: r, onLoad: c, ...n } = e;
-  let [v, sv] = (0, _.useState)(() => {
+  let [visible, setVisible] = (0, _.useState)(() => {
     return l === `eager` || typeof IntersectionObserver === `undefined`;
   });
+  let [retry, setRetry] = (0, _.useState)(0);
   let ref = (0, _.useRef)(null);
+
   (0, _.useEffect)(() => {
-    if (v || !ref.current || typeof IntersectionObserver === `undefined`) return;
+    if (visible || !ref.current || typeof IntersectionObserver === `undefined`) return;
+    let rootEl = document.getElementById('root');
     let obs = new IntersectionObserver((entries) => {
       if (entries[0] && entries[0].isIntersecting) {
-        sv(true);
+        setVisible(true);
         obs.disconnect();
       }
-    }, { rootMargin: `350px` });
+    }, {
+      root: rootEl || null,
+      rootMargin: `1200px 0px`
+    });
     obs.observe(ref.current);
     return () => { obs.disconnect(); };
-  }, [v]);
+  }, [visible]);
+
+  let handleError = (ev) => {
+    if (retry < 2) {
+      setTimeout(() => {
+        setRetry(prev => prev + 1);
+      }, 1500 * (retry + 1));
+    } else {
+      r && r(ev);
+    }
+  };
+
   return (0, b.jsx)(`img`, {
     ref,
     ...n,
-    src: v ? t : void 0,
+    key: retry,
+    src: visible ? t : void 0,
     alt: a,
     className: s,
     decoding: `async`,
     onLoad: c,
-    onError: r
+    onError: handleError
   });
 }
 function Oo({ item: e2, server: t2, onPlay: n2, onClick: r2, onUserDataChange: i2, aspectRatio: a2 = 16 / 9, width: o2, className: s2, title: c2, subtitle: l2, subtitleLines: u2 }) {
@@ -11512,7 +11533,7 @@ function Uo({ className: e2 }) {
   return (0, b.jsxs)(`div`, { className: `${Ho.card} ${e2 || ``}`, "aria-hidden": `true`, children: [(0, b.jsx)(`div`, { className: Ho.posterWrapper, children: (0, b.jsx)(wo, { height: `100%`, radius: `var(--radius-l)` }) }), (0, b.jsxs)(`div`, { className: Ho.meta, children: [(0, b.jsx)(`span`, { className: Ho.title, children: (0, b.jsx)(wo, { width: `80%`, radius: `xs`, children: (0, b.jsx)(`span`, { children: `\xA0` }) }) }), (0, b.jsx)(`span`, { className: Ho.year, children: (0, b.jsx)(wo, { width: `40%`, radius: `xs`, children: (0, b.jsx)(`span`, { children: `\xA0` }) }) })] })] });
 }
 function B({ item: e2, server: t2, onClick: n2, onUserDataChange: r2, onIdentifySuccess: i2, className: a2 }) {
-  let o2 = Gn(), [s2, c2] = (0, _.useState)(false), [l2, u2] = (0, _.useState)(false), d2 = !!t2.user?.Policy?.IsAdministrator && ea(e2.Type), { isPlayed: f2, unplayedCount: p2, canMarkPlayed: m2, canMarkUnplayed: h2, pendingAction: g2, isUpdating: v2, isConfirmOpen: y2, requestMarkPlayed: x2, requestMarkUnplayed: S2, cancelTogglePlayed: C2, confirmTogglePlayed: ee2 } = Wa({ item: e2, server: t2, onUserDataChange: r2 }), w2 = !!e2.isIdentifying, te2 = e2.pendingImageUrl, T2 = s2 ? void 0 : te2 || xi(t2.serverUrl, e2, { prefer: `primary`, maxWidth: 280, maxHeight: 420, quality: 85, accessToken: t2.accessToken }), E2 = typeof e2.CommunityRating == `number` && e2.CommunityRating > 0 ? e2.CommunityRating.toFixed(1) : null;
+  let o2 = Gn(), [s2, c2] = (0, _.useState)(false), [l2, u2] = (0, _.useState)(false), d2 = !!t2.user?.Policy?.IsAdministrator && ea(e2.Type), { isPlayed: f2, unplayedCount: p2, canMarkPlayed: m2, canMarkUnplayed: h2, pendingAction: g2, isUpdating: v2, isConfirmOpen: y2, requestMarkPlayed: x2, requestMarkUnplayed: S2, cancelTogglePlayed: C2, confirmTogglePlayed: ee2 } = Wa({ item: e2, server: t2, onUserDataChange: r2 }), w2 = !!e2.isIdentifying, te2 = e2.pendingImageUrl, T2 = s2 ? void 0 : te2 || xi(t2.serverUrl, e2, { prefer: `primary`, maxWidth: 280, maxHeight: 420, quality: 85, accessToken: t2.accessToken }), E2 = typeof e2.CommunityRating == `number` && e2.CommunityRating > 0 ? e2.CommunityRating.toFixed(1) : null; if(!T2){ fetch('http://127.0.0.1:8765/log?msg=' + encodeURIComponent('NO_T2:' + e2.Name + ':s2=' + s2 + ':imgs=' + JSON.stringify(e2.ImageTags||{}))).catch(()=>{}); }
   let _lastCardClick = 0;
   let _handleCardClick = (t3) => {
     t3 && t3.stopPropagation && t3.stopPropagation();
@@ -12455,7 +12476,7 @@ function SearchPage() {
         for (let g of it.Genres) if (g && g.trim()) gc[g.trim()] = (gc[g.trim()] || 0) + 1;
       }
       if (Array.isArray(it.GenreItems)) {
-        for (let gi of it.GenreItems) if (gi?.Name && gi.Name.trim()) gc[gi.Name.trim()] = (gc[gi.Name.trim()] || 0) + 1;
+        for (let gi of it.GenreItems) if (gi?.Name && gi.Name.trim()) gc[gi.Name.trim()] = (gi[gi.Name.trim()] || 0) + 1;
       }
       let y = it.ProductionYear ?? (it.PremiereDate ? new Date(it.PremiereDate).getFullYear() : 0);
       if (y > 1900 && y < 2100) yc[y] = (yc[y] || 0) + 1;
@@ -12498,11 +12519,11 @@ function SearchPage() {
   };
 
   return (0, b.jsxs)("div", {
-    className: "search-page-container",
+    className: gs.container,
     children: [
-      (0, b.jsx)(fs, { onBack: () => l2("/"), backTitle: "Home", title: "Search" }),
+      (0, b.jsx)(Ao, { onBack: () => l2("/"), backTitle: "Home", title: "Search" }),
       (0, b.jsxs)("main", {
-        className: "search-page-main",
+        className: gs.content,
         children: [
           (0, b.jsxs)("div", {
             className: "search-header-container",
@@ -12678,6 +12699,10 @@ function SearchPage() {
                       filteredResults.length > 1 ? `s` : ``,
                       ` across library`
                     ]
+                  }),
+                  (0, b.jsx)("span", {
+                    className: gs.countBadge,
+                    children: filteredResults.length
                   })
                 ]
               }),
@@ -13914,6 +13939,71 @@ html, body {
   border-color: rgba(56, 189, 248, 0.5) !important;
 }
 
+
+/* --- Anti-flicker & Dark Backing Fixes --- */
+:root {
+  color-scheme: dark !important;
+}
+
+html, body {
+  background-color: #202026 !important;
+  background: #202026 !important;
+  color: rgba(255, 255, 255, 0.85);
+  margin: 0 !important;
+  padding: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  max-height: 100% !important;
+  overflow: hidden !important; /* Window root never scrolls or rubber-bands into white canvas */
+  overscroll-behavior: none !important;
+  overscroll-behavior-y: none !important;
+  -webkit-font-smoothing: antialiased;
+}
+
+#root {
+  background-color: #202026 !important;
+  background: #202026 !important;
+  width: 100% !important;
+  height: 100% !important;
+  max-height: 100% !important;
+  overflow-y: auto !important; /* The ONE AND ONLY vertical scroll viewport */
+  overflow-x: hidden !important;
+  -webkit-overflow-scrolling: touch !important;
+  overscroll-behavior: none !important;
+  overscroll-behavior-y: none !important;
+  position: relative !important;
+}
+
+/* Page containers inside #root expand naturally to their full content height */
+[class*="_container_"] {
+  width: 100% !important;
+  height: auto !important;
+  min-height: auto !important;
+  max-height: none !important;
+  overflow-y: visible !important;
+  background: transparent !important;
+}
+
+/* Shelf horizontal scrollers */
+[class*="_scroller_"] {
+  overflow-x: auto !important;
+  overflow-y: hidden !important;
+  contain: none !important;
+}
+
+/* Remove CSS containment and content-visibility so WebKit never drops or delays rendering cards */
+[class*="_card_"] {
+  content-visibility: visible !important;
+  contain: none !important;
+}
+
+[class*="_itemWrapper_"] {
+  contain: none !important;
+}
+
+[class*="_posterWrapper_"], [class*="_preview_"] {
+  background-color: #14141a !important;
+}
 </style>
 </head>
   <body>
@@ -13934,5 +14024,22 @@ html, body {
   }, true);
 })();
 </script>
+<script id="keyboard-scroll-helper">
+(function() {
+  window.addEventListener('keydown', function(e) {
+    var tag = document.activeElement ? document.activeElement.tagName : '';
+    if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+    var root = document.getElementById('root');
+    if (!root) return;
+    if (e.key === 'ArrowDown') { root.scrollBy({ top: 140, behavior: 'smooth' }); }
+    else if (e.key === 'ArrowUp') { root.scrollBy({ top: -140, behavior: 'smooth' }); }
+    else if (e.key === 'PageDown' || (e.key === ' ' && !e.shiftKey)) { root.scrollBy({ top: window.innerHeight * 0.8, behavior: 'smooth' }); }
+    else if (e.key === 'PageUp' || (e.key === ' ' && e.shiftKey)) { root.scrollBy({ top: -window.innerHeight * 0.8, behavior: 'smooth' }); }
+    else if (e.key === 'Home') { root.scrollTo({ top: 0, behavior: 'smooth' }); }
+    else if (e.key === 'End') { root.scrollTo({ top: root.scrollHeight, behavior: 'smooth' }); }
+  });
+})();
+</script>
+
 </body>
 </html>

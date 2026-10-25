@@ -8,9 +8,7 @@
   text-align: left;
   outline: none;
   font-family: inherit;
-  contain: layout paint style;
-  content-visibility: auto;
-  contain-intrinsic-size: 260px 180px;
+  contain: none;
 }
 
 .preview {

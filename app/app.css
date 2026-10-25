@@ -1,13 +1,20 @@
 @import "./theme/tokens.css";
 
+:root {
+  color-scheme: dark;
+}
+
 html,
 body {
   margin: 0;
   padding: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
   background: var(--bg-window);
   color: var(--text-secondary);
   font-family: var(--font-system);
-  overflow-x: clip;
   user-select: none;
   -webkit-user-select: none;
   -webkit-font-smoothing: antialiased;
@@ -16,7 +23,14 @@ body {
 }
 
 #root {
-  min-height: 100vh;
+  width: 100%;
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: none;
+  background: var(--bg-window);
+  position: relative;
 }
 
 /* Completely Transparent / Zero-Width Scrollbars (Zero Gutter) */

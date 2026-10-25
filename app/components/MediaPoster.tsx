@@ -2,7 +2,7 @@ import type { EmbyItemMetadata, EmbyServer, EmbyUserData, RemoteSearchResult } f
 import { getItemImageUrl } from "@shared";
 import { IconCheck, IconDots, IconFingerprint, IconInfoCircle, IconMovie } from "@tabler/icons-react";
 import type React from "react";
-import { memo, useState } from "react";
+import { memo, useCallback, useState } from "react";
 import { useNavigate } from "react-router";
 import { useItemPlayedStatus } from "../hooks/useItemPlayedStatus";
 import { isIdentifySupported } from "../lib/emby-library-client";
@@ -53,8 +53,22 @@ export const MediaPoster = memo(function MediaPoster({
 }: MediaPosterProps) {
   const navigate = useNavigate();
   const [imgError, setImgError] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
   const [isIdentifyOpen, setIsIdentifyOpen] = useState(false);
   const canIdentify = Boolean(server.user?.Policy?.IsAdministrator) && isIdentifySupported(item.Type);
+
+  const handleImgError = useCallback(() => {
+    if (retryCount < 2) {
+      setTimeout(
+        () => {
+          setRetryCount((prev) => prev + 1);
+        },
+        1500 * (retryCount + 1),
+      );
+    } else {
+      setImgError(true);
+    }
+  }, [retryCount]);
 
   const {
     isPlayed,
@@ -106,12 +120,12 @@ export const MediaPoster = memo(function MediaPoster({
       <div className={classes.posterWrapper}>
         {imageUrl ? (
           <img
+            key={retryCount}
             src={imageUrl}
             alt={item.Name || "Media"}
             className={classes.image}
-            loading="lazy"
             decoding="async"
-            onError={() => setImgError(true)}
+            onError={handleImgError}
           />
         ) : (
           <div className={classes.placeholder}>

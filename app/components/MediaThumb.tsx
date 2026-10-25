@@ -11,7 +11,7 @@ import {
 } from "@shared";
 import { IconCheck, IconDots, IconInfoCircle, IconMovie, IconPlayerPlay } from "@tabler/icons-react";
 import type React from "react";
-import { memo, useState } from "react";
+import { memo, useCallback, useState } from "react";
 import { useNavigate } from "react-router";
 import { useItemPlayedStatus } from "../hooks/useItemPlayedStatus";
 import { buildStreamUrl } from "../lib/emby-library-client";
@@ -72,6 +72,20 @@ export const MediaThumb = memo(function MediaThumb({
 }: MediaThumbProps) {
   const navigate = useNavigate();
   const [imageError, setImageError] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
+
+  const handleImgError = useCallback(() => {
+    if (retryCount < 2) {
+      setTimeout(
+        () => {
+          setRetryCount((prev) => prev + 1);
+        },
+        1500 * (retryCount + 1),
+      );
+    } else {
+      setImageError(true);
+    }
+  }, [retryCount]);
   const {
     isPlayed,
     unplayedCount,
@@ -160,7 +174,7 @@ export const MediaThumb = memo(function MediaThumb({
           aria-label={`Play ${fullPlayTitle}`}
         ></button>
         {imageUrl ? (
-          <img src={imageUrl} alt={title} className={classes.image} loading="lazy" decoding="async" onError={() => setImageError(true)} />
+          <img key={retryCount} src={imageUrl} alt={title} className={classes.image} decoding="async" onError={handleImgError} />
         ) : (
           <div className={classes.placeholder}>
             <IconMovie size={38} stroke={1.5} />

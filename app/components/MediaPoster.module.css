@@ -4,9 +4,7 @@
   flex-direction: column;
   width: 100%;
   user-select: none;
-  contain: layout paint style;
-  content-visibility: auto;
-  contain-intrinsic-size: 160px 240px;
+  contain: none;
 }
 
 /* Participate in view transitions started by startViewTransitionSafe (app/lib/view-transitions.ts) */

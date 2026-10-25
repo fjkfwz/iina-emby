@@ -1,8 +1,8 @@
 .container {
-  min-height: 100vh;
+  min-height: 100%;
   width: 100%;
   box-sizing: border-box;
-  background: transparent;
+  background: var(--bg-window, #202026);
   display: flex;
   flex-direction: column;
 }

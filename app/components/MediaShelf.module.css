@@ -62,7 +62,7 @@
   scroll-padding: 0 1.5rem;
   overscroll-behavior-x: contain;
   scrollbar-width: none;
-  contain: layout style;
+  contain: none;
 }
 
 .scroller::-webkit-scrollbar {
@@ -72,7 +72,7 @@
 .itemWrapper {
   flex: 0 0 auto;
   scroll-snap-align: start;
-  contain: layout paint;
+  contain: none;
 }
 
 .itemWrapper:last-child {
