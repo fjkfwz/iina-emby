@@ -170,19 +170,20 @@
   left: 0;
   right: 0;
   bottom: 0;
-  height: 3px;
-  background: rgba(255, 255, 255, 0.25);
+  height: 4px;
+  background: rgba(0, 0, 0, 0.45);
   border-bottom-left-radius: inherit;
   border-bottom-right-radius: inherit;
   overflow: hidden;
   pointer-events: none;
+  z-index: 10;
 }
 
 .playButtonProgressBarFill {
   height: 100%;
   background: #ffffff;
-  border-radius: 1.5px;
-  box-shadow: 0 0 6px rgba(255, 255, 255, 0.7);
+  border-radius: 2px;
+  box-shadow: 0 0 8px rgba(255, 255, 255, 0.85);
   transition: width 0.25s ease;
 }
 

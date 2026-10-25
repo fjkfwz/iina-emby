@@ -1,73 +1,116 @@
 # iina-emby
 
-Emby plugin for [IINA](https://iina.io). Provides a media browser interface and playback integration with Emby servers.
+<div align="center">
 
-![IINA Emby Browser](docs/screenshot.webp)
+**Modern, fast, and feature-rich Emby client plugin for [IINA](https://iina.io).**
 
-## Features
+[English](README.md) • [简体中文](README_CN.md)
 
-- Standalone media browser (Continue Watching, Libraries, TV Shows, Movies)
-- Direct playback in IINA player windows
-- Progress reporting and playback resume sync with Emby server
-- Next episode autoplay
-- Subtitle downloading from Emby
-- Multi-server support
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Platform](https://img.shields.io/badge/Platform-macOS-lightgrey.svg)](https://apple.com/macos)
+[![IINA Compatibility](https://img.shields.io/badge/IINA-%3E%3D%201.4.0-brightgreen.svg)](https://iina.io)
 
-## Installation
+<img src="docs/screenshot.webp" alt="IINA Emby Browser" width="820" style="border-radius: 12px; box-shadow: 0 8px 30px rgba(0,0,0,0.3);" />
 
-### Agent / 命令行一键安装 (推荐)
+</div>
 
-如果你正在使用 AI Agent（如 Antigravity, Claude Code, Cursor 等）或通过终端安装，可直接使用以下方式一键构建并安装至本机 IINA：
+---
 
-#### 1. 直接发送给 Agent 的提示词
+## ✨ Features
+
+- **Modern macOS Media Browser**: Standalone browsing interface designed to look and feel native to macOS with dark frosted-glass aesthetics.
+- **Smooth Scroll-Driven Header**: Dynamic top navigation bar with continuous frosted-glass and gradient shadow interpolation that smoothly fades in on scroll.
+- **Featured Hero Carousel & Shelves**: Automatically cycles top featured media banners and quick-access 16:9 category shelves.
+- **Native Hardware-Accelerated Playback**: Launches IINA player windows using MPV with direct stream playback and hardware decoding.
+- **Play Button Resume Progress**: Item details page displays visual progress track and readable timestamp directly on the play button (e.g. `继续播放 (00:34:42 · 28%)`).
+- **Crash-Free Playback Architecture**: Progress reporting (`Playing`, `Progress`, `Stopped`) is bridged safely through WebKit networking, completely avoiding JavaScriptCore thread blocking.
+- **Subtitle & Audio Stream Selector**: Intuitive track switching with stream index mapping, language code matching, and external subtitle download.
+- **Real-Time WebSocket Sync**: Instant updates for continue watching and library item changes via Emby WebSocket connection.
+- **Multi-Server Management**: Easily add, switch, and manage multiple Emby server profiles and user tokens.
+
+---
+
+## 📦 Installation
+
+### Option 1: AI Agent One-Click Install (Recommended)
+
+If you are using an AI coding assistant (such as **Antigravity**, **Claude Code**, or **Cursor**), simply paste this instruction into the chat:
+
 ```text
-请帮我将 iina-emby 插件安装到本机的 IINA 播放器中：克隆 https://github.com/fjkfwz/iina-emby.git，安装依赖并构建，然后将产物安装至 ~/Library/Application Support/com.colliderli.iina/plugins/com.ghotriw.iina-emby.iinaplugin。
+Please build and install the iina-emby plugin into my local IINA player, and restart IINA to activate it.
 ```
 
-#### 2. 终端单行命令一键安装
+The agent will automatically locate the project, build the production bundle, copy the plugin bundle to your IINA plugins folder, and restart the player.
+
+---
+
+### Option 2: One-Line Terminal Command
+
+Run the following command in Terminal to clone, build, and install the latest version:
+
 ```bash
 git clone https://github.com/fjkfwz/iina-emby.git /tmp/iina-emby && cd /tmp/iina-emby && ./scripts/install.sh
 ```
 
-#### 3. 已有代码仓库安装
-在已克隆的代码仓库根目录下执行：
+---
+
+### Option 3: Install from Local Repository
+
+If you have already cloned this repository, run:
+
 ```bash
 pnpm install
 pnpm run build
 pnpm run install:plugin
 ```
 
-> **注意**：IINA 插件功能要求 **IINA >= 1.4.0**。若本机版本较低，可使用 Homebrew 快速升级：
+> **Note**: This plugin requires **IINA >= 1.4.0**. If you have an older version, update via Homebrew:
 > ```bash
 > brew install --cask iina
 > ```
 
-### From IINA (UI)
+---
+
+### Option 4: Install via IINA GUI
 
 1. Open **IINA Preferences** (`⌘,`) -> **Plugins**.
 2. Click **Install from GitHub / URL**.
 3. Enter `fjkfwz/iina-emby` and click **Install**.
 
-### Manual
+---
 
-Download the `.iinaplgz` package from [Releases](https://github.com/fjkfwz/iina-emby/releases) and open it with IINA.
+## 🛠 Tech Stack & Architecture
 
-## Development
+- **Frontend Browser**: React 19, TypeScript, React Router, TanStack Query, Vite with single-file bundling.
+- **IINA Plugin Engine**: TypeScript bundled via `tsup`, communicating with IINA's MPV core and JavaScript plugin runtime.
+- **Bidirectional Bridge**: High-performance typed IPC bridge between the standalone WebKit window and IINA player instances.
+
+---
+
+## 💻 Development
 
 ```bash
+# Install dependencies
 pnpm install
+
+# Run unit tests
+pnpm test
+
+# Build production bundle
 pnpm run build
 
-# Watch plugin scripts
+# Watch plugin code during development
 pnpm run dev:plugin
 
-# Run UI in browser
+# Run UI dev server in standard web browser
 pnpm run dev
 
-# Type check
+# Run TypeScript typecheck
 pnpm run typecheck
 ```
 
-## License
+---
 
-MIT
+## 📄 License
+
+This project is licensed under the [MIT License](LICENSE).

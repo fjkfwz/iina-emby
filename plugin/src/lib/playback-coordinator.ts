@@ -225,6 +225,10 @@ export function createPlaybackCoordinator({
     launchedFromBrowser = false;
   }
 
+  function isLaunchedFromBrowser(): boolean {
+    return launchedFromBrowser;
+  }
+
   function consumeLaunchedFromBrowser(): boolean {
     const wasLaunched = launchedFromBrowser;
     launchedFromBrowser = false;
@@ -487,6 +491,7 @@ export function createPlaybackCoordinator({
     markLaunchedFromBrowser,
     clearLaunchedFromBrowser,
     consumeLaunchedFromBrowser,
+    isLaunchedFromBrowser,
     openInNewInstance,
     openInCurrentWindow,
     flushPendingPlaylistQueue,

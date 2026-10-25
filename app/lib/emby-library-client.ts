@@ -419,7 +419,7 @@ export async function fetchItemDetails(
   const cacheKey = `${base}:${server.userId}:item:${itemId}`;
 
   return getOrFetchCached(cacheKey, DEFAULT_CACHE_TTL_MS, bypassCache, async () => {
-    const url = `${base}/Users/${encodeURIComponent(server.userId)}/Items/${encodeURIComponent(itemId)}?Fields=MediaSources,MediaStreams,People,Overview,Genres,Studios`;
+    const url = `${base}/Users/${encodeURIComponent(server.userId)}/Items/${encodeURIComponent(itemId)}?Fields=MediaSources,MediaStreams,People,Overview,Genres,Studios,UserData,RunTimeTicks`;
 
     const response = await embyFetch(server, url, {
       signal,

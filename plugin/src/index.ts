@@ -91,6 +91,7 @@ const {
   markLaunchedFromBrowser,
   clearLaunchedFromBrowser,
   consumeLaunchedFromBrowser,
+  isLaunchedFromBrowser,
   getPendingMediaTitle,
   getPendingStartPosition,
   getPendingAudioIndex,
@@ -460,13 +461,15 @@ function onFileLoaded(fileUrl?: string): void {
       // Ignore
     }
 
+    const isBrowser = isLaunchedFromBrowser();
+
     // Start playback tracking for progress sync
     if (preferences.get("sync_playback_progress")) {
       const pendingStart = getPendingStartPosition(embyInfo.itemId);
       debugLog(
-        `Starting playback tracking for: ${embyInfo.itemId}, userId: ${reportUserId || "none"}, pendingStart: ${pendingStart ?? "none"}`,
+        `Starting playback tracking for: ${embyInfo.itemId}, userId: ${reportUserId || "none"}, pendingStart: ${pendingStart ?? "none"}, isBrowser: ${isBrowser}`,
       );
-      startPlaybackTracking(reportServerBase, embyInfo.itemId, reportApiKey, reportUserId, pendingStart);
+      startPlaybackTracking(reportServerBase, embyInfo.itemId, reportApiKey, reportUserId, pendingStart, isBrowser);
     }
 
     // Set video title from metadata if enabled
@@ -479,13 +482,14 @@ function onFileLoaded(fileUrl?: string): void {
         } catch {
           // Ignore
         }
+      } else if (!isBrowser) {
+        debugLog(`Setting video title from metadata for: ${embyInfo.itemId}, userId: ${reportUserId || "none"}`);
+        setVideoTitleFromMetadata(reportServerBase, embyInfo.itemId, reportApiKey, reportUserId);
       }
-      debugLog(`Setting video title from metadata for: ${embyInfo.itemId}, userId: ${reportUserId || "none"}`);
-      setVideoTitleFromMetadata(reportServerBase, embyInfo.itemId, reportApiKey, reportUserId);
     }
 
-    // Setup autoplay for TV episodes if enabled
-    if (preferences.get("autoplay_next_episode")) {
+    // Setup autoplay for TV episodes if enabled (only when not launched from browser)
+    if (!isBrowser && preferences.get("autoplay_next_episode")) {
       debugLog(`Setting up autoplay for episode (itemId): ${embyInfo.itemId}, userId: ${reportUserId || "none"}`);
       resetForNewFile();
       setupAutoplayForEpisode(reportServerBase, embyInfo.itemId, reportApiKey, reportUserId);
@@ -497,8 +501,8 @@ function onFileLoaded(fileUrl?: string): void {
 
     const pendingSubtitle = getPendingSubtitleIndex(embyInfo.itemId);
 
-    // Only auto-download if enabled and user didn't disable subtitles
-    if (pendingSubtitle !== -1 && preferences.get("auto_download_enabled")) {
+    // Only auto-download if enabled, user didn't disable subtitles, and media not launched from browser
+    if (!isBrowser && pendingSubtitle !== -1 && preferences.get("auto_download_enabled")) {
       debugLog(`Auto-downloading subtitles for: ${embyInfo.itemId}`);
       const hasSpecificSubSelected = typeof pendingSubtitle === "number";
       downloadAllSubtitles(reportServerBase, embyInfo.itemId, reportApiKey).then(() => {

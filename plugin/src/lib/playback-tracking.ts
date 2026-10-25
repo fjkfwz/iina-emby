@@ -11,7 +11,13 @@ export interface PlaybackTrackingDeps {
   fetchItemMetadata: (serverBase: string, itemId: string, apiKey: string, userId?: string) => Promise<EmbyItemMetadata>;
   secondsToTicks: (seconds: number) => number;
   ticksToSeconds: (ticks: number) => number;
-  onProgressUpdated?: (data: { itemId: string; positionTicks: number; isPaused: boolean }) => void;
+  onProgressUpdated?: (data: {
+    itemId: string;
+    positionTicks: number;
+    isPaused: boolean;
+    event?: "start" | "progress" | "stop";
+    playSessionId?: string | null;
+  }) => void;
   log: DebugLogger;
 }
 
@@ -27,6 +33,7 @@ export interface PlaybackSession {
   hasPerformedInitialSeek?: boolean;
   duration: number | null;
   hasReportedWatched: boolean;
+  isBrowserPlayback?: boolean;
 }
 
 export function createPlaybackTrackingManager({
@@ -129,6 +136,20 @@ export function createPlaybackTrackingManager({
       const url = `${serverBase}/Sessions/Playing?api_key=${apiKey}`;
       log(`Reporting playback start for item: ${itemId} at ${startPositionSeconds}s (${positionTicks} ticks)`);
 
+      if (currentPlaybackSession?.isBrowserPlayback) {
+        log(`[start] Browser playback mode: reporting playback start event to WebView`);
+        if (typeof onProgressUpdated === "function") {
+          onProgressUpdated({
+            itemId,
+            positionTicks,
+            isPaused: false,
+            event: "start",
+            playSessionId,
+          });
+        }
+        return true;
+      }
+
       const response = await http.post(url, {
         headers: buildEmbyHeaders(apiKey, {
           "Content-Type": "application/json",
@@ -171,10 +192,10 @@ export function createPlaybackTrackingManager({
 
     try {
       let resumePosition: number | null = null;
-      if (typeof knownStartPositionSeconds === "number" && knownStartPositionSeconds > 0) {
+      if (typeof knownStartPositionSeconds === "number" && knownStartPositionSeconds >= 0) {
         resumePosition = knownStartPositionSeconds;
-        log(`[resume] Using known initial start position from browser: ${resumePosition.toFixed(1)}s for itemId=${itemId}`);
-      } else {
+        log(`[resume] Using known initial start position: ${resumePosition.toFixed(1)}s for itemId=${itemId}`);
+      } else if (!session?.isBrowserPlayback) {
         resumePosition = await fetchResumePosition(serverBase, itemId, apiKey, userId);
       }
 
@@ -222,6 +243,20 @@ export function createPlaybackTrackingManager({
       }
 
       const positionTicks = secondsToTicks(positionSeconds);
+
+      if (currentPlaybackSession?.isBrowserPlayback) {
+        if (typeof onProgressUpdated === "function") {
+          onProgressUpdated({
+            itemId,
+            positionTicks,
+            isPaused,
+            event: "progress",
+            playSessionId,
+          });
+        }
+        return true;
+      }
+
       const url = `${serverBase}/Sessions/Playing/Progress?api_key=${apiKey}`;
 
       const response = await http.post(url, {
@@ -272,6 +307,21 @@ export function createPlaybackTrackingManager({
       }
 
       const positionTicks = secondsToTicks(positionSeconds);
+
+      if (currentPlaybackSession?.isBrowserPlayback) {
+        log(`[stop] Browser playback mode: reporting playback stop event to WebView`);
+        if (typeof onProgressUpdated === "function") {
+          onProgressUpdated({
+            itemId,
+            positionTicks,
+            isPaused: false,
+            event: "stop",
+            playSessionId,
+          });
+        }
+        return true;
+      }
+
       const url = `${serverBase}/Sessions/Playing/Stopped?api_key=${apiKey}`;
 
       log(`Reporting playback stop: position=${positionSeconds}s (${positionTicks} ticks)`);
@@ -345,6 +395,7 @@ export function createPlaybackTrackingManager({
     apiKey: string,
     userId?: string,
     knownStartPositionSeconds?: number | null,
+    isBrowserPlayback?: boolean,
   ) {
     stopPlaybackTracking();
 
@@ -353,24 +404,27 @@ export function createPlaybackTrackingManager({
       return;
     }
 
-    log(`Starting playback tracking for item: ${itemId}`);
+    log(`Starting playback tracking for item: ${itemId}, isBrowserPlayback: ${Boolean(isBrowserPlayback)}`);
 
     const requestId = ++sessionRequestCounter;
 
-    let playSessionId: string | null = null;
-    let mediaSourceId: string | null = null;
-    try {
-      const playbackInfo = await fetchPlaybackInfo(serverBase, itemId, apiKey);
-      if (playbackInfo) {
-        playSessionId = playbackInfo.PlaySessionId || null;
-        if (playbackInfo.MediaSources && playbackInfo.MediaSources.length > 0) {
-          mediaSourceId = playbackInfo.MediaSources[0].Id || null;
+    let playSessionId: string | null = `emby-${Date.now()}`;
+    let mediaSourceId: string | null = itemId;
+
+    if (!isBrowserPlayback) {
+      try {
+        const playbackInfo = await fetchPlaybackInfo(serverBase, itemId, apiKey);
+        if (playbackInfo) {
+          playSessionId = playbackInfo.PlaySessionId || playSessionId;
+          if (playbackInfo.MediaSources && playbackInfo.MediaSources.length > 0) {
+            mediaSourceId = playbackInfo.MediaSources[0].Id || mediaSourceId;
+          }
+          log(`PlaySessionId: ${playSessionId}, MediaSourceId: ${mediaSourceId}`);
         }
-        log(`PlaySessionId: ${playSessionId}, MediaSourceId: ${mediaSourceId}`);
+      } catch (error: unknown) {
+        const errorMsg = error instanceof Error ? error.message : String(error);
+        log(`Could not fetch playback info for session: ${errorMsg}`);
       }
-    } catch (error: unknown) {
-      const errorMsg = error instanceof Error ? error.message : String(error);
-      log(`Could not fetch playback info for session: ${errorMsg}`);
     }
 
     if (requestId !== sessionRequestCounter) {
@@ -389,6 +443,7 @@ export function createPlaybackTrackingManager({
       resumePosition: typeof knownStartPositionSeconds === "number" && knownStartPositionSeconds >= 15 ? knownStartPositionSeconds : null,
       duration: null,
       hasReportedWatched: false,
+      isBrowserPlayback: Boolean(isBrowserPlayback),
     };
 
     resumeAndReportStart(serverBase, itemId, apiKey, playSessionId, mediaSourceId, userId, knownStartPositionSeconds);

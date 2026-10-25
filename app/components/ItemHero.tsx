@@ -123,7 +123,7 @@ export function ItemHero({
   const { durationText, premiereDateText, resolutionBadge, hdrBadge, fpsBadge, sizeBadge } = getMediaBadges(targetItem || undefined, item);
 
   // Resume position & progress
-  const resumeTicks = targetItem?.UserData?.PlaybackPositionTicks || 0;
+  const resumeTicks = targetItem?.UserData?.PlaybackPositionTicks || item?.UserData?.PlaybackPositionTicks || 0;
   const runtimeTicks = targetItem?.RunTimeTicks || item?.RunTimeTicks || 0;
   const hasProgress = runtimeTicks > 0 && resumeTicks > 0;
   const progressPercent = hasProgress ? Math.min(100, Math.max(0, (resumeTicks / runtimeTicks) * 100)) : 0;
@@ -228,8 +228,10 @@ export function ItemHero({
           >
             <span>
               {isSeries && nextUpEpisode
-                ? `播放 S${nextUpEpisode.ParentIndexNumber ?? 1}:E${nextUpEpisode.IndexNumber ?? 1}${resumeTimeClock ? ` (${resumeTimeClock})` : ""}`
-                : `Play${resumeTimeClock ? ` ${resumeTimeClock}` : ""}`}
+                ? `播放 S${nextUpEpisode.ParentIndexNumber ?? 1}:E${nextUpEpisode.IndexNumber ?? 1}${resumeTimeClock ? ` (${resumeTimeClock} · ${Math.round(progressPercent)}%)` : ""}`
+                : hasProgress
+                  ? `继续播放 (${resumeTimeClock} · ${Math.round(progressPercent)}%)`
+                  : `播放`}
             </span>
             {hasProgress && (
               <div className={styles.playButtonProgressBarTrack}>

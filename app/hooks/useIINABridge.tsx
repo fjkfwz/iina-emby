@@ -8,7 +8,7 @@ import {
 import type React from "react";
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { setClientIdentity } from "../lib/emby-auth-client";
-import { clearLibraryCache } from "../lib/emby-library-client";
+import { clearLibraryCache, embyFetch } from "../lib/emby-library-client";
 import { embyWebSocket } from "../lib/emby-websocket-client";
 import { applyUserDataUpdatesToCache } from "../lib/user-data-sync";
 
@@ -176,6 +176,34 @@ export function IINABridgeProvider({ children }: { children: React.ReactNode }) 
             PlaybackPositionTicks: data.positionTicks,
           },
         ]);
+
+        // Sync playback progress safely to Emby server from WebView
+        const endpoint =
+          data.event === "start"
+            ? "/Sessions/Playing"
+            : data.event === "stop"
+              ? "/Sessions/Playing/Stopped"
+              : "/Sessions/Playing/Progress";
+
+        const url = `${currentServer.serverUrl}${endpoint}?api_key=${currentServer.accessToken}`;
+        embyFetch(currentServer, url, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          },
+          body: JSON.stringify({
+            ItemId: data.itemId,
+            MediaSourceId: data.itemId,
+            PlaySessionId: data.playSessionId || undefined,
+            PositionTicks: data.positionTicks,
+            IsPaused: data.isPaused,
+            CanSeek: true,
+            PlayMethod: "DirectPlay",
+          }),
+        }).catch((err) => {
+          console.debug("[PlaybackProgressSync] WebView embyFetch error:", err);
+        });
       });
 
       // Request window context, identity, and servers list on mount

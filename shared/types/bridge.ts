@@ -75,6 +75,8 @@ export interface PlaybackProgressUpdatedPayload {
   itemId: string;
   positionTicks: number;
   isPaused: boolean;
+  event?: "start" | "progress" | "stop";
+  playSessionId?: string | null;
 }
 
 export interface ServerSwitchedPayload {
