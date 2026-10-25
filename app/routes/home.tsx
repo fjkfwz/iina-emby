@@ -1,6 +1,7 @@
 import { IconAlertCircle, IconSearch, IconX } from "@tabler/icons-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Navigate, useNavigate, useSearchParams } from "react-router";
+import { CategoriesShelf } from "../components/CategoriesShelf";
 import { ContinueWatching } from "../components/ContinueWatching";
 import { FavoritesShelf } from "../components/FavoritesShelf";
 import { LibraryShelf, LibraryShelfSkeleton } from "../components/LibraryShelf";
@@ -211,6 +212,9 @@ export default function HomeRoute() {
           </div>
         ) : (
           <>
+            {/* Categories / Libraries shelf */}
+            <CategoriesShelf server={activeServer} />
+
             {/* Continue Watching shelf */}
             <ContinueWatching server={activeServer} onPlayMedia={playMedia} />
 
