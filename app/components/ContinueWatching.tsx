@@ -20,7 +20,7 @@ export interface ContinueWatchingHandle {
 
 export const ContinueWatching = forwardRef<ContinueWatchingHandle, ContinueWatchingProps>(({ server, onPlayMedia }, ref) => {
   const navigate = useNavigate();
-  const { items: resumeItems, loading, error, refresh } = useContinueWatching(server);
+  const { items: resumeItems, loading, error, refresh } = useContinueWatching(server, 24);
 
   useImperativeHandle(
     ref,

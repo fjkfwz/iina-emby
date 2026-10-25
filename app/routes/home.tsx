@@ -32,10 +32,10 @@ export default function HomeRoute() {
     }
   }, [activeServer, isRefreshing]);
 
+  // Keep queries in memory cache when window reopens to prevent slow re-fetching;
+  // Users can use the top-right Refresh button or staleTime handles updates naturally.
   useOnWindowReopen(() => {
-    if (activeServer) {
-      queryClient.invalidateQueries({ queryKey: embyKeys.server(activeServer.id) });
-    }
+    // Preserve cache across window refocuses
   });
 
   const handleIdentifySuccess = useCallback(() => {

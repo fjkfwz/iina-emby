@@ -145,12 +145,9 @@ export const MediaPoster = memo(function MediaPoster({
             src={imageUrl}
             alt=""
             className={classes.image}
-            loading={isCached || isLoaded ? "eager" : "lazy"}
+            loading={isCached ? "eager" : "lazy"}
             decoding="async"
-            style={{
-              opacity: isCached || isLoaded ? 1 : 0,
-              transition: isCached || isLoaded ? "opacity 0.2s ease" : "none",
-            }}
+            style={{ opacity: 1 }}
             onLoad={handleImgLoad}
             onError={handleImgError}
           />

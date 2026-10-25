@@ -11318,17 +11318,44 @@ function Eo({ label: e2, children: t2 }) {
 function Do({ className: e2 }) {
   return (0, b.jsxs)(`div`, { className: `${Ga.card} ${e2 || ``}`, "aria-hidden": `true`, children: [(0, b.jsx)(`div`, { className: Ga.preview, children: (0, b.jsx)(wo, { height: `100%`, radius: `var(--radius-l)` }) }), (0, b.jsxs)(`div`, { className: Ga.meta, children: [(0, b.jsx)(`span`, { className: Ga.title, children: (0, b.jsx)(wo, { width: `75%`, radius: `xs`, children: (0, b.jsx)(`span`, { children: `\xA0` }) }) }), (0, b.jsx)(`span`, { className: Ga.subtitle, children: (0, b.jsx)(wo, { width: `45%`, radius: `xs`, children: (0, b.jsx)(`span`, { children: `\xA0` }) }) })] })] });
 }
-var __loadedImgUrls = window.__loadedImgUrls || (window.__loadedImgUrls = new Set());
+var __imgCacheKey = 'iina_emby_img_cache_v2';
+var __loadedImgUrls = (function() {
+  if (window.__loadedImgUrls) return window.__loadedImgUrls;
+  var s = new Set();
+  try {
+    var raw = localStorage.getItem(__imgCacheKey);
+    if (raw) {
+      var arr = JSON.parse(raw);
+      if (Array.isArray(arr)) {
+        for (var i = 0; i < arr.length; i++) s.add(arr[i]);
+      }
+    }
+  } catch(e) {}
+  return (window.__loadedImgUrls = s);
+})();
+
+var __saveCacheTimer = null;
+function __saveImgCache() {
+  if (__saveCacheTimer) return;
+  __saveCacheTimer = setTimeout(function() {
+    __saveCacheTimer = null;
+    try {
+      var arr = Array.from(__loadedImgUrls).slice(-2000);
+      localStorage.setItem(__imgCacheKey, JSON.stringify(arr));
+    } catch(e) {}
+  }, 1200);
+}
 
 function CachedImg(e) {
   let { src: t, alt: a, className: s, loading: l, onError: r, onLoad: c, style: st, ...n } = e;
   let isCached = Boolean(t && __loadedImgUrls.has(t));
-  let [isLoaded, setIsLoaded] = (0, _.useState)(isCached);
   let [retry, setRetry] = (0, _.useState)(0);
 
   let handleLoad = (ev) => {
-    if (t) __loadedImgUrls.add(t);
-    setIsLoaded(true);
+    if (t) {
+      __loadedImgUrls.add(t);
+      __saveImgCache();
+    }
     c && c(ev);
   };
 
@@ -11342,18 +11369,9 @@ function CachedImg(e) {
     }
   };
 
-  let refCallback = (el) => {
-    if (el && el.complete && el.naturalWidth > 0 && !isLoaded) {
-      if (t) __loadedImgUrls.add(t);
-      setIsLoaded(true);
-    }
-  };
-
-  let effectiveLoading = (isCached || isLoaded) ? `eager` : (l || `lazy`);
-  let show = isCached || isLoaded;
+  let effectiveLoading = isCached ? `eager` : (l || `lazy`);
 
   return (0, b.jsx)(`img`, {
-    ref: refCallback,
     ...n,
     key: retry,
     src: t,
@@ -11363,8 +11381,7 @@ function CachedImg(e) {
     decoding: `async`,
     style: {
       ...st,
-      opacity: show ? 1 : 0,
-      transition: show ? `opacity 0.2s ease` : `none`
+      opacity: 1
     },
     onLoad: handleLoad,
     onError: handleError
@@ -11410,7 +11427,7 @@ function Ao({ onBack: e2, backTitle: t2 = `Back`, title: n2, showActiveDot: r2 =
     l2(`/settings`);
   }, children: (0, b.jsx)(Pa, { size: 16 }) }), o2, i2 && (0, b.jsx)(_o, { variant: `glass`, shape: `rounded`, size: `sm`, isIconOnly: true, onClick: i2, disabled: a2, title: `Refresh`, "aria-label": `Refresh content`, children: (0, b.jsx)(ja, { size: 16, className: a2 ? ko.spinning : `` }) })] })] });
 }
-function jo(e2, t2 = 1e4) {
+function jo(e2, t2 = 24) {
   let n2 = !!(e2?.serverUrl && e2.accessToken && e2.userId), r2 = dt({ queryKey: e2?.id ? P.continueWatching(e2.id) : [`empty-resume`], staleTime: 300000, queryFn: async ({ signal: n3 }) => e2 ? (await zi(e2, t2, n3)).items : [], enabled: n2 });
   return { items: r2.data ?? [], loading: r2.isLoading, error: r2.error ? r2.error instanceof Error ? r2.error.message : String(r2.error) : null, refresh: async () => {
     await r2.refetch();
@@ -11486,7 +11503,7 @@ function zo({ title: e2, rightSection: t2, children: n2, itemWidth: r2 = 260, ga
   return (0, b.jsxs)(`section`, { className: `${Ro.container} ${a2 || ``}`, children: [(e2 || t2 || g2) && (0, b.jsxs)(`div`, { className: Ro.header, children: [(0, b.jsx)(`div`, { children: typeof e2 == `string` ? (0, b.jsx)(`h3`, { className: Ro.title, children: e2 }) : e2 }), (0, b.jsxs)(`div`, { className: Ro.navGroup, children: [t2, g2 && (0, b.jsxs)(b.Fragment, { children: [(0, b.jsx)(`button`, { type: `button`, className: Ro.arrowBtn, disabled: !l2, onMouseDown: (e3) => e3.preventDefault(), onClick: () => h2(`left`), "aria-label": `Scroll left`, children: (0, b.jsx)(ha, { size: 18 }) }), (0, b.jsx)(`button`, { type: `button`, className: Ro.arrowBtn, disabled: !d2, onMouseDown: (e3) => e3.preventDefault(), onClick: () => h2(`right`), "aria-label": `Scroll right`, children: (0, b.jsx)(ga, { size: 18 }) })] })] })] }), m2 > 0 ? (0, b.jsx)(`div`, { ref: s2, className: Ro.scroller, style: { gap: i2 }, onScroll: p2, children: _.Children.map(n2, (e3) => e3 ? (0, b.jsx)(`div`, { className: Ro.itemWrapper, style: { width: r2 }, children: e3 }) : null) }) : o2 ? (0, b.jsx)(`div`, { className: Ro.emptyText, children: o2 }) : null] });
 }
 var Bo = (0, _.forwardRef)(({ server: e2, onPlayMedia: t2 }, n2) => {
-  let r2 = Gn(), { items: i2, loading: a2, error: o2, refresh: s2 } = jo(e2);
+  let r2 = Gn(), { items: i2, loading: a2, error: o2, refresh: s2 } = jo(e2, 24);
   (0, _.useImperativeHandle)(n2, () => ({ refresh: s2 }), [s2]);
   let c2 = () => {
     r2(`/continue-watching`);
@@ -11677,7 +11694,7 @@ function qo() {
     }
   }, [t2, c2]);
   la(() => {
-    t2 && N.invalidateQueries({ queryKey: P.server(t2.id) });
+    /* Preserve cache across window reopen; refresh button is available on top-right */
   });
   let d2 = (0, _.useCallback)(() => {
     t2 && N.invalidateQueries({ queryKey: P.server(t2.id) });

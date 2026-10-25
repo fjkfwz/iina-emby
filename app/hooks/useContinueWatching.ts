@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { fetchResumeItems } from "../lib/emby-library-client";
 import { embyKeys } from "../lib/query-keys";
 
-export function useContinueWatching(activeServer: EmbyServer | null, limit = 10000) {
+export function useContinueWatching(activeServer: EmbyServer | null, limit = 24) {
   const isEnabled = Boolean(activeServer?.serverUrl && activeServer.accessToken && activeServer.userId);
 
   const query = useQuery({
@@ -14,6 +14,8 @@ export function useContinueWatching(activeServer: EmbyServer | null, limit = 100
       return result.items;
     },
     enabled: isEnabled,
+    staleTime: 1000 * 60 * 5,
+    gcTime: 1000 * 60 * 30,
   });
 
   return {
