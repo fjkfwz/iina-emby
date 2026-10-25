@@ -15,7 +15,8 @@
     "lint:fix": "biome check --write .",
     "format": "biome format --write .",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "install:plugin": "./scripts/install.sh"
   },
   "dependencies": {
     "@tabler/icons-react": "^3.48.0",
