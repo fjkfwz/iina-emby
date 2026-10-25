@@ -1029,81 +1029,65 @@ function createPlaybackCoordinator({
       currentPlaybackSubtitleCodec = message.subtitleCodec;
     }
   }
+  function isItemMatching(targetItemId) {
+    if (!targetItemId || !currentPlaybackItemId) return true;
+    const a = String(currentPlaybackItemId).trim().toLowerCase();
+    const b = String(targetItemId).trim().toLowerCase();
+    return a === b || a.includes(b) || b.includes(a);
+  }
   function getPendingMediaTitle2(itemId) {
     if (!currentPlaybackTitle) return null;
-    if (itemId && currentPlaybackItemId && currentPlaybackItemId !== itemId) {
-      return null;
-    }
+    if (!isItemMatching(itemId)) return null;
     return currentPlaybackTitle;
   }
   function getPendingStartPosition2(itemId) {
     if (typeof currentPlaybackStartPositionSeconds !== "number") return null;
-    if (itemId && currentPlaybackItemId && currentPlaybackItemId !== itemId) {
-      return null;
-    }
+    if (!isItemMatching(itemId)) return null;
     return currentPlaybackStartPositionSeconds;
   }
   function getPendingAudioIndex2(itemId) {
     if (typeof currentPlaybackAudioIndex !== "number") return null;
-    if (itemId && currentPlaybackItemId && currentPlaybackItemId !== itemId) {
-      return null;
-    }
+    if (!isItemMatching(itemId)) return null;
     return currentPlaybackAudioIndex;
   }
   function getPendingSubtitleIndex2(itemId) {
     if (typeof currentPlaybackSubtitleIndex !== "number") return null;
-    if (itemId && currentPlaybackItemId && currentPlaybackItemId !== itemId) {
-      return null;
-    }
+    if (!isItemMatching(itemId)) return null;
     return currentPlaybackSubtitleIndex;
   }
   function getPendingAudioTrackNumber2(itemId) {
     if (typeof currentPlaybackAudioTrackNumber !== "number") return null;
-    if (itemId && currentPlaybackItemId && currentPlaybackItemId !== itemId) {
-      return null;
-    }
+    if (!isItemMatching(itemId)) return null;
     return currentPlaybackAudioTrackNumber;
   }
   function getPendingSubtitleTrackNumber2(itemId) {
     if (typeof currentPlaybackSubtitleTrackNumber !== "number") return null;
-    if (itemId && currentPlaybackItemId && currentPlaybackItemId !== itemId) {
-      return null;
-    }
+    if (!isItemMatching(itemId)) return null;
     return currentPlaybackSubtitleTrackNumber;
   }
   function getPendingAudioLanguage2(itemId) {
     if (!currentPlaybackAudioLanguage) return null;
-    if (itemId && currentPlaybackItemId && currentPlaybackItemId !== itemId) {
-      return null;
-    }
+    if (!isItemMatching(itemId)) return null;
     return currentPlaybackAudioLanguage;
   }
   function getPendingSubtitleLanguage2(itemId) {
     if (!currentPlaybackSubtitleLanguage) return null;
-    if (itemId && currentPlaybackItemId && currentPlaybackItemId !== itemId) {
-      return null;
-    }
+    if (!isItemMatching(itemId)) return null;
     return currentPlaybackSubtitleLanguage;
   }
   function getPendingIsExternalSubtitle2(itemId) {
     if (typeof currentPlaybackIsExternalSubtitle !== "boolean") return null;
-    if (itemId && currentPlaybackItemId && currentPlaybackItemId !== itemId) {
-      return null;
-    }
+    if (!isItemMatching(itemId)) return null;
     return currentPlaybackIsExternalSubtitle;
   }
   function getPendingSubtitlePath2(itemId) {
     if (!currentPlaybackSubtitlePath) return null;
-    if (itemId && currentPlaybackItemId && currentPlaybackItemId !== itemId) {
-      return null;
-    }
+    if (!isItemMatching(itemId)) return null;
     return currentPlaybackSubtitlePath;
   }
   function getPendingSubtitleCodec2(itemId) {
     if (!currentPlaybackSubtitleCodec) return null;
-    if (itemId && currentPlaybackItemId && currentPlaybackItemId !== itemId) {
-      return null;
-    }
+    if (!isItemMatching(itemId)) return null;
     return currentPlaybackSubtitleCodec;
   }
   function markReplacingPlayback() {
@@ -2189,11 +2173,19 @@ function applySelectedAudioTrack(itemId) {
     if (!match) {
       match = audioTracks.find((t) => t.id === pendingAudioTrackNum || t.id === pendingAudio);
     }
-    if (match && typeof match.id === "number") {
-      debugLog(`Matched mpv audio track id: ${match.id}`);
-      mpv.set("aid", match.id);
-    } else if (typeof pendingAudioTrackNum === "number" && pendingAudioTrackNum > 0) {
-      mpv.set("aid", pendingAudioTrackNum);
+    const targetAid = match && typeof match.id === "number" ? match.id : typeof pendingAudioTrackNum === "number" && pendingAudioTrackNum > 0 ? pendingAudioTrackNum : null;
+    if (targetAid !== null) {
+      debugLog(`Applying audio track id: ${targetAid}`);
+      try {
+        core.audio.id = targetAid;
+      } catch (e) {
+        debugLog("core.audio.id assignment:", e);
+      }
+      try {
+        mpv.set("aid", targetAid);
+      } catch (e) {
+        debugLog("mpv.set aid:", e);
+      }
     }
   } catch (err) {
     debugLog("Failed to set audio track:", err);
@@ -2271,11 +2263,19 @@ async function applySelectedSubtitleTrack(serverBase, itemId, apiKey) {
     if (!match) {
       match = subTracks.find((t) => t.id === pendingSubTrackNum || t.id === pendingSubtitle);
     }
-    if (match && typeof match.id === "number") {
-      debugLog(`Matched mpv subtitle track id: ${match.id}`);
-      mpv.set("sid", match.id);
-    } else if (typeof pendingSubTrackNum === "number" && pendingSubTrackNum > 0) {
-      mpv.set("sid", pendingSubTrackNum);
+    const targetSid = match && typeof match.id === "number" ? match.id : typeof pendingSubTrackNum === "number" && pendingSubTrackNum > 0 ? pendingSubTrackNum : null;
+    if (targetSid !== null) {
+      debugLog(`Applying subtitle track id: ${targetSid}`);
+      try {
+        core.subtitle.id = targetSid;
+      } catch (e) {
+        debugLog("core.subtitle.id assignment:", e);
+      }
+      try {
+        mpv.set("sid", targetSid);
+      } catch (e) {
+        debugLog("mpv.set sid:", e);
+      }
     }
   } catch (err) {
     debugLog("Failed to set subtitle track:", err);
@@ -2413,14 +2413,7 @@ event.on("mpv.tracks-changed", () => {
         reportApiKey = session.accessToken;
       }
       applySelectedAudioTrack(embyInfo.itemId);
-      const pendingSub = getPendingSubtitleIndex(embyInfo.itemId);
-      if (pendingSub === -1) {
-        try {
-          mpv.set("sid", "no");
-          core.subtitle.id = null;
-        } catch {
-        }
-      }
+      applySelectedSubtitleTrack(reportServerBase, embyInfo.itemId, reportApiKey);
     }
   }
 });

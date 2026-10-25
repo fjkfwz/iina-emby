@@ -846,7 +846,14 @@ global.onMessage("player-inactive", (data, player) => {
   debugLog("Player reported inactive (retaining player instance for reuse):", { data, player });
 });
 global.onMessage("player-unregistered", (_data, player) => {
-  debugLog("Player instance unregistered (retaining player instance for reuse):", player);
+  debugLog("Player instance unregistered:", player);
+  if (player !== void 0 && player !== null) {
+    if (activePlayerTarget === player) {
+      activePlayerTarget = null;
+    }
+  } else {
+    activePlayerTarget = null;
+  }
 });
 global.onMessage("player-file-loaded", (data, player) => {
   debugLog("Player file loaded:", data);
@@ -883,6 +890,8 @@ function spawnNewPlayerInstance(playData) {
     if (typeof playerId === "number") {
       activePlayerTarget = playerId;
       global.postMessage(playerId, "apply-pending-media", playData);
+    } else {
+      global.postMessage(null, "apply-pending-media", playData);
     }
   } catch (err) {
     const errorMsg = err instanceof Error ? err.message : String(err);
@@ -974,6 +983,8 @@ global.onMessage("create-player", (data, player) => {
     if (typeof playerId === "number") {
       activePlayerTarget = playerId;
       global.postMessage(playerId, "apply-pending-media", playData);
+    } else {
+      global.postMessage(null, "apply-pending-media", playData);
     }
     if (player !== void 0 && player !== null) {
       global.postMessage(player, "player-created", {

@@ -73,10 +73,30 @@ export function MediaShelf({ title, rightSection, children, itemWidth = 260, gap
     const itemStep = numericItemWidth + gap;
     const visibleItems = Math.max(1, Math.floor(el.clientWidth / itemStep));
     const scrollAmount = visibleItems * itemStep;
-    el.scrollBy({
-      left: direction === "left" ? -scrollAmount : scrollAmount,
-      behavior: "smooth",
-    });
+    const delta = direction === "left" ? -scrollAmount : scrollAmount;
+    const prevLeft = el.scrollLeft;
+
+    try {
+      el.scrollBy({
+        left: delta,
+        behavior: "smooth",
+      });
+    } catch {
+      el.scrollLeft += delta;
+    }
+
+    // Older WebKit (Safari 13) silently ignores { left, behavior } dictionary without throwing
+    if (el.scrollLeft === prevLeft) {
+      if (typeof (el as unknown as { scrollBy?: (x: number, y: number) => void }).scrollBy === "function") {
+        try {
+          (el as unknown as { scrollBy: (x: number, y: number) => void }).scrollBy(delta, 0);
+        } catch {
+          el.scrollLeft += delta;
+        }
+      } else {
+        el.scrollLeft += delta;
+      }
+    }
   };
 
   const showNavArrows = canScrollLeft || canScrollRight;

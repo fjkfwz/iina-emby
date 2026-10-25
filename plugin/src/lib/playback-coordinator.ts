@@ -120,91 +120,76 @@ export function createPlaybackCoordinator({
     }
   }
 
+  function isItemMatching(targetItemId?: string): boolean {
+    if (!targetItemId || !currentPlaybackItemId) return true;
+    const a = String(currentPlaybackItemId).trim().toLowerCase();
+    const b = String(targetItemId).trim().toLowerCase();
+    return a === b || a.includes(b) || b.includes(a);
+  }
+
   function getPendingMediaTitle(itemId?: string): string | null {
     if (!currentPlaybackTitle) return null;
-    if (itemId && currentPlaybackItemId && currentPlaybackItemId !== itemId) {
-      return null;
-    }
+    if (!isItemMatching(itemId)) return null;
     return currentPlaybackTitle;
   }
 
   function getPendingStartPosition(itemId?: string): number | null {
     if (typeof currentPlaybackStartPositionSeconds !== "number") return null;
-    if (itemId && currentPlaybackItemId && currentPlaybackItemId !== itemId) {
-      return null;
-    }
+    if (!isItemMatching(itemId)) return null;
     return currentPlaybackStartPositionSeconds;
   }
 
   function getPendingAudioIndex(itemId?: string): number | null {
     if (typeof currentPlaybackAudioIndex !== "number") return null;
-    if (itemId && currentPlaybackItemId && currentPlaybackItemId !== itemId) {
-      return null;
-    }
+    if (!isItemMatching(itemId)) return null;
     return currentPlaybackAudioIndex;
   }
 
   function getPendingSubtitleIndex(itemId?: string): number | null {
     if (typeof currentPlaybackSubtitleIndex !== "number") return null;
-    if (itemId && currentPlaybackItemId && currentPlaybackItemId !== itemId) {
-      return null;
-    }
+    if (!isItemMatching(itemId)) return null;
     return currentPlaybackSubtitleIndex;
   }
 
   function getPendingAudioTrackNumber(itemId?: string): number | null {
     if (typeof currentPlaybackAudioTrackNumber !== "number") return null;
-    if (itemId && currentPlaybackItemId && currentPlaybackItemId !== itemId) {
-      return null;
-    }
+    if (!isItemMatching(itemId)) return null;
     return currentPlaybackAudioTrackNumber;
   }
 
   function getPendingSubtitleTrackNumber(itemId?: string): number | null {
     if (typeof currentPlaybackSubtitleTrackNumber !== "number") return null;
-    if (itemId && currentPlaybackItemId && currentPlaybackItemId !== itemId) {
-      return null;
-    }
+    if (!isItemMatching(itemId)) return null;
     return currentPlaybackSubtitleTrackNumber;
   }
 
   function getPendingAudioLanguage(itemId?: string): string | null {
     if (!currentPlaybackAudioLanguage) return null;
-    if (itemId && currentPlaybackItemId && currentPlaybackItemId !== itemId) {
-      return null;
-    }
+    if (!isItemMatching(itemId)) return null;
     return currentPlaybackAudioLanguage;
   }
 
   function getPendingSubtitleLanguage(itemId?: string): string | null {
     if (!currentPlaybackSubtitleLanguage) return null;
-    if (itemId && currentPlaybackItemId && currentPlaybackItemId !== itemId) {
-      return null;
-    }
+    if (!isItemMatching(itemId)) return null;
     return currentPlaybackSubtitleLanguage;
   }
 
   function getPendingIsExternalSubtitle(itemId?: string): boolean | null {
     if (typeof currentPlaybackIsExternalSubtitle !== "boolean") return null;
-    if (itemId && currentPlaybackItemId && currentPlaybackItemId !== itemId) {
-      return null;
-    }
+    if (!isItemMatching(itemId)) return null;
     return currentPlaybackIsExternalSubtitle;
   }
 
   function getPendingSubtitlePath(itemId?: string): string | null {
     if (!currentPlaybackSubtitlePath) return null;
-    if (itemId && currentPlaybackItemId && currentPlaybackItemId !== itemId) {
-      return null;
-    }
+    if (!isItemMatching(itemId)) return null;
     return currentPlaybackSubtitlePath;
   }
 
   function getPendingSubtitleCodec(itemId?: string): string | null {
     if (!currentPlaybackSubtitleCodec) return null;
-    if (itemId && currentPlaybackItemId && currentPlaybackItemId !== itemId) {
-      return null;
-    }
+    if (!isItemMatching(itemId)) return null;
     return currentPlaybackSubtitleCodec;
   }
 

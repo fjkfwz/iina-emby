@@ -59,6 +59,7 @@
 .scroller {
   display: flex;
   overflow-x: auto;
+  overflow-y: hidden;
   scroll-snap-type: x proximity;
   -webkit-overflow-scrolling: touch;
   /* Extra vertical padding so hover scale and focus rings don't get clipped; horizontal padding aligns with header */
