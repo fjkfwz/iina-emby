@@ -10,8 +10,9 @@ export const queryClient = new QueryClient({
       // In desktop app, window focus should not spam the Emby server
       refetchOnWindowFocus: false,
       refetchOnReconnect: false,
-      // Retry once on failure
-      retry: 1,
+      // Retry transient network errors with backoff
+      retry: 2,
+      retryDelay: (attemptIndex) => Math.min(600 * 2 ** attemptIndex, 4000),
     },
   },
 });

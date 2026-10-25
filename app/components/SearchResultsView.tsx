@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { MediaPoster, MediaPosterSkeleton } from "./MediaPoster";
 import { Alert } from "./ui";
 import { Select, type SelectOption } from "./ui/Select";
-import { buildAuthHeaders } from "../lib/emby-auth-client";
+import { embyFetch } from "../lib/emby-library-client";
 import styles from "./SearchResultsView.module.css";
 
 export type MediaTypeFilter = "all" | "movies" | "series";
@@ -60,11 +60,14 @@ export function SearchResultsView({
       SearchTerm: cleanQuery,
     });
 
+    if (server.accessToken) {
+      params.set("api_key", server.accessToken);
+    }
+
     const url = `${baseUrl}/Users/${encodeURIComponent(server.userId)}/Items?${params.toString()}`;
 
-    fetch(url, {
+    embyFetch(server, url, {
       signal: controller.signal,
-      headers: buildAuthHeaders(server.accessToken, { Accept: "application/json" }),
     })
       .then((res) => {
         if (!res.ok) throw new Error(`Search request failed (${res.status} ${res.statusText})`);
@@ -77,10 +80,19 @@ export function SearchResultsView({
         }
       })
       .catch((err: unknown) => {
-        if (!isCancelled && !(err instanceof Error && err.name === "AbortError")) {
-          setError(err instanceof Error ? err.message : String(err));
-          setIsLoading(false);
+        if (
+          isCancelled ||
+          controller.signal.aborted ||
+          (err instanceof Error &&
+            (err.name === "AbortError" ||
+              err.name === "CanceledError" ||
+              err.message?.toLowerCase().includes("abort") ||
+              err.message?.toLowerCase().includes("cancel")))
+        ) {
+          return;
         }
+        setError(err instanceof Error ? err.message : String(err));
+        setIsLoading(false);
       });
 
     return () => {

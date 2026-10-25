@@ -44,7 +44,7 @@ describe("emby-library-client caching and deduplication", () => {
       expect.stringContaining("/Users/user-1/Items/item-123"),
       expect.objectContaining({
         headers: expect.objectContaining({
-          "X-Emby-Token": "test-token",
+          Authorization: expect.stringContaining('Token="test-token"'),
         }),
       }),
     );
@@ -84,7 +84,7 @@ describe("emby-library-client caching and deduplication", () => {
     const results = await searchRemoteItem(dummyServer, "Movie", query);
     expect(results).toEqual(mockResults);
     expect(fetchSpy).toHaveBeenCalledWith(
-      "http://localhost:8096/Items/RemoteSearch/Movie",
+      expect.stringContaining("http://localhost:8096/Items/RemoteSearch/Movie"),
       expect.objectContaining({
         method: "POST",
         body: JSON.stringify(query),
@@ -107,7 +107,7 @@ describe("emby-library-client caching and deduplication", () => {
     await applyRemoteSearchResult(dummyServer, "item-123", result, true);
 
     expect(fetchSpy).toHaveBeenCalledWith(
-      "http://localhost:8096/Items/RemoteSearch/Apply/item-123?replaceAllImages=true",
+      expect.stringContaining("http://localhost:8096/Items/RemoteSearch/Apply/item-123?replaceAllImages=true"),
       expect.objectContaining({
         method: "POST",
         body: JSON.stringify(result),

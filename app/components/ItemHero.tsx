@@ -1,7 +1,7 @@
 import { type EmbyItemMetadata, type EmbyPerson, type EmbyServer, getEmbyImageUrl, getItemImageUrl } from "@shared";
 import { IconFingerprint, IconHeart, IconHeartFilled, IconPlayerPlayFilled } from "@tabler/icons-react";
 import { useState } from "react";
-import { isIdentifySupported } from "../lib/emby-library-client";
+import { embyFetch, isIdentifySupported } from "../lib/emby-library-client";
 import { formatResumeTime, getMediaBadges } from "../lib/media-formatters";
 import { queryClient } from "../lib/query-client";
 import { embyKeys } from "../lib/query-keys";
@@ -47,12 +47,8 @@ export function ItemHero({
     try {
       const base = activeServer.serverUrl.replace(/\/+$/, "");
       const url = `${base}/Users/${encodeURIComponent(activeServer.userId)}/FavoriteItems/${encodeURIComponent(item.Id)}`;
-      const resp = await fetch(url, {
+      const resp = await embyFetch(activeServer, url, {
         method: isFavorite ? "DELETE" : "POST",
-        headers: {
-          "X-Emby-Token": activeServer.accessToken,
-          Accept: "application/json",
-        },
       });
       if (resp.ok) {
         const updatedUserData = await resp.json();

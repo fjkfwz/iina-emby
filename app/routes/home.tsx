@@ -26,26 +26,46 @@ export default function HomeRoute() {
   const { sections, isLoading: isSectionsLoading, error: sectionsError } = useLibrarySections(activeServer);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  const [searchQuery, setSearchQuery] = useState<string>(() => {
-    return searchParams.get("q") || "";
-  });
+  const urlQ = searchParams.get("q") || "";
+  const prevQRef = useRef(urlQ);
 
-  const [debouncedQuery, setDebouncedQuery] = useState<string>(() => {
-    return searchParams.get("q") || "";
-  });
+  const [searchQuery, setSearchQuery] = useState<string>(() => urlQ);
+  const [debouncedQuery, setDebouncedQuery] = useState<string>(() => urlQ);
 
-  // Debounce search query
+  // Synchronize internal search state when URL param 'q' changes externally (e.g. Back/Forward navigation)
+  useEffect(() => {
+    if (urlQ !== searchQuery) {
+      setSearchQuery(urlQ);
+      setDebouncedQuery(urlQ);
+      prevQRef.current = urlQ;
+    }
+  }, [urlQ]);
+
+  // Support focus=search query parameter when navigating from search buttons or shortcuts
+  useEffect(() => {
+    if (searchParams.get("focus") === "search") {
+      searchInputRef.current?.focus();
+      searchInputRef.current?.select();
+    }
+  }, [searchParams]);
+
+  // Debounce search query and sync to URL search params
   useEffect(() => {
     const timer = window.setTimeout(() => {
       const q = searchQuery.trim();
       setDebouncedQuery(q);
+      const prevQ = prevQRef.current;
       if (q) {
-        setSearchParams({ q }, { replace: true });
+        // Push a new history entry on transition from idle to searching so browser Back returns to home
+        const shouldReplace = Boolean(prevQ);
+        setSearchParams({ q }, { replace: shouldReplace });
+        prevQRef.current = q;
         try {
           sessionStorage.setItem("emby_search_q", q);
         } catch {}
       } else {
         setSearchParams({}, { replace: true });
+        prevQRef.current = "";
         try {
           sessionStorage.removeItem("emby_search_q");
         } catch {}
@@ -102,15 +122,32 @@ export default function HomeRoute() {
     return <Navigate to="/servers" replace />;
   }
 
-  const handleBack = () => {
+  const isSearching = Boolean(searchQuery.trim() || urlQ.trim());
+
+  const handleClearSearch = useCallback(() => {
+    setSearchQuery("");
+    setDebouncedQuery("");
+    setSearchParams({}, { replace: true });
+    prevQRef.current = "";
+    try {
+      sessionStorage.removeItem("emby_search_q");
+    } catch {}
+  }, [setSearchParams]);
+
+  const handleBack = useCallback(() => {
+    if (isSearching) {
+      handleClearSearch();
+      searchInputRef.current?.blur();
+      return;
+    }
     navigate("/servers");
-  };
+  }, [isSearching, handleClearSearch, navigate]);
 
   return (
     <div className={styles.container}>
       <PageHeader
         onBack={handleBack}
-        backTitle="Servers"
+        backTitle={isSearching ? "Home" : "Servers"}
         title={activeServer.serverName || "Emby"}
         showActiveDot
         onRefresh={handleRefresh}
@@ -127,7 +164,7 @@ export default function HomeRoute() {
               onChange={(e) => setSearchQuery(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === "Escape") {
-                  setSearchQuery("");
+                  handleClearSearch();
                   searchInputRef.current?.blur();
                 }
               }}
@@ -140,7 +177,7 @@ export default function HomeRoute() {
                 className={styles.searchClearBtn}
                 onClick={(e) => {
                   e.stopPropagation();
-                  setSearchQuery("");
+                  handleClearSearch();
                   searchInputRef.current?.focus();
                 }}
                 title="Clear search"

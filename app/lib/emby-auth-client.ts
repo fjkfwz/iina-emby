@@ -134,7 +134,9 @@ export async function fetchCurrentUser(server: EmbyServer): Promise<EmbyUser | n
   try {
     if (!server.userId) return null;
     const apiBase = await resolveServerApiBase(server.serverUrl);
-    const userRes = await fetch(`${apiBase}/Users/${encodeURIComponent(server.userId)}`, {
+    const userUrl = new URL(`${apiBase}/Users/${encodeURIComponent(server.userId)}`);
+    if (server.accessToken) userUrl.searchParams.set("api_key", server.accessToken);
+    const userRes = await fetch(userUrl.toString(), {
       headers: buildAuthHeaders(server.accessToken),
     });
     if (userRes.ok) {
@@ -150,7 +152,9 @@ export async function verifyServerSession(server: EmbyServer): Promise<{ valid: 
   try {
     const apiBase = await resolveServerApiBase(server.serverUrl);
     // Emby validates token on /System/Info or /Users/{userId}
-    const res = await fetch(`${apiBase}/System/Info`, {
+    const infoUrl = new URL(`${apiBase}/System/Info`);
+    if (server.accessToken) infoUrl.searchParams.set("api_key", server.accessToken);
+    const res = await fetch(infoUrl.toString(), {
       headers: buildAuthHeaders(server.accessToken),
     });
     if (!res.ok) return { valid: false };

@@ -16,6 +16,8 @@ export function useContinueWatching(activeServer: EmbyServer | null, limit = 24)
     enabled: isEnabled,
     staleTime: 1000 * 60 * 5,
     gcTime: 1000 * 60 * 30,
+    retry: 2,
+    retryDelay: 500,
   });
 
   return {

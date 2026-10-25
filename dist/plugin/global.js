@@ -30,23 +30,11 @@ function buildAuthorizationHeader(identity, token) {
 }
 function buildEmbyHeaders(identity, token, extraHeaders) {
   const auth = buildAuthorizationHeader(identity, token);
-  const clientName = identity?.clientName || CLIENT_NAME;
-  const deviceName = identity?.deviceName || DEVICE_NAME;
-  const deviceId = identity?.deviceId || "iina-emby";
-  const version = identity?.version || CLIENT_VERSION;
   const headers = {
     Authorization: auth,
-    "X-Emby-Authorization": auth,
-    "X-Emby-Client": clientName,
-    "X-Emby-Device-Name": deviceName,
-    "X-Emby-Device-Id": deviceId,
-    "X-Emby-Client-Version": version,
     Accept: "application/json",
     ...extraHeaders || {}
   };
-  if (token) {
-    headers["X-Emby-Token"] = token;
-  }
   return headers;
 }
 

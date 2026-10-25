@@ -8,7 +8,7 @@ import type {
   RemoteSearchQuery,
   RemoteSearchResult,
 } from "@shared";
-import { buildAuthHeaders } from "./emby-auth-client";
+import { buildAuthorizationHeader } from "./emby-auth-client";
 
 const DEFAULT_CACHE_TTL_MS = 60_000;
 
@@ -18,6 +18,74 @@ export function clearLibraryCache(): void {
 
 async function getOrFetchCached<T>(_key: string, _ttlMs: number, _bypassCache: boolean, fetcher: () => Promise<T>): Promise<T> {
   return fetcher();
+}
+
+/**
+ * Resilient HTTP fetcher for Emby API:
+ * 1. Automatically attaches `api_key` to query parameters.
+ * 2. Attaches standard headers (Accept: application/json and standard Authorization).
+ * 3. Automatically retries on transient network errors (e.g. Load failed, connection drop)
+ *    or server reverse proxy errors (502, 503, 504) with backoff.
+ */
+export async function embyFetch(
+  server: EmbyServer,
+  urlStr: string,
+  init?: RequestInit & { retries?: number },
+): Promise<Response> {
+  const method = (init?.method || "GET").toUpperCase();
+  const maxRetries = init?.retries ?? (method === "GET" ? 2 : 1);
+
+  const base = server.serverUrl.replace(/\/+$/, "");
+  const fullUrlStr = urlStr.startsWith("http://") || urlStr.startsWith("https://")
+    ? urlStr
+    : `${base}${urlStr.startsWith("/") ? "" : "/"}${urlStr}`;
+
+  const parsedUrl = new URL(fullUrlStr);
+  if (server.accessToken && !parsedUrl.searchParams.has("api_key")) {
+    parsedUrl.searchParams.set("api_key", server.accessToken);
+  }
+
+  const headers: Record<string, string> = {
+    Accept: "application/json",
+    ...((init?.headers as Record<string, string>) || {}),
+  };
+  if (server.accessToken && !headers.Authorization) {
+    headers.Authorization = buildAuthorizationHeader(server.accessToken);
+  }
+
+  let attempt = 0;
+  let lastError: unknown;
+
+  while (attempt <= maxRetries) {
+    try {
+      const response = await fetch(parsedUrl.toString(), {
+        ...init,
+        method,
+        headers,
+      });
+
+      if (!response.ok && [502, 503, 504].includes(response.status) && attempt < maxRetries) {
+        attempt++;
+        await new Promise((r) => setTimeout(r, attempt * 300));
+        continue;
+      }
+
+      return response;
+    } catch (err: unknown) {
+      lastError = err;
+      if (init?.signal?.aborted) {
+        throw err;
+      }
+      if (attempt < maxRetries) {
+        attempt++;
+        await new Promise((r) => setTimeout(r, attempt * 300));
+      } else {
+        break;
+      }
+    }
+  }
+
+  throw lastError;
 }
 
 export interface FetchResumeItemsResult {
@@ -52,11 +120,8 @@ export async function fetchResumeItems(
   }
 
   const url = `${base}/Users/${encodeURIComponent(server.userId)}/Items/Resume?${query.toString()}`;
-  const response = await fetch(url, {
+  const response = await embyFetch(server, url, {
     signal,
-    headers: buildAuthHeaders(server.accessToken, {
-      Accept: "application/json",
-    }),
   });
 
   if (!response.ok) {
@@ -80,11 +145,8 @@ export async function fetchUserViews(server: EmbyServer, signal?: AbortSignal, b
   return getOrFetchCached(cacheKey, DEFAULT_CACHE_TTL_MS, bypassCache, async () => {
     const url = `${base}/Users/${encodeURIComponent(server.userId)}/Views`;
 
-    const response = await fetch(url, {
+    const response = await embyFetch(server, url, {
       signal,
-      headers: buildAuthHeaders(server.accessToken, {
-        Accept: "application/json",
-      }),
     });
 
     if (!response.ok) {
@@ -122,11 +184,8 @@ export async function fetchFavoriteItems(
     });
 
     const url = `${base}/Users/${encodeURIComponent(server.userId)}/Items?${query.toString()}`;
-    const response = await fetch(url, {
+    const response = await embyFetch(server, url, {
       signal,
-      headers: buildAuthHeaders(server.accessToken, {
-        Accept: "application/json",
-      }),
     });
 
     if (!response.ok) {
@@ -161,11 +220,8 @@ export async function fetchLatestItems(
     });
 
     const url = `${base}/Users/${encodeURIComponent(server.userId)}/Items/Latest?${query.toString()}`;
-    const response = await fetch(url, {
+    const response = await embyFetch(server, url, {
       signal,
-      headers: buildAuthHeaders(server.accessToken, {
-        Accept: "application/json",
-      }),
     });
 
     if (!response.ok) {
@@ -233,11 +289,8 @@ export async function fetchSectionItems(
     }
 
     const url = `${base}/Users/${encodeURIComponent(server.userId)}/Items?${query.toString()}`;
-    const response = await fetch(url, {
+    const response = await embyFetch(server, url, {
       signal,
-      headers: buildAuthHeaders(server.accessToken, {
-        Accept: "application/json",
-      }),
     });
 
     if (!response.ok) {
@@ -302,11 +355,8 @@ export async function fetchNextUp(server: EmbyServer, seriesId: string, signal?:
   });
 
   const url = `${base}/Shows/NextUp?${query.toString()}`;
-  const response = await fetch(url, {
+  const response = await embyFetch(server, url, {
     signal,
-    headers: buildAuthHeaders(server.accessToken, {
-      Accept: "application/json",
-    }),
   });
 
   if (!response.ok) {
@@ -332,11 +382,8 @@ export async function fetchItemDetails(
   return getOrFetchCached(cacheKey, DEFAULT_CACHE_TTL_MS, bypassCache, async () => {
     const url = `${base}/Users/${encodeURIComponent(server.userId)}/Items/${encodeURIComponent(itemId)}?Fields=MediaSources,MediaStreams,People,Overview,Genres,Studios`;
 
-    const response = await fetch(url, {
+    const response = await embyFetch(server, url, {
       signal,
-      headers: buildAuthHeaders(server.accessToken, {
-        Accept: "application/json",
-      }),
     });
 
     if (!response.ok) {
@@ -365,14 +412,11 @@ export interface EmbyImageInfo {
  */
 export async function fetchItemImages(server: EmbyServer, itemId: string, signal?: AbortSignal): Promise<EmbyImageInfo[]> {
   const base = server.serverUrl.replace(/\/+$/, "");
-  const url = `${base}/Items/${encodeURIComponent(itemId)}/Images?api_key=${encodeURIComponent(server.accessToken)}`;
+  const url = `${base}/Items/${encodeURIComponent(itemId)}/Images`;
 
   try {
-    const response = await fetch(url, {
+    const response = await embyFetch(server, url, {
       signal,
-      headers: buildAuthHeaders(server.accessToken, {
-        Accept: "application/json",
-      }),
     });
 
     if (!response.ok) {
@@ -412,11 +456,8 @@ export async function fetchSeasons(
     });
 
     const url = `${base}/Shows/${encodeURIComponent(seriesId)}/Seasons?${query.toString()}`;
-    const response = await fetch(url, {
+    const response = await embyFetch(server, url, {
       signal,
-      headers: buildAuthHeaders(server.accessToken, {
-        Accept: "application/json",
-      }),
     });
 
     if (!response.ok) {
@@ -458,11 +499,8 @@ export async function fetchEpisodes(
     }
 
     const url = `${base}/Shows/${encodeURIComponent(seriesId)}/Episodes?${query.toString()}`;
-    const response = await fetch(url, {
+    const response = await embyFetch(server, url, {
       signal,
-      headers: buildAuthHeaders(server.accessToken, {
-        Accept: "application/json",
-      }),
     });
 
     if (!response.ok) {
@@ -490,11 +528,8 @@ export async function fetchServerSystemInfo(server: EmbyServer, signal?: AbortSi
 
   return getOrFetchCached(cacheKey, DEFAULT_CACHE_TTL_MS, bypassCache, async () => {
     const url = `${base}/System/Info`;
-    const response = await fetch(url, {
+    const response = await embyFetch(server, url, {
       signal,
-      headers: buildAuthHeaders(server.accessToken, {
-        Accept: "application/json",
-      }),
     });
 
     if (!response.ok) {
@@ -512,11 +547,8 @@ export async function setItemPlayedStatus(server: EmbyServer, itemId: string, pl
   const base = server.serverUrl.replace(/\/+$/, "");
   const url = `${base}/Users/${encodeURIComponent(server.userId)}/PlayedItems/${encodeURIComponent(itemId)}`;
 
-  const response = await fetch(url, {
+  const response = await embyFetch(server, url, {
     method: played ? "POST" : "DELETE",
-    headers: buildAuthHeaders(server.accessToken, {
-      Accept: "application/json",
-    }),
   });
 
   if (!response.ok) {
@@ -546,9 +578,8 @@ export interface EmbyScanTaskStatus {
  */
 export async function startLibraryScan(server: EmbyServer): Promise<void> {
   const base = server.serverUrl.replace(/\/+$/, "");
-  const response = await fetch(`${base}/Library/Refresh`, {
+  const response = await embyFetch(server, `${base}/Library/Refresh`, {
     method: "POST",
-    headers: buildAuthHeaders(server.accessToken, { Accept: "application/json" }),
   });
 
   if (!response.ok) {
@@ -561,9 +592,8 @@ export async function startLibraryScan(server: EmbyServer): Promise<void> {
  */
 export async function fetchLibraryScanStatus(server: EmbyServer, signal?: AbortSignal): Promise<EmbyScanTaskStatus | null> {
   const base = server.serverUrl.replace(/\/+$/, "");
-  const response = await fetch(`${base}/ScheduledTasks?IsHidden=false`, {
+  const response = await embyFetch(server, `${base}/ScheduledTasks?IsHidden=false`, {
     signal,
-    headers: buildAuthHeaders(server.accessToken, { Accept: "application/json" }),
   });
 
   if (!response.ok) {
@@ -630,13 +660,12 @@ export async function searchRemoteItem(
   const targetType = getIdentifyItemType(itemType) || itemType;
   const url = `${base}/Items/RemoteSearch/${encodeURIComponent(targetType)}`;
 
-  const response = await fetch(url, {
+  const response = await embyFetch(server, url, {
     method: "POST",
     signal,
-    headers: buildAuthHeaders(server.accessToken, {
+    headers: {
       "Content-Type": "application/json",
-      Accept: "application/json",
-    }),
+    },
     body: JSON.stringify(query),
   });
 
@@ -661,12 +690,11 @@ export async function applyRemoteSearchResult(
   const base = server.serverUrl.replace(/\/+$/, "");
   const url = `${base}/Items/RemoteSearch/Apply/${encodeURIComponent(itemId)}?replaceAllImages=${replaceAllImages}`;
 
-  const response = await fetch(url, {
+  const response = await embyFetch(server, url, {
     method: "POST",
-    headers: buildAuthHeaders(server.accessToken, {
+    headers: {
       "Content-Type": "application/json",
-      Accept: "application/json",
-    }),
+    },
     body: JSON.stringify(result),
   });
 

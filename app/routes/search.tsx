@@ -7,5 +7,5 @@ export function meta() {
 export default function SearchRoute() {
   const [searchParams] = useSearchParams();
   const q = searchParams.get("q") || "";
-  return <Navigate to={q ? `/?q=${encodeURIComponent(q)}` : "/"} replace />;
+  return <Navigate to={q ? `/?q=${encodeURIComponent(q)}` : "/?focus=search"} replace />;
 }

@@ -15,12 +15,10 @@ describe("auth utils", () => {
     expect(header).toContain('Token="token123"');
   });
 
-  it("builds complete headers map with X-Emby-Token", () => {
+  it("builds complete headers map with Authorization", () => {
     const headers = buildEmbyHeaders({ clientName: "TestClient" }, "secret-key", { "Custom-Header": "Value" });
     expect(headers.Authorization).toContain('Client="TestClient"');
-    expect(headers["X-Emby-Authorization"]).toBe(headers.Authorization);
-    expect(headers["X-Emby-Token"]).toBe("secret-key");
-    expect(headers["X-Emby-Client"]).toBe("TestClient");
+    expect(headers.Authorization).toContain('Token="secret-key"');
     expect(headers["Custom-Header"]).toBe("Value");
     expect(headers.Accept).toBe("application/json");
   });

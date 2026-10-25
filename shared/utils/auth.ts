@@ -19,7 +19,9 @@ export function buildAuthorizationHeader(identity?: Partial<ClientIdentity>, tok
 }
 
 /**
- * Builds a complete Emby HTTP headers object including Authorization and X-Emby-* headers.
+ * Builds standard Emby HTTP headers using the official Authorization header format.
+ * Omits non-standard X-Emby-* headers to ensure compatibility with reverse proxies
+ * and Cloudflare CORS Access-Control-Allow-Headers.
  */
 export function buildEmbyHeaders(
   identity?: Partial<ClientIdentity>,
@@ -27,25 +29,12 @@ export function buildEmbyHeaders(
   extraHeaders?: Record<string, string>,
 ): Record<string, string> {
   const auth = buildAuthorizationHeader(identity, token);
-  const clientName = identity?.clientName || CLIENT_NAME;
-  const deviceName = identity?.deviceName || DEVICE_NAME;
-  const deviceId = identity?.deviceId || "iina-emby";
-  const version = identity?.version || CLIENT_VERSION;
 
   const headers: Record<string, string> = {
     Authorization: auth,
-    "X-Emby-Authorization": auth,
-    "X-Emby-Client": clientName,
-    "X-Emby-Device-Name": deviceName,
-    "X-Emby-Device-Id": deviceId,
-    "X-Emby-Client-Version": version,
     Accept: "application/json",
     ...(extraHeaders || {}),
   };
-
-  if (token) {
-    headers["X-Emby-Token"] = token;
-  }
 
   return headers;
 }
