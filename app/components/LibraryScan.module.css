@@ -123,7 +123,7 @@
 .footer {
   padding: 0.625rem 1rem;
   border-top: 1px solid var(--border-subtle);
-  background: rgb(from var(--material-base) r g b / 2%);
+  background: rgba(255, 255, 255, 0.02);
 }
 
 .meta {

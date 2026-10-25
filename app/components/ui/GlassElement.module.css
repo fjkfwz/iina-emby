@@ -43,6 +43,7 @@
   --dark-color-mix: 10%;
   --bg-color: color-mix(in oklab, transparent, var(--mix-color) var(--dark-color-mix));
 
+  background: rgba(255, 255, 255, 0.1);
   background: linear-gradient(
     to bottom,
     color-mix(in oklab, var(--bg-color), white 5%),
@@ -91,7 +92,7 @@
 
 /* Focus */
 .interactive:focus-visible {
-  outline: 2px solid rgb(from var(--material-base) r g b / 85%);
+  outline: 2px solid rgba(255, 255, 255, 0.85);
   outline-offset: 0.125rem;
 }
 
@@ -138,6 +139,7 @@
 .variantGhost.interactive:hover {
   --mix-color: white;
   --dark-color-mix: 10%;
+  background: rgba(255, 255, 255, 0.1);
   background: linear-gradient(
     to bottom,
     color-mix(in oklab, var(--bg-color), white 5%),

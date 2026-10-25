@@ -10,64 +10,64 @@
   /* Materials & Solid/Translucent Backgrounds */
   --bg-window: #202026;
   --bg-sidebar: linear-gradient(180deg, #1e1e1e 0%, #121212 100%);
-  --bg-panel: rgb(from var(--material-base) r g b / 4%);
+  --bg-panel: rgba(255, 255, 255, 0.04);
 
-  --bg-control: rgb(from var(--material-base) r g b / 10%);
-  --bg-control-hover: rgb(from var(--material-base) r g b / 16%);
-  --bg-control-active: rgb(from var(--material-base) r g b / 22%);
+  --bg-control: rgba(255, 255, 255, 0.10);
+  --bg-control-hover: rgba(255, 255, 255, 0.16);
+  --bg-control-active: rgba(255, 255, 255, 0.22);
 
-  --bg-row: rgb(from var(--material-base) r g b / 5%);
-  --bg-row-hover: rgb(from var(--material-base) r g b / 8%);
+  --bg-row: rgba(255, 255, 255, 0.05);
+  --bg-row-hover: rgba(255, 255, 255, 0.08);
 
-  --bg-input: rgb(from var(--scrim-base) r g b / 30%);
-  --bg-dialog: rgb(26 26 32 / 92%);
-  --bg-overlay: rgb(from var(--scrim-base) r g b / 45%);
-  --bg-modal-scrim: rgb(from var(--scrim-base) r g b / 28%);
-  --bg-toolbar: rgb(18 18 24 / 50%);
+  --bg-input: rgba(0, 0, 0, 0.30);
+  --bg-dialog: rgba(26, 26, 32, 0.92);
+  --bg-overlay: rgba(0, 0, 0, 0.45);
+  --bg-modal-scrim: rgba(0, 0, 0, 0.28);
+  --bg-toolbar: rgba(18, 18, 24, 0.50);
 
   /* Borders & Dividers */
-  --border-subtle: rgb(from var(--material-base) r g b / 8%);
+  --border-subtle: rgba(255, 255, 255, 0.08);
   --border-control: var(--bg-control);
   --border-focus: var(--accent-blue);
 
-  /* Typography Colors (Apple HIG) - Relative Color Syntax */
-  --text-primary: var(--material-base);
-  --text-secondary: rgb(from var(--text-primary) r g b / 65%);
-  --text-tertiary: rgb(from var(--text-primary) r g b / 42%);
-  --text-disabled: rgb(from var(--text-primary) r g b / 25%);
+  /* Typography Colors (Apple HIG) */
+  --text-primary: #ffffff;
+  --text-secondary: rgba(255, 255, 255, 0.65);
+  --text-tertiary: rgba(255, 255, 255, 0.42);
+  --text-disabled: rgba(255, 255, 255, 0.25);
 
-  /* Accent Colors (Dynamic hover via color-mix in oklch) */
+  /* Accent Colors */
   --accent-blue: #007aff;
-  --accent-blue-hover: color-mix(in oklch, var(--accent-blue) 85%, black);
-  --accent-blue-bg: rgb(from var(--accent-blue) r g b / 12%);
+  --accent-blue-hover: #0062cc;
+  --accent-blue-bg: rgba(0, 122, 255, 0.12);
   --accent-teal: #00c781;
-  --accent-teal-bg: rgb(from var(--accent-teal) r g b / 12%);
-  --accent-teal-border: rgb(from var(--accent-teal) r g b / 35%);
-  --accent-teal-hover: color-mix(in oklch, var(--accent-teal) 85%, black);
+  --accent-teal-bg: rgba(0, 199, 129, 0.12);
+  --accent-teal-border: rgba(0, 199, 129, 0.35);
+  --accent-teal-hover: #009e66;
   --accent-red: #ff453a;
-  --accent-red-hover: color-mix(in oklch, var(--accent-red) 85%, black);
+  --accent-red-hover: #cc372e;
   --accent-orange: #ff9500;
-  --accent-orange-bg: rgb(from var(--accent-orange) r g b / 12%);
-  --accent-orange-border: rgb(from var(--accent-orange) r g b / 35%);
+  --accent-orange-bg: rgba(255, 149, 0, 0.12);
+  --accent-orange-border: rgba(255, 149, 0, 0.35);
 
   /* Feedback & Alert Tokens */
-  --danger-bg: rgb(from var(--accent-red) r g b / 12%);
-  --danger-bg-hover: rgb(from var(--accent-red) r g b / 16%);
-  --danger-border: rgb(from var(--accent-red) r g b / 30%);
+  --danger-bg: rgba(255, 69, 58, 0.12);
+  --danger-bg-hover: rgba(255, 69, 58, 0.16);
+  --danger-border: rgba(255, 69, 58, 0.30);
   --danger-text: #ff6961;
 
   /* Surfaces & Component Backgrounds */
-  --bg-media-poster: rgb(20 20 26 / 80%);
+  --bg-media-poster: rgba(20, 20, 26, 0.80);
   --bg-media-placeholder: linear-gradient(145deg, #1f232b 0%, #14161a 100%);
-  --bg-badge: rgb(from var(--scrim-base) r g b / 50%);
-  --bg-tooltip: rgb(30 30 36 / 95%);
+  --bg-badge: rgba(0, 0, 0, 0.50);
+  --bg-tooltip: rgba(30, 30, 36, 0.95);
   --shimmer-gradient: linear-gradient(
     90deg,
-    rgb(from var(--material-base) r g b / 0%) 0,
-    rgb(from var(--material-base) r g b / 6%) 20%,
-    rgb(from var(--material-base) r g b / 12%) 50%,
-    rgb(from var(--material-base) r g b / 6%) 80%,
-    rgb(from var(--material-base) r g b / 0%) 100%
+    rgba(255, 255, 255, 0) 0,
+    rgba(255, 255, 255, 0.06) 20%,
+    rgba(255, 255, 255, 0.12) 50%,
+    rgba(255, 255, 255, 0.06) 80%,
+    rgba(255, 255, 255, 0) 100%
   );
 
   /* Corner Radii (IINA Native Standard: 6px = 0.375rem) */
@@ -77,22 +77,22 @@
   --radius-sm: 0.25rem;
 
   /* Elevations, Shadows & Rings */
-  --shadow-focus: 0 0 0 2px rgb(from var(--accent-blue) r g b / 35%);
-  --shadow-card: 0 0.125rem 0.5rem rgb(from var(--scrim-base) r g b / 30%), 0 0.0625rem 0.1875rem rgb(from var(--scrim-base) r g b / 20%);
-  --shadow-thumb-hover: 0 0.375rem 1.125rem var(--bg-overlay), 0 0.125rem 0.375rem rgb(from var(--scrim-base) r g b / 25%);
-  --shadow-poster-hover: 0 0.5rem 1.5rem rgb(from var(--scrim-base) r g b / 55%), 0 0.125rem 0.5rem rgb(from var(--scrim-base) r g b / 30%);
+  --shadow-focus: 0 0 0 2px rgba(0, 122, 255, 0.35);
+  --shadow-card: 0 0.125rem 0.5rem rgba(0, 0, 0, 0.30), 0 0.0625rem 0.1875rem rgba(0, 0, 0, 0.20);
+  --shadow-thumb-hover: 0 0.375rem 1.125rem var(--bg-overlay), 0 0.125rem 0.375rem rgba(0, 0, 0, 0.25);
+  --shadow-poster-hover: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.55), 0 0.125rem 0.5rem rgba(0, 0, 0, 0.30);
   --shadow-dialog:
-    0 1rem 2.25rem -0.25rem rgb(from var(--scrim-base) r g b / 40%), 0 0.25rem 0.75rem -0.125rem rgb(from var(--scrim-base) r g b / 25%),
-    inset 0 1px 0 rgb(from var(--material-base) r g b / 10%);
-  --shadow-badge: 0 0.125rem 0.375rem rgb(from var(--scrim-base) r g b / 50%);
-  --shadow-tooltip: 0 0.25rem 0.75rem rgb(from var(--scrim-base) r g b / 35%);
+    0 1rem 2.25rem -0.25rem rgba(0, 0, 0, 0.40), 0 0.25rem 0.75rem -0.125rem rgba(0, 0, 0, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.10);
+  --shadow-badge: 0 0.125rem 0.375rem rgba(0, 0, 0, 0.50);
+  --shadow-tooltip: 0 0.25rem 0.75rem rgba(0, 0, 0, 0.35);
   --shadow-glass:
-    -1px 0 0 rgb(from var(--scrim-base) r g b / 15%),
-    1px 0 0 rgb(from var(--scrim-base) r g b / 15%),
-    0 -1px 0 rgb(from var(--scrim-base) r g b / 6.5%),
-    0 1px 0 rgb(from var(--scrim-base) r g b / 6.5%),
-    inset 0 2px 2px -2px rgb(from var(--material-base) r g b / 50%),
-    inset 0 -2px 2px -2px rgb(from var(--material-base) r g b / 70%);
+    -1px 0 0 rgba(0, 0, 0, 0.15),
+    1px 0 0 rgba(0, 0, 0, 0.15),
+    0 -1px 0 rgba(0, 0, 0, 0.065),
+    0 1px 0 rgba(0, 0, 0, 0.065),
+    inset 0 2px 2px -2px rgba(255, 255, 255, 0.50),
+    inset 0 -2px 2px -2px rgba(255, 255, 255, 0.70);
 
   /* Standard Heights */
   --height-input: 1.75rem; /* 28px — macOS standard control height */

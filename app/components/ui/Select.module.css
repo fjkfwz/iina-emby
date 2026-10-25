@@ -220,6 +220,7 @@
 
 .itemSelected:hover:not([aria-disabled="true"]),
 .itemSelected:focus-visible:not([aria-disabled="true"]) {
+  background: rgba(0, 122, 255, 0.2);
   background: color-mix(in oklab, var(--accent-blue-bg) 60%, var(--bg-control-hover) 40%);
 }
 
