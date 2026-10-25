@@ -1,5 +1,6 @@
 import { QueryClientProvider } from "@tanstack/react-query";
 import { HashRouter, Navigate, Route, Routes } from "react-router";
+import { ScrollProgress } from "./components/ui";
 import { IINABridgeProvider } from "./hooks/useIINABridge";
 import { queryClient } from "./lib/query-client";
 import ContinueWatchingRoute from "./routes/continue-watching";
@@ -27,6 +28,7 @@ export function App() {
             <Route path="/system-info" element={<SystemInfoRoute />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
+          <ScrollProgress />
         </HashRouter>
       </IINABridgeProvider>
     </QueryClientProvider>
