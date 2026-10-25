@@ -116,7 +116,7 @@ export async function fetchFavoriteItems(
       SortOrder: "Ascending",
       Limit: String(limit),
       Fields:
-        "CommunityRating,ProductionYear,ImageTags,BackdropImageTags,UserData,PrimaryImageAspectRatio,SeriesName,ProviderIds",
+        "CommunityRating,ProductionYear,Genres,GenreItems,ImageTags,BackdropImageTags,UserData,PrimaryImageAspectRatio,SeriesName,ProviderIds",
       EnableImageTypes: "Primary,Backdrop,Thumb",
       ImageTypeLimit: "1",
     });
@@ -218,7 +218,7 @@ export async function fetchSectionItems(
       Limit: String(limit),
       IncludeItemTypes: includeItemTypes,
       Fields:
-        "CommunityRating,ProductionYear,ImageTags,BackdropImageTags,UserData,PrimaryImageAspectRatio,SeriesName,ProviderIds",
+        "CommunityRating,ProductionYear,Genres,GenreItems,ImageTags,BackdropImageTags,UserData,PrimaryImageAspectRatio,SeriesName,ProviderIds",
       EnableImageTypes: "Primary,Backdrop,Thumb",
       ImageTypeLimit: "1",
     });

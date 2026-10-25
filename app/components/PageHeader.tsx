@@ -1,5 +1,6 @@
-import { IconChevronLeft, IconReload, IconSettings2 } from "@tabler/icons-react";
+import { IconChevronLeft, IconReload, IconSearch, IconSettings2 } from "@tabler/icons-react";
 import type { ReactNode } from "react";
+import { useEffect } from "react";
 import { useLocation, useNavigate } from "react-router";
 import styles from "./PageHeader.module.css";
 import { GlassElement } from "./ui/GlassElement";
@@ -32,6 +33,21 @@ export function PageHeader({
 
   const isSettingsRoute = location.pathname === "/settings" || location.pathname === "/system-info";
   const shouldShowSettings = showSettings ?? !isSettingsRoute;
+  const canSearch = !isSettingsRoute && location.pathname !== "/search";
+
+  useEffect(() => {
+    if (!canSearch) return;
+    const handleKey = (e: KeyboardEvent) => {
+      const target = document.activeElement as HTMLElement | null;
+      const isInput = target?.tagName === "INPUT" || target?.tagName === "TEXTAREA";
+      if ((e.metaKey && e.key.toLowerCase() === "f") || (e.key === "/" && !isInput)) {
+        e.preventDefault();
+        navigate("/search");
+      }
+    };
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, [canSearch, navigate]);
 
   return (
     <header className={`${styles.header} ${className || ""}`}>
@@ -58,6 +74,22 @@ export function PageHeader({
       </div>
 
       <div className={styles.headerRight}>
+        {canSearch && (
+          <GlassElement
+            variant="glass"
+            shape="rounded"
+            size="sm"
+            isIconOnly
+            title="Search (Cmd+F)"
+            aria-label="Search"
+            onClick={() => {
+              navigate("/search");
+            }}
+          >
+            <IconSearch size={16} />
+          </GlassElement>
+        )}
+
         {shouldShowSettings && (
           <GlassElement
             variant="glass"

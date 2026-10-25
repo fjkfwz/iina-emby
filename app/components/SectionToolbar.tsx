@@ -1,4 +1,5 @@
 import { IconSearch, IconSortAscending, IconSortDescending, IconX } from "@tabler/icons-react";
+import { useMemo } from "react";
 import type { SectionFilter, SectionSortBy, SectionSortOrder } from "../lib/section-items";
 import styles from "./SectionToolbar.module.css";
 import { Button } from "./ui/Button";
@@ -25,6 +26,20 @@ export interface SectionToolbarProps {
   /** Callback on watch status filter change */
   onFilterChange?: (filter: SectionFilter) => void;
 
+  /** Genre filter value */
+  genre?: string;
+  /** Callback on genre filter change */
+  onGenreChange?: (genre: string) => void;
+  /** Available genres in the collection */
+  availableGenres?: string[];
+
+  /** Year filter value */
+  year?: string;
+  /** Callback on year filter change */
+  onYearChange?: (year: string) => void;
+  /** Available years in the collection */
+  availableYears?: number[];
+
   /** Title search query */
   searchQuery?: string;
   /** Callback on search query change */
@@ -46,6 +61,12 @@ export interface SectionToolbarProps {
 export function SectionToolbar({
   filter = "all",
   onFilterChange,
+  genre = "all",
+  onGenreChange,
+  availableGenres = [],
+  year = "all",
+  onYearChange,
+  availableYears = [],
   searchQuery = "",
   onSearchQueryChange,
   sortBy = "name",
@@ -54,21 +75,67 @@ export function SectionToolbar({
   onSortOrderChange,
   className,
 }: SectionToolbarProps) {
+  const genreOptions = useMemo<SelectOption[]>(() => {
+    const list: SelectOption[] = [{ value: "all", label: "All Genres" }];
+    for (const g of availableGenres) {
+      list.push({ value: g, label: g });
+    }
+    return list;
+  }, [availableGenres]);
+
+  const yearOptions = useMemo<SelectOption[]>(() => {
+    const list: SelectOption[] = [{ value: "all", label: "All Years" }];
+    for (const y of availableYears) {
+      list.push({ value: String(y), label: String(y) });
+    }
+    return list;
+  }, [availableYears]);
+
   return (
     <div className={`${styles.toolbar} ${className || ""}`}>
-      {/* Left: Watch Status Select */}
+      {/* Left: Filter Selects */}
       <div className={styles.leftGroup}>
-        <Select
-          data={WATCH_STATUS_OPTIONS}
-          value={filter}
-          onChange={(val) => {
-            if (val) {
-              onFilterChange?.(val as SectionFilter);
-            }
-          }}
-          size="sm"
-          placement="bottom-start"
-        />
+        {onFilterChange && (
+          <Select
+            data={WATCH_STATUS_OPTIONS}
+            value={filter}
+            onChange={(val) => {
+              if (val) {
+                onFilterChange(val as SectionFilter);
+              }
+            }}
+            size="sm"
+            placement="bottom-start"
+          />
+        )}
+
+        {onGenreChange && genreOptions.length > 1 && (
+          <Select
+            data={genreOptions}
+            value={genre}
+            onChange={(val) => {
+              if (val) {
+                onGenreChange(val);
+              }
+            }}
+            size="sm"
+            placement="bottom-start"
+          />
+        )}
+
+        {onYearChange && yearOptions.length > 1 && (
+          <Select
+            data={yearOptions}
+            value={year}
+            onChange={(val) => {
+              if (val) {
+                onYearChange(val);
+              }
+            }}
+            size="sm"
+            placement="bottom-start"
+          />
+        )}
       </div>
 
       {/* Center: Search by Title */}

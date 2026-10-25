@@ -29,6 +29,8 @@ export function isItemInProgress(item: EmbyItemMetadata, resumeSeriesIds?: Set<s
 
 export interface FilterAndSortSectionItemsOptions {
   filter: SectionFilter;
+  genre?: string;
+  year?: string;
   searchQuery?: string;
   sortBy: SectionSortBy;
   sortOrder?: SectionSortOrder;
@@ -40,7 +42,7 @@ export interface FilterAndSortSectionItemsOptions {
  * Filter and sort section items in-memory.
  */
 export function filterAndSortSectionItems(items: EmbyItemMetadata[], options: FilterAndSortSectionItemsOptions): EmbyItemMetadata[] {
-  const { filter, searchQuery, sortBy, sortOrder = "asc", resumeSeriesIds, resumeItemIds } = options;
+  const { filter, genre, year, searchQuery, sortBy, sortOrder = "asc", resumeSeriesIds, resumeItemIds } = options;
 
   const normalizedQuery = searchQuery?.trim().toLowerCase();
 
@@ -54,7 +56,29 @@ export function filterAndSortSectionItems(items: EmbyItemMetadata[], options: Fi
       if (item.UserData?.Played || isItemInProgress(item, resumeSeriesIds, resumeItemIds)) return false;
     }
 
-    // 2. Filter by Search Query
+    // 2. Filter by Genre
+    if (genre && genre !== "all") {
+      const hasGenre =
+        (Array.isArray(item.Genres) && item.Genres.includes(genre)) ||
+        (Array.isArray(item.GenreItems) && item.GenreItems.some((g) => g.Name === genre));
+      if (!hasGenre) return false;
+    }
+
+    // 3. Filter by Year
+    if (year && year !== "all") {
+      const itemYear = item.ProductionYear ?? (item.PremiereDate ? new Date(item.PremiereDate).getFullYear() : 0);
+      if (year === "earlier") {
+        if (itemYear <= 0 || itemYear >= 1990) return false;
+      } else if (year.endsWith("s")) {
+        const decade = parseInt(year, 10);
+        if (itemYear < decade || itemYear >= decade + 10) return false;
+      } else {
+        const targetYear = parseInt(year, 10);
+        if (itemYear !== targetYear) return false;
+      }
+    }
+
+    // 4. Filter by Search Query
     if (normalizedQuery) {
       const name = item.Name?.toLowerCase() ?? "";
       const seriesName = item.SeriesName?.toLowerCase() ?? "";

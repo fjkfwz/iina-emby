@@ -1,28 +1,31 @@
 .toolbar {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  display: flex;
   align-items: center;
-  gap: 0.75rem;
+  justify-content: space-between;
+  flex-wrap: wrap;
   width: 100%;
   box-sizing: border-box;
 }
 
 .leftGroup {
-  grid-column: 1;
-  justify-self: start;
   display: flex;
   align-items: center;
-  gap: 0.375rem;
+  flex-wrap: wrap;
+}
+
+.leftGroup > * {
+  margin-right: 0.375rem;
+  margin-bottom: 0.375rem;
 }
 
 .centerGroup {
-  grid-column: 2;
-  justify-self: center;
   display: flex;
   align-items: center;
-  width: 17.5rem;
-  max-width: 100%;
+  flex: 1;
   min-width: 8.75rem;
+  max-width: 17.5rem;
+  margin-right: 0.375rem;
+  margin-bottom: 0.375rem;
 }
 
 .searchWrapper {
@@ -97,36 +100,20 @@
 }
 
 .rightGroup {
-  grid-column: 3;
-  justify-self: end;
   display: flex;
   align-items: center;
-  gap: 0.375rem;
+}
+
+.rightGroup > * {
+  margin-left: 0.375rem;
+  margin-bottom: 0.375rem;
 }
 
 @media (max-width: 42.5rem) {
-  .toolbar {
-    grid-template-columns: 1fr 1fr;
-    gap: 0.5rem;
-  }
-
-  .leftGroup {
-    grid-column: 1;
-    grid-row: 1;
-    justify-self: start;
-  }
-
-  .rightGroup {
-    grid-column: 2;
-    grid-row: 1;
-    justify-self: end;
-  }
-
   .centerGroup {
-    grid-column: 1 / -1;
-    grid-row: 2;
-    justify-self: stretch;
+    order: 3;
     width: 100%;
     max-width: 100%;
+    margin-right: 0;
   }
 }

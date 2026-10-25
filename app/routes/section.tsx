@@ -30,6 +30,8 @@ export default function SectionRoute() {
 
   const stateName = location.state?.name as string | undefined;
   const [filter, setFilter] = useState<SectionFilter>("all");
+  const [genre, setGenre] = useState<string>("all");
+  const [year, setYear] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState<string>("");
   const deferredSearchQuery = useDeferredValue(searchQuery);
   const [sortBy, setSortBy] = useState<SectionSortBy>("name");
@@ -125,6 +127,18 @@ export default function SectionRoute() {
     });
   };
 
+  const handleGenreChange = (newGenre: string) => {
+    startViewTransitionSafe(() => {
+      setGenre(newGenre);
+    });
+  };
+
+  const handleYearChange = (newYear: string) => {
+    startViewTransitionSafe(() => {
+      setYear(newYear);
+    });
+  };
+
   const handleSortByChange = (newSortBy: SectionSortBy) => {
     startViewTransitionSafe(() => {
       setSortBy(newSortBy);
@@ -148,18 +162,49 @@ export default function SectionRoute() {
     }
   };
 
-  // Client-side filtering and sorting
+  // Derive unique genres and years from raw data for composite filtering
+  const availableGenres = useMemo(() => {
+    if (!rawData?.items) return [];
+    const set = new Set<string>();
+    for (const it of rawData.items) {
+      if (Array.isArray(it.Genres)) {
+        for (const g of it.Genres) {
+          if (g && g.trim()) set.add(g.trim());
+        }
+      }
+      if (Array.isArray(it.GenreItems)) {
+        for (const g of it.GenreItems) {
+          if (g?.Name && g.Name.trim()) set.add(g.Name.trim());
+        }
+      }
+    }
+    return Array.from(set).sort((a, b) => a.localeCompare(b, "zh-CN"));
+  }, [rawData?.items]);
+
+  const availableYears = useMemo(() => {
+    if (!rawData?.items) return [];
+    const set = new Set<number>();
+    for (const it of rawData.items) {
+      const y = it.ProductionYear ?? (it.PremiereDate ? new Date(it.PremiereDate).getFullYear() : 0);
+      if (y > 1900 && y < 2100) set.add(y);
+    }
+    return Array.from(set).sort((a, b) => b - a);
+  }, [rawData?.items]);
+
+  // Client-side composite filtering and sorting
   const filteredItems = useMemo(() => {
     if (!rawData) return [];
     return filterAndSortSectionItems(rawData.items, {
       filter,
+      genre,
+      year,
       searchQuery: deferredSearchQuery,
       sortBy,
       sortOrder,
       resumeSeriesIds: rawData.resumeSeriesIds,
       resumeItemIds: rawData.resumeItemIds,
     });
-  }, [rawData, filter, deferredSearchQuery, sortBy, sortOrder]);
+  }, [rawData, filter, genre, year, deferredSearchQuery, sortBy, sortOrder]);
 
   // Progressive rendering for DOM performance
   const { visibleItems, hasMore, sentinelRef } = useProgressiveScroll({
@@ -192,19 +237,16 @@ export default function SectionRoute() {
   );
 
   const getEmptyMessage = () => {
-    if (searchQuery.trim()) {
-      return `No media found matching "${searchQuery.trim()}".`;
+    const activeFilters = [];
+    if (searchQuery.trim()) activeFilters.push(`"${searchQuery.trim()}"`);
+    if (genre !== "all") activeFilters.push(`genre "${genre}"`);
+    if (year !== "all") activeFilters.push(`year "${year}"`);
+    if (filter !== "all") activeFilters.push(`status "${filter}"`);
+
+    if (activeFilters.length > 0) {
+      return `No media found matching ${activeFilters.join(", ")}.`;
     }
-    switch (filter) {
-      case "unplayed":
-        return "No unplayed media in this collection.";
-      case "inprogress":
-        return "No in-progress media in this collection.";
-      case "played":
-        return "No played media in this collection.";
-      default:
-        return "No media found in this collection.";
-    }
+    return "No media found in this collection.";
   };
 
   return (
@@ -215,6 +257,12 @@ export default function SectionRoute() {
         <SectionToolbar
           filter={filter}
           onFilterChange={handleFilterChange}
+          genre={genre}
+          onGenreChange={handleGenreChange}
+          availableGenres={availableGenres}
+          year={year}
+          onYearChange={handleYearChange}
+          availableYears={availableYears}
           searchQuery={searchQuery}
           onSearchQueryChange={handleSearchQueryChange}
           sortBy={sortBy}

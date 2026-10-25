@@ -5,6 +5,7 @@ import { queryClient } from "./lib/query-client";
 import ContinueWatchingRoute from "./routes/continue-watching";
 import HomeRoute from "./routes/home";
 import ItemDetailRoute from "./routes/item";
+import SearchRoute from "./routes/search";
 import SectionRoute from "./routes/section";
 import ServersRoute from "./routes/servers";
 import SettingsRoute from "./routes/settings";
@@ -17,6 +18,7 @@ export function App() {
         <HashRouter>
           <Routes>
             <Route path="/" element={<HomeRoute />} />
+            <Route path="/search" element={<SearchRoute />} />
             <Route path="/continue-watching" element={<ContinueWatchingRoute />} />
             <Route path="/section/:id" element={<SectionRoute />} />
             <Route path="/item/:id" element={<ItemDetailRoute />} />

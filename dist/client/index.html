@@ -12059,14 +12059,21 @@ function as() {
   }, onEpisodeClick: l2 }), (0, b.jsx)(Yo, { episode: c2, onClose: () => l2(null) })] });
 }
 var os = { toolbar: `_toolbar_jur9t_1`, leftGroup: `_leftGroup_jur9t_10`, centerGroup: `_centerGroup_jur9t_18`, searchWrapper: `_searchWrapper_jur9t_28`, searchIcon: `_searchIcon_jur9t_52`, searchInput: `_searchInput_jur9t_59`, clearBtn: `_clearBtn_jur9t_77`, rightGroup: `_rightGroup_jur9t_99` }, ss = [{ value: `all`, label: `All` }, { value: `unplayed`, label: `Unplayed` }, { value: `inprogress`, label: `In Progress` }, { value: `played`, label: `Played` }], cs = [{ value: `name`, label: `Name` }, { value: `date`, label: `Date Added` }, { value: `year`, label: `Release Year` }, { value: `rating`, label: `Rating` }];
-function ls({ filter: e2 = `all`, onFilterChange: t2, searchQuery: n2 = ``, onSearchQueryChange: r2, sortBy: i2 = `name`, onSortByChange: a2, sortOrder: o2 = `asc`, onSortOrderChange: s2, className: c2 }) {
-  return (0, b.jsxs)(`div`, { className: `${os.toolbar} ${c2 || ``}`, children: [(0, b.jsx)(`div`, { className: os.leftGroup, children: (0, b.jsx)(xo, { data: ss, value: e2, onChange: (e3) => {
-    e3 && t2?.(e3);
-  }, size: `sm`, placement: `bottom-start` }) }), r2 && (0, b.jsx)(`div`, { className: os.centerGroup, children: (0, b.jsx)(yo, { size: `sm`, value: n2, onChange: (e3) => r2(e3.target.value), onKeyDown: (e3) => {
-    e3.key === `Escape` && r2(``);
-  }, placeholder: `Search by title...`, "aria-label": `Filter media by title`, leftSection: (0, b.jsx)(Ma, { size: 14, className: os.searchIcon, "aria-hidden": `true` }), rightSection: n2 ? (0, b.jsx)(`button`, { type: `button`, className: os.clearBtn, onClick: () => r2(``), "aria-label": `Clear search`, title: `Clear`, children: (0, b.jsx)(Va, { size: 12 }) }) : null }) }), a2 && (0, b.jsxs)(`div`, { className: os.rightGroup, children: [(0, b.jsx)(xo, { data: cs, value: i2, onChange: (e3) => {
-    e3 && a2(e3);
-  }, size: `sm`, placement: `bottom-end` }), s2 && (0, b.jsx)(qa, { iconOnly: true, size: `sm`, onClick: () => s2(o2 === `asc` ? `desc` : `asc`), title: o2 === `asc` ? `Sort ascending (click to invert)` : `Sort descending (click to invert)`, "aria-label": o2 === `asc` ? `Sort ascending, click to sort descending` : `Sort descending, click to sort ascending`, children: o2 === `asc` ? (0, b.jsx)(Ia, { size: 14 }) : (0, b.jsx)(La, { size: 14 }) })] })] });
+function ls({ filter: e2 = `all`, onFilterChange: t2, genre: curG = `all`, onGenreChange: setG, availableGenres: avG = [], year: curY = `all`, onYearChange: setY, availableYears: avY = [], searchQuery: n2 = ``, onSearchQueryChange: r2, sortBy: i2 = `name`, onSortByChange: a2, sortOrder: o2 = `asc`, onSortOrderChange: s2, className: c2 }) {
+  let genreOpts = [{ value: `all`, label: `All Genres` }].concat(avG.map((g) => ({ value: g, label: g })));
+  let yearOpts = [{ value: `all`, label: `All Years` }].concat(avY.map((y) => ({ value: String(y), label: String(y) })));
+  return (0, b.jsxs)(`div`, { className: `${os.toolbar} ${c2 || ``}`, children: [
+    (0, b.jsxs)(`div`, { className: os.leftGroup, children: [
+      (0, b.jsx)(xo, { data: ss, value: e2, onChange: (e3) => { e3 && t2?.(e3); }, size: `sm`, placement: `bottom-start` }),
+      setG && genreOpts.length > 1 && (0, b.jsx)(xo, { data: genreOpts, value: curG, onChange: (v) => { v && setG(v); }, size: `sm`, placement: `bottom-start` }),
+      setY && yearOpts.length > 1 && (0, b.jsx)(xo, { data: yearOpts, value: curY, onChange: (v) => { v && setY(v); }, size: `sm`, placement: `bottom-start` })
+    ] }),
+    r2 && (0, b.jsx)(`div`, { className: os.centerGroup, children: (0, b.jsx)(yo, { size: `sm`, value: n2, onChange: (e3) => r2(e3.target.value), onKeyDown: (e3) => { e3.key === `Escape` && r2(``); }, placeholder: `Search by title...`, "aria-label": `Filter media by title`, leftSection: (0, b.jsx)(Ma, { size: 14, className: os.searchIcon, "aria-hidden": `true` }), rightSection: n2 ? (0, b.jsx)(`button`, { type: `button`, className: os.clearBtn, onClick: () => r2(``), "aria-label": `Clear search`, title: `Clear`, children: (0, b.jsx)(Va, { size: 12 }) }) : null }) }),
+    a2 && (0, b.jsxs)(`div`, { className: os.rightGroup, children: [
+      (0, b.jsx)(xo, { data: cs, value: i2, onChange: (e3) => { e3 && a2(e3); }, size: `sm`, placement: `bottom-end` }),
+      s2 && (0, b.jsx)(qa, { iconOnly: true, size: `sm`, onClick: () => s2(o2 === `asc` ? `desc` : `asc`), title: o2 === `asc` ? `Sort ascending (click to invert)` : `Sort descending (click to invert)`, "aria-label": o2 === `asc` ? `Sort ascending, click to sort descending` : `Sort descending, click to sort ascending`, children: o2 === `asc` ? (0, b.jsx)(Ia, { size: 14 }) : (0, b.jsx)(La, { size: 14 }) })
+    ] })
+  ] });
 }
 function us(e2, t2, n2) {
   if (e2.Type === `Series`) {
@@ -12079,13 +12086,28 @@ function us(e2, t2, n2) {
   return n2?.has(e2.Id) ? true : !!(e2.UserData?.PlaybackPositionTicks && e2.UserData.PlaybackPositionTicks > 0);
 }
 function ds(e2, t2) {
-  let { filter: n2, searchQuery: r2, sortBy: i2, sortOrder: a2 = `asc`, resumeSeriesIds: o2, resumeItemIds: s2 } = t2, c2 = r2?.trim().toLowerCase();
+  let { filter: n2, genre: g_filter, year: y_filter, searchQuery: r2, sortBy: i2, sortOrder: a2 = `asc`, resumeSeriesIds: o2, resumeItemIds: s2 } = t2, c2 = r2?.trim().toLowerCase();
   return e2.filter((e3) => {
     if (n2 === `played`) {
       if (!e3.UserData?.Played) return false;
     } else if (n2 === `inprogress`) {
       if (!us(e3, o2, s2)) return false;
     } else if (n2 === `unplayed` && (e3.UserData?.Played || us(e3, o2, s2))) return false;
+    if (g_filter && g_filter !== `all`) {
+      let hasG = (Array.isArray(e3.Genres) && e3.Genres.includes(g_filter)) || (Array.isArray(e3.GenreItems) && e3.GenreItems.some((x) => x?.Name === g_filter));
+      if (!hasG) return false;
+    }
+    if (y_filter && y_filter !== `all`) {
+      let iy = e3.ProductionYear ?? (e3.PremiereDate ? new Date(e3.PremiereDate).getFullYear() : 0);
+      if (y_filter === `earlier`) {
+        if (iy <= 0 || iy >= 1990) return false;
+      } else if (y_filter.endsWith(`s`)) {
+        let dec = parseInt(y_filter, 10);
+        if (iy < dec || iy >= dec + 10) return false;
+      } else {
+        if (iy !== parseInt(y_filter, 10)) return false;
+      }
+    }
     if (c2) {
       let t3 = e3.Name?.toLowerCase() ?? ``, n3 = e3.SeriesName?.toLowerCase() ?? ``, r3 = e3.OriginalTitle?.toLowerCase() ?? ``;
       if (!t3.includes(c2) && !n3.includes(c2) && !r3.includes(c2)) return false;
@@ -12132,7 +12154,7 @@ function hs(e2) {
 }
 var gs = { container: `_container_xl81f_1`, content: `_content_xl81f_10`, grid: `_grid_xl81f_18`, countBadge: `_countBadge_xl81f_26`, emptyState: `_emptyState_xl81f_33`, sentinel: `_sentinel_xl81f_44` }, _s = 36;
 function vs() {
-  let { id: e2 } = qn(), t2 = Gn(), n2 = Un(), { activeServer: r2, servers: i2, isLoading: a2 } = I(), o2 = n2.state?.name, [s2, c2] = (0, _.useState)(`all`), [l2, u2] = (0, _.useState)(``), [d2, f2] = (0, _.useState)(`name`), [p2, m2] = (0, _.useState)(`asc`), h2 = dt({ queryKey: r2?.id ? P.userViews(r2.id) : [`empty-views`], queryFn: async ({ signal: e3 }) => r2 ? Bi(r2, e3) : [], enabled: !(!r2?.id || o2) }), g2 = o2 || h2.data?.find((t3) => t3.Id === e2)?.Name || `Library`, v2 = dt({ queryKey: r2?.id && e2 ? P.section(r2.id, e2) : [`empty-section`], queryFn: async ({ signal: t3 }) => !r2 || !e2 ? null : Ui(r2, e2, t3, false), staleTime: 300000, enabled: !!(r2?.id && e2) }), y2 = v2.data ?? null, x2 = v2.isLoading, S2 = v2.isRefetching, C2 = v2.error ? v2.error instanceof Error ? v2.error.message : String(v2.error) : null, ee2 = (0, _.useCallback)(() => v2.refetch(), [v2]);
+  let { id: e2 } = qn(), t2 = Gn(), n2 = Un(), { activeServer: r2, servers: i2, isLoading: a2 } = I(), o2 = n2.state?.name, [s2, c2] = (0, _.useState)(`all`), [curG, setCurG] = (0, _.useState)(`all`), [curY, setCurY] = (0, _.useState)(`all`), [l2, u2] = (0, _.useState)(``), [d2, f2] = (0, _.useState)(`name`), [p2, m2] = (0, _.useState)(`asc`), h2 = dt({ queryKey: r2?.id ? P.userViews(r2.id) : [`empty-views`], queryFn: async ({ signal: e3 }) => r2 ? Bi(r2, e3) : [], enabled: !(!r2?.id || o2) }), g2 = o2 || h2.data?.find((t3) => t3.Id === e2)?.Name || `Library`, v2 = dt({ queryKey: r2?.id && e2 ? P.section(r2.id, e2) : [`empty-section`], queryFn: async ({ signal: t3 }) => !r2 || !e2 ? null : Ui(r2, e2, t3, false), staleTime: 300000, enabled: !!(r2?.id && e2) }), y2 = v2.data ?? null, x2 = v2.isLoading, S2 = v2.isRefetching, C2 = v2.error ? v2.error instanceof Error ? v2.error.message : String(v2.error) : null, ee2 = (0, _.useCallback)(() => v2.refetch(), [v2]);
   la(() => {
     ee2();
   });
@@ -12156,24 +12178,38 @@ function vs() {
     !e3 && l2 ? hs(() => {
       u2(``);
     }) : u2(e3);
-  }, re2 = (0, _.useMemo)(() => y2 ? ds(y2.items, { filter: s2, searchQuery: l2, sortBy: d2, sortOrder: p2, resumeSeriesIds: y2.resumeSeriesIds, resumeItemIds: y2.resumeItemIds }) : [], [y2, s2, l2, d2, p2]), { visibleItems: ie2, hasMore: D2, sentinelRef: ae2 } = No({ items: re2, pageSize: _s });
+  }, avG = (0, _.useMemo)(() => {
+    if (!y2?.items) return [];
+    let s = new Set();
+    for (let it of y2.items) {
+      if (Array.isArray(it.Genres)) for (let g of it.Genres) if (g && g.trim()) s.add(g.trim());
+      if (Array.isArray(it.GenreItems)) for (let gi of it.GenreItems) if (gi?.Name && gi.Name.trim()) s.add(gi.Name.trim());
+    }
+    return Array.from(s).sort((a, b) => a.localeCompare(b, "zh-CN"));
+  }, [y2?.items]),
+  avY = (0, _.useMemo)(() => {
+    if (!y2?.items) return [];
+    let s = new Set();
+    for (let it of y2.items) {
+      let y = it.ProductionYear ?? (it.PremiereDate ? new Date(it.PremiereDate).getFullYear() : 0);
+      if (y > 1900 && y < 2100) s.add(y);
+    }
+    return Array.from(s).sort((a, b) => b - a);
+  }, [y2?.items]),
+  re2 = (0, _.useMemo)(() => y2 ? ds(y2.items, { filter: s2, genre: curG, year: curY, searchQuery: l2, sortBy: d2, sortOrder: p2, resumeSeriesIds: y2.resumeSeriesIds, resumeItemIds: y2.resumeItemIds }) : [], [y2, s2, curG, curY, l2, d2, p2]), { visibleItems: ie2, hasMore: D2, sentinelRef: ae2 } = No({ items: re2, pageSize: _s });
   if (a2) return null;
   if (i2.length === 0 || !r2) return (0, b.jsx)(mr, { to: `/servers`, replace: true });
   let oe2 = () => {
     t2(`/`);
   }, se2 = y2?.items.length ?? 0, ce2 = re2.length, le2 = se2 === 0 ? null : ce2 === se2 ? `(${se2})` : `(${ce2} / ${se2})`, ue2 = (0, b.jsxs)(`span`, { children: [g2, le2 && (0, b.jsx)(`span`, { className: gs.countBadge, children: le2 })] });
-  return (0, b.jsxs)(`div`, { className: gs.container, children: [(0, b.jsx)(Ao, { onBack: oe2, backTitle: `Home`, title: ue2, onRefresh: ee2, isRefreshing: S2 }), (0, b.jsxs)(`main`, { className: gs.content, children: [(0, b.jsx)(ls, { filter: s2, onFilterChange: te2, searchQuery: l2, onSearchQueryChange: ne2, sortBy: d2, onSortByChange: T2, sortOrder: p2, onSortOrderChange: E2 }), C2 && (0, b.jsx)(go, { icon: (0, b.jsx)(da, { size: 18 }), children: C2 }), x2 ? (0, b.jsx)(`div`, { className: gs.grid, children: Array.from({ length: 18 }).map((e3, t3) => (0, b.jsx)(Uo, {}, `skeleton-${t3}`)) }) : re2.length === 0 && !C2 ? (0, b.jsx)(`div`, { className: gs.emptyState, children: (0, b.jsx)(`p`, { children: (() => {
-    if (l2.trim()) return `No media found matching "${l2.trim()}".`;
-    switch (s2) {
-      case `unplayed`:
-        return `No unplayed media in this collection.`;
-      case `inprogress`:
-        return `No in-progress media in this collection.`;
-      case `played`:
-        return `No played media in this collection.`;
-      default:
-        return `No media found in this collection.`;
-    }
+  return (0, b.jsxs)(`div`, { className: gs.container, children: [(0, b.jsx)(Ao, { onBack: oe2, backTitle: `Home`, title: ue2, onRefresh: ee2, isRefreshing: S2 }), (0, b.jsxs)(`main`, { className: gs.content, children: [(0, b.jsx)(ls, { filter: s2, onFilterChange: te2, genre: curG, onGenreChange: (g) => hs(() => setCurG(g)), availableGenres: avG, year: curY, onYearChange: (y) => hs(() => setCurY(y)), availableYears: avY, searchQuery: l2, onSearchQueryChange: ne2, sortBy: d2, onSortByChange: T2, sortOrder: p2, onSortOrderChange: E2 }), C2 && (0, b.jsx)(go, { icon: (0, b.jsx)(da, { size: 18 }), children: C2 }), x2 ? (0, b.jsx)(`div`, { className: gs.grid, children: Array.from({ length: 18 }).map((e3, t3) => (0, b.jsx)(Uo, {}, `skeleton-${t3}`)) }) : re2.length === 0 && !C2 ? (0, b.jsx)(`div`, { className: gs.emptyState, children: (0, b.jsx)(`p`, { children: (() => {
+    let af = [];
+    if (l2.trim()) af.push(`"${l2.trim()}"`);
+    if (curG !== `all`) af.push(`genre "${curG}"`);
+    if (curY !== `all`) af.push(`year "${curY}"`);
+    if (s2 !== `all`) af.push(`status "${s2}"`);
+    if (af.length > 0) return `No media found matching ` + af.join(`, `) + `.`;
+    return `No media found in this collection.`;
   })() }) }) : (0, b.jsxs)(b.Fragment, { children: [(0, b.jsx)(`div`, { className: gs.grid, children: ie2.map((e3) => (0, b.jsx)(B, { item: e3, server: r2, onIdentifySuccess: w2 }, e3.Id)) }), D2 && (0, b.jsx)(`div`, { ref: ae2, className: gs.sentinel, "aria-hidden": `true` })] })] })] });
 }
 function ys({ size: e2 = 68, className: t2 }) {
@@ -12328,6 +12364,8 @@ function SearchPage() {
     try { return sessionStorage.getItem("emby_search_q") || ""; } catch { return ""; }
   });
   let [filterType, setFilterType] = (0, _.useState)("all");
+  let [selectedGenre, setSelectedGenre] = (0, _.useState)("all");
+  let [selectedYear, setSelectedYear] = (0, _.useState)("all");
   let [results, setResults] = (0, _.useState)([]);
   let [isLoading, setIsLoading] = (0, _.useState)(false);
   let [error, setError] = (0, _.useState)(null);
@@ -12341,13 +12379,19 @@ function SearchPage() {
     let t = setTimeout(() => {
       let q = query.trim();
       setDebouncedQuery(q);
-      try { sessionStorage.setItem("emby_search_q", q); } catch {}
+      try {
+        if (q) {
+          sessionStorage.setItem("emby_search_q", q);
+        } else {
+          sessionStorage.removeItem("emby_search_q");
+        }
+      } catch {}
     }, 280);
     return () => clearTimeout(t);
   }, [query]);
 
   (0, _.useEffect)(() => {
-    if (!r2 || !debouncedQuery) {
+    if (!r2) {
       setResults([]);
       setIsLoading(false);
       setError(null);
@@ -12361,17 +12405,19 @@ function SearchPage() {
     let types = filterType === "movies" ? "Movie" : filterType === "series" ? "Series" : "Movie,Series,BoxSet";
     let baseUrl = r2.serverUrl.replace(/\/+$/, "");
     let params = new URLSearchParams({
-      SearchTerm: debouncedQuery,
       Recursive: "true",
       SortBy: "SortName",
       SortOrder: "Ascending",
       StartIndex: "0",
-      Limit: "80",
+      Limit: "250",
       IncludeItemTypes: types,
-      Fields: "CommunityRating,ProductionYear,ImageTags,BackdropImageTags,UserData,PrimaryImageAspectRatio,SeriesName,RunTimeTicks,Overview,RecursiveItemCount,ItemCounts,DateCreated,PremiereDate,OriginalTitle,ProviderIds",
+      Fields: "CommunityRating,ProductionYear,Genres,GenreItems,ImageTags,BackdropImageTags,UserData,PrimaryImageAspectRatio,SeriesName,RunTimeTicks,Overview,RecursiveItemCount,ItemCounts,DateCreated,PremiereDate,OriginalTitle,ProviderIds",
       EnableImageTypes: "Primary,Backdrop,Thumb",
       ImageTypeLimit: "1"
     });
+    if (debouncedQuery) {
+      params.set("SearchTerm", debouncedQuery);
+    }
     let url = `${baseUrl}/Users/${encodeURIComponent(r2.userId)}/Items?${params.toString()}`;
 
     fetch(url, {
@@ -12401,16 +12447,62 @@ function SearchPage() {
     };
   }, [r2, debouncedQuery, filterType]);
 
+  // Extract available genres and years with item counts
+  let { genreOpts, yearOpts } = (0, _.useMemo)(() => {
+    let gc = {}, yc = {};
+    for (let it of results) {
+      if (Array.isArray(it.Genres)) {
+        for (let g of it.Genres) if (g && g.trim()) gc[g.trim()] = (gc[g.trim()] || 0) + 1;
+      }
+      if (Array.isArray(it.GenreItems)) {
+        for (let gi of it.GenreItems) if (gi?.Name && gi.Name.trim()) gc[gi.Name.trim()] = (gc[gi.Name.trim()] || 0) + 1;
+      }
+      let y = it.ProductionYear ?? (it.PremiereDate ? new Date(it.PremiereDate).getFullYear() : 0);
+      if (y > 1900 && y < 2100) yc[y] = (yc[y] || 0) + 1;
+    }
+    let gList = Object.keys(gc).sort((a, b) => a.localeCompare(b, "zh-CN"));
+    let yList = Object.keys(yc).map(Number).sort((a, b) => b - a);
+    return {
+      genreOpts: [{ value: "all", label: results.length > 0 ? "All Genres (" + results.length + ")" : "All Genres" }].concat(gList.map(n => ({ value: n, label: n + " (" + gc[n] + ")" }))),
+      yearOpts: [{ value: "all", label: results.length > 0 ? "All Years (" + results.length + ")" : "All Years" }].concat(yList.map(y => ({ value: String(y), label: y + " (" + yc[y] + ")" })))
+    };
+  }, [results]);
+
+  // Client-side composite filtering
+  let filteredResults = (0, _.useMemo)(() => {
+    return results.filter(it => {
+      if (selectedGenre !== "all") {
+        let hasG = (Array.isArray(it.Genres) && it.Genres.includes(selectedGenre)) || (Array.isArray(it.GenreItems) && it.GenreItems.some(gi => gi.Name === selectedGenre));
+        if (!hasG) return false;
+      }
+      if (selectedYear !== "all") {
+        let iy = it.ProductionYear ?? (it.PremiereDate ? new Date(it.PremiereDate).getFullYear() : 0);
+        if (selectedYear === "earlier") {
+          if (iy <= 0 || iy >= 1990) return false;
+        } else if (selectedYear.endsWith("s")) {
+          let dec = parseInt(selectedYear, 10);
+          if (iy < dec || iy >= dec + 10) return false;
+        } else {
+          if (iy !== parseInt(selectedYear, 10)) return false;
+        }
+      }
+      return true;
+    });
+  }, [results, selectedGenre, selectedYear]);
+
+  let hasFilters = filterType !== "all" || selectedGenre !== "all" || selectedYear !== "all";
+  let resetFilters = () => {
+    setFilterType("all");
+    setSelectedGenre("all");
+    setSelectedYear("all");
+  };
+
   return (0, b.jsxs)("div", {
-    className: gs.container,
+    className: "search-page-container",
     children: [
-      (0, b.jsx)(Ao, {
-        onBack: () => l2("/"),
-        backTitle: "Home",
-        title: "Search"
-      }),
+      (0, b.jsx)(fs, { onBack: () => l2("/"), backTitle: "Home", title: "Search" }),
       (0, b.jsxs)("main", {
-        className: gs.content,
+        className: "search-page-main",
         children: [
           (0, b.jsxs)("div", {
             className: "search-header-container",
@@ -12418,7 +12510,7 @@ function SearchPage() {
               (0, b.jsxs)("div", {
                 className: "search-input-box",
                 children: [
-                  (0, b.jsx)(Ma, { size: 18, style: { opacity: 0.6, flexShrink: 0 } }),
+                  (0, b.jsx)(Ma, { size: 18, className: "search-icon" }),
                   (0, b.jsx)("input", {
                     ref: inputRef,
                     type: "text",
@@ -12435,9 +12527,10 @@ function SearchPage() {
                       }
                     },
                     placeholder: "Search movies, TV series, episodes...",
-                    "aria-label": "Search library"
+                    "aria-label": "Search library",
+                    className: "search-input-field"
                   }),
-                  query && (0, b.jsx)("button", {
+                  query ? (0, b.jsx)("button", {
                     type: "button",
                     className: "search-clear-btn",
                     onClick: () => {
@@ -12445,31 +12538,88 @@ function SearchPage() {
                       try { sessionStorage.removeItem("emby_search_q"); } catch {}
                       inputRef.current?.focus();
                     },
-                    title: "Clear",
+                    title: "Clear query",
                     children: (0, b.jsx)(Va, { size: 14 })
-                  })
+                  }) : null
                 ]
               }),
               (0, b.jsxs)("div", {
-                className: "search-filter-tabs",
+                className: "search-controls-row",
                 children: [
-                  (0, b.jsx)("button", {
-                    type: "button",
-                    className: `search-filter-tab ${filterType === "all" ? "active" : ""}`,
+                  (0, b.jsxs)("div", {
+                    className: "search-filter-tabs",
+                    children: [
+                      (0, b.jsx)("button", {
+                        type: "button",
+                        className: `search-filter-tab ${filterType === "all" ? "active" : ""}`,
+                        onClick: () => setFilterType("all"),
+                        children: "All"
+                      }),
+                      (0, b.jsx)("button", {
+                        type: "button",
+                        className: `search-filter-tab ${filterType === "movies" ? "active" : ""}`,
+                        onClick: () => setFilterType("movies"),
+                        children: "Movies"
+                      }),
+                      (0, b.jsx)("button", {
+                        type: "button",
+                        className: `search-filter-tab ${filterType === "series" ? "active" : ""}`,
+                        onClick: () => setFilterType("series"),
+                        children: "Series"
+                      })
+                    ]
+                  }),
+                  (0, b.jsxs)("div", {
+                    className: "search-dropdown-group",
+                    children: [
+                      genreOpts.length > 1 && (0, b.jsx)("div", {
+                        className: "search-dropdown-item",
+                        children: (0, b.jsx)(xo, {
+                          data: genreOpts,
+                          value: selectedGenre,
+                          onChange: (v) => setSelectedGenre(v || "all"),
+                          size: "sm",
+                          placement: "bottom-start"
+                        })
+                      }),
+                      yearOpts.length > 1 && (0, b.jsx)("div", {
+                        className: "search-dropdown-item",
+                        children: (0, b.jsx)(xo, {
+                          data: yearOpts,
+                          value: selectedYear,
+                          onChange: (v) => setSelectedYear(v || "all"),
+                          size: "sm",
+                          placement: "bottom-start"
+                        })
+                      }),
+                      hasFilters && (0, b.jsx)("button", {
+                        type: "button",
+                        className: "search-reset-btn",
+                        onClick: resetFilters,
+                        title: "Reset all filters",
+                        children: "Reset"
+                      })
+                    ]
+                  })
+                ]
+              }),
+              hasFilters && (0, b.jsxs)("div", {
+                className: "search-active-chips",
+                children: [
+                  filterType !== "all" && (0, b.jsxs)("span", {
+                    className: "search-chip",
                     onClick: () => setFilterType("all"),
-                    children: "All"
+                    children: ["Type: " + (filterType === "movies" ? "Movies" : "Series") + " ", (0, b.jsx)(Va, { size: 12 })]
                   }),
-                  (0, b.jsx)("button", {
-                    type: "button",
-                    className: `search-filter-tab ${filterType === "movies" ? "active" : ""}`,
-                    onClick: () => setFilterType("movies"),
-                    children: "Movies"
+                  selectedGenre !== "all" && (0, b.jsxs)("span", {
+                    className: "search-chip",
+                    onClick: () => setSelectedGenre("all"),
+                    children: ["Genre: " + selectedGenre + " ", (0, b.jsx)(Va, { size: 12 })]
                   }),
-                  (0, b.jsx)("button", {
-                    type: "button",
-                    className: `search-filter-tab ${filterType === "series" ? "active" : ""}`,
-                    onClick: () => setFilterType("series"),
-                    children: "Series"
+                  selectedYear !== "all" && (0, b.jsxs)("span", {
+                    className: "search-chip",
+                    onClick: () => setSelectedYear("all"),
+                    children: ["Year: " + selectedYear + " ", (0, b.jsx)(Va, { size: 12 })]
                   })
                 ]
               })
@@ -12485,19 +12635,26 @@ function SearchPage() {
           isLoading ? (0, b.jsx)("div", {
             className: gs.grid,
             children: Array.from({ length: 12 }).map((_, i) => (0, b.jsx)(Uo, {}, `search-skeleton-${i}`))
-          }) : !debouncedQuery ? (0, b.jsxs)("div", {
-            className: "search-empty-state",
-            children: [
-              (0, b.jsx)(Ma, { size: 44, className: "search-empty-icon" }),
-              (0, b.jsx)("div", { style: { fontSize: "16px", fontWeight: 600, color: "rgba(255,255,255,0.8)" }, children: "Type to search your library" }),
-              (0, b.jsx)("div", { style: { fontSize: "13px" }, children: "Search movies, series, or keywords across your active Emby server." })
-            ]
           }) : results.length === 0 ? (0, b.jsxs)("div", {
             className: "search-empty-state",
             children: [
               (0, b.jsx)(Ma, { size: 44, className: "search-empty-icon" }),
-              (0, b.jsx)("div", { style: { fontSize: "16px", fontWeight: 600, color: "rgba(255,255,255,0.8)" }, children: `No results found for "${debouncedQuery}"` }),
-              (0, b.jsx)("div", { style: { fontSize: "13px" }, children: "Try checking your spelling or searching for another title." })
+              (0, b.jsx)("div", { style: { fontSize: "16px", fontWeight: 600, color: "rgba(255,255,255,0.8)" }, children: debouncedQuery ? `No results found for "${debouncedQuery}"` : "No items found in library" }),
+              (0, b.jsx)("div", { style: { fontSize: "13px" }, children: debouncedQuery ? "Try checking your spelling or searching for another title." : "Check your server library or try changing the media type filter." })
+            ]
+          }) : filteredResults.length === 0 ? (0, b.jsxs)("div", {
+            className: "search-empty-state",
+            children: [
+              (0, b.jsx)(Ma, { size: 44, className: "search-empty-icon" }),
+              (0, b.jsx)("div", { style: { fontSize: "16px", fontWeight: 600, color: "rgba(255,255,255,0.8)" }, children: "No results match active filters" }),
+              (0, b.jsx)("div", { style: { fontSize: "13px", marginBottom: "12px" }, children: debouncedQuery ? results.length + " item(s) matched \"" + debouncedQuery + "\", but none passed the genre or year filter." : results.length + " item(s) loaded from library, but none passed the genre or year filter." }),
+              (0, b.jsx)("button", {
+                type: "button",
+                className: "search-reset-btn",
+                onClick: resetFilters,
+                style: { padding: "6px 14px", fontSize: "13px" },
+                children: "Reset Filters"
+              })
             ]
           }) : (0, b.jsxs)(b.Fragment, {
             children: [
@@ -12506,13 +12663,27 @@ function SearchPage() {
                 children: [
                   (0, b.jsxs)("span", {
                     style: { fontSize: "13px", color: "rgba(255,255,255,0.6)" },
-                    children: [`Found `, (0, b.jsx)("strong", { style: { color: "#fff" }, children: results.length }), ` results for "${debouncedQuery}"`]
+                    children: debouncedQuery ? [
+                      `Found `,
+                      (0, b.jsx)("strong", { style: { color: "#fff" }, children: filteredResults.length }),
+                      filteredResults.length !== results.length ? ` (filtered from ${results.length})` : ``,
+                      ` result`,
+                      filteredResults.length > 1 ? `s` : ``,
+                      ` for "${debouncedQuery}"`
+                    ] : [
+                      `Showing `,
+                      (0, b.jsx)("strong", { style: { color: "#fff" }, children: filteredResults.length }),
+                      filteredResults.length !== results.length ? ` (filtered from ${results.length})` : ``,
+                      ` item`,
+                      filteredResults.length > 1 ? `s` : ``,
+                      ` across library`
+                    ]
                   })
                 ]
               }),
               (0, b.jsx)("div", {
                 className: gs.grid,
-                children: results.map((item) => (0, b.jsx)(B, { item: item, server: r2 }, item.Id))
+                children: filteredResults.map((item) => (0, b.jsx)(B, { item: item, server: r2 }, item.Id))
               })
             ]
           })
@@ -13674,6 +13845,75 @@ html, body {
   font-size: 0.6875rem !important;
   font-weight: 600 !important;
 }
+
+/* --- Search Composite Filter Styles --- */
+.search-controls-row {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex-wrap: wrap !important;
+  width: 100% !important;
+}
+
+.search-dropdown-group {
+  display: inline-flex !important;
+  align-items: center !important;
+  flex-wrap: wrap !important;
+}
+
+.search-dropdown-item {
+  margin: 0 4px 6px 4px !important;
+}
+
+.search-reset-btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  background: rgba(239, 68, 68, 0.12) !important;
+  color: #f87171 !important;
+  border: 1px solid rgba(239, 68, 68, 0.28) !important;
+  border-radius: 14px !important;
+  padding: 4px 10px !important;
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  cursor: pointer !important;
+  margin: 0 4px 6px 4px !important;
+  transition: all 0.15s ease !important;
+}
+
+.search-reset-btn:hover {
+  background: rgba(239, 68, 68, 0.22) !important;
+  border-color: rgba(239, 68, 68, 0.5) !important;
+}
+
+.search-active-chips {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex-wrap: wrap !important;
+  width: 100% !important;
+  margin-top: 4px !important;
+}
+
+.search-chip {
+  display: inline-flex !important;
+  align-items: center !important;
+  background: rgba(56, 189, 248, 0.12) !important;
+  color: #38bdf8 !important;
+  border: 1px solid rgba(56, 189, 248, 0.3) !important;
+  border-radius: 12px !important;
+  padding: 2px 8px !important;
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  margin: 2px 4px !important;
+  cursor: pointer !important;
+  transition: all 0.15s ease !important;
+}
+
+.search-chip:hover {
+  background: rgba(56, 189, 248, 0.22) !important;
+  border-color: rgba(56, 189, 248, 0.5) !important;
+}
+
 </style>
 </head>
   <body>
