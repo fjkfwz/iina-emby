@@ -643,6 +643,43 @@ function createEmbyApi({ http: http2, preferences: preferences2, log }) {
 }
 
 // plugin/src/lib/media-actions.ts
+function subtitleExtensionForCodec(codec) {
+  if (codec === "subrip") return "srt";
+  if (codec === "webvtt" || codec === "vtt") return "vtt";
+  if (codec === "ass") return "ass";
+  if (codec === "ssa") return "ssa";
+  if (codec?.toLowerCase().includes("srt")) return "srt";
+  if (codec?.toLowerCase().includes("vtt")) return "vtt";
+  return "srt";
+}
+function formatExternalSubtitleFileName(subtitleTitle, language, extension = "srt") {
+  let trackLabel = (subtitleTitle || "").trim();
+  if (!trackLabel) {
+    if (language && language !== "und" && language !== "unknown") {
+      trackLabel = language.toUpperCase();
+    } else {
+      trackLabel = "\u5B57\u5E55";
+    }
+  }
+  const lower = trackLabel.toLowerCase();
+  if (lower === "chi" || lower === "zho" || lower === "zh" || lower === "zh-cn") {
+    trackLabel = "\u7B80\u4F53\u4E2D\u6587";
+  } else if (lower === "zh-tw" || lower === "zh-hk") {
+    trackLabel = "\u7E41\u4F53\u4E2D\u6587";
+  } else if (lower === "eng" || lower === "en") {
+    trackLabel = "\u82F1\u8BED";
+  } else if (lower === "jpn" || lower === "ja") {
+    trackLabel = "\u65E5\u8BED";
+  } else if (lower === "kor" || lower === "ko") {
+    trackLabel = "\u97E9\u8BED";
+  }
+  trackLabel = trackLabel.replace(new RegExp(`\\.${extension}$`, "i"), "").trim();
+  if (!trackLabel.startsWith("[\u5916\u6302]")) {
+    trackLabel = `[\u5916\u6302] ${trackLabel}`;
+  }
+  const safeTitle = trackLabel.replace(/[/\\:*?"<>|\x00-\x1f]/g, "_").trim() || "[\u5916\u6302] \u5B57\u5E55";
+  return `${safeTitle}.${extension}`;
+}
 function createMediaActionsManager({
   core: core2,
   http: http2,
@@ -723,15 +760,6 @@ function createMediaActionsManager({
       log(`Error setting video title: ${errorMsg}`);
     }
   }
-  function subtitleExtensionForCodec(codec) {
-    if (codec === "subrip") return "srt";
-    if (codec === "webvtt" || codec === "vtt") return "vtt";
-    if (codec === "ass") return "ass";
-    if (codec === "ssa") return "ssa";
-    if (codec?.toLowerCase().includes("srt")) return "srt";
-    if (codec?.toLowerCase().includes("vtt")) return "vtt";
-    return "srt";
-  }
   async function downloadExternalSubtitle2(serverBase, itemId, mediaSourceId, streamIndex, subtitlePath, apiKey, language, codec, deliveryUrl, subtitleTitle) {
     try {
       const extension = subtitleExtensionForCodec(codec);
@@ -759,32 +787,7 @@ function createMediaActionsManager({
         const cleanBase = serverBase.replace(/\/+$/, "");
         subtitleUrl = `${cleanBase}/Videos/${encodeURIComponent(itemId)}/${encodeURIComponent(effectiveMediaSourceId || itemId)}/Subtitles/${streamIndex}/Stream.${extension}?api_key=${encodeURIComponent(apiKey)}`;
       }
-      let trackLabel = (subtitleTitle || "").trim();
-      if (!trackLabel) {
-        if (language && language !== "und" && language !== "unknown") {
-          trackLabel = language.toUpperCase();
-        } else {
-          trackLabel = "\u5B57\u5E55";
-        }
-      }
-      const lower = trackLabel.toLowerCase();
-      if (lower === "chi" || lower === "zho" || lower === "zh" || lower === "zh-cn") {
-        trackLabel = "\u7B80\u4F53\u4E2D\u6587";
-      } else if (lower === "zh-tw" || lower === "zh-hk") {
-        trackLabel = "\u7E41\u4F53\u4E2D\u6587";
-      } else if (lower === "eng" || lower === "en") {
-        trackLabel = "\u82F1\u8BED";
-      } else if (lower === "jpn" || lower === "ja") {
-        trackLabel = "\u65E5\u8BED";
-      } else if (lower === "kor" || lower === "ko") {
-        trackLabel = "\u97E9\u8BED";
-      }
-      trackLabel = trackLabel.replace(new RegExp(`\\.${extension}$`, "i"), "").trim();
-      if (!trackLabel.startsWith("[\u5916\u6302]")) {
-        trackLabel = `[\u5916\u6302] ${trackLabel}`;
-      }
-      const safeTitle = trackLabel.replace(/[/\\:*?"<>|\x00-\x1f]/g, "_").trim() || `[\u5916\u6302] \u5B57\u5E55`;
-      const fileName = `${safeTitle}.${extension}`;
+      const fileName = formatExternalSubtitleFileName(subtitleTitle, language, extension);
       const sanitizedItemId = String(itemId).replace(/[^a-zA-Z0-9_-]/g, "_");
       const safeStreamIndex = typeof streamIndex === "number" ? streamIndex : 0;
       const localPath = `@tmp/emby_${sanitizedItemId}_${safeStreamIndex}/${fileName}`;

@@ -24,6 +24,58 @@ export interface MediaActionsDeps {
   log: DebugLogger;
 }
 
+export function subtitleExtensionForCodec(codec?: string): string {
+  if (codec === "subrip") return "srt";
+  if (codec === "webvtt" || codec === "vtt") return "vtt";
+  if (codec === "ass") return "ass";
+  if (codec === "ssa") return "ssa";
+  if (codec?.toLowerCase().includes("srt")) return "srt";
+  if (codec?.toLowerCase().includes("vtt")) return "vtt";
+  return "srt";
+}
+
+export function formatExternalSubtitleFileName(
+  subtitleTitle?: string | null,
+  language?: string,
+  extension = "srt",
+): string {
+  // Build a clean, human-readable track name for IINA's subtitle menu
+  let trackLabel = (subtitleTitle || "").trim();
+  if (!trackLabel) {
+    if (language && language !== "und" && language !== "unknown") {
+      trackLabel = language.toUpperCase();
+    } else {
+      trackLabel = "字幕";
+    }
+  }
+
+  // Map raw ISO language codes to readable names if title is just the code
+  const lower = trackLabel.toLowerCase();
+  if (lower === "chi" || lower === "zho" || lower === "zh" || lower === "zh-cn") {
+    trackLabel = "简体中文";
+  } else if (lower === "zh-tw" || lower === "zh-hk") {
+    trackLabel = "繁体中文";
+  } else if (lower === "eng" || lower === "en") {
+    trackLabel = "英语";
+  } else if (lower === "jpn" || lower === "ja") {
+    trackLabel = "日语";
+  } else if (lower === "kor" || lower === "ko") {
+    trackLabel = "韩语";
+  }
+
+  // Strip redundant extension from the label if present
+  trackLabel = trackLabel.replace(new RegExp(`\\.${extension}$`, "i"), "").trim();
+
+  // Ensure clear [外挂] prefix so it's distinguishable in IINA subtitle menu
+  if (!trackLabel.startsWith("[外挂]")) {
+    trackLabel = `[外挂] ${trackLabel}`;
+  }
+
+  // Sanitize forbidden filesystem characters without stripping Chinese/Unicode characters
+  const safeTitle = trackLabel.replace(/[/\\:*?"<>|\x00-\x1f]/g, "_").trim() || "[外挂] 字幕";
+  return `${safeTitle}.${extension}`;
+}
+
 export function createMediaActionsManager({
   core,
   http,
@@ -120,16 +172,6 @@ export function createMediaActionsManager({
     }
   }
 
-  function subtitleExtensionForCodec(codec?: string): string {
-    if (codec === "subrip") return "srt";
-    if (codec === "webvtt" || codec === "vtt") return "vtt";
-    if (codec === "ass") return "ass";
-    if (codec === "ssa") return "ssa";
-    if (codec?.toLowerCase().includes("srt")) return "srt";
-    if (codec?.toLowerCase().includes("vtt")) return "vtt";
-    return "srt";
-  }
-
   async function downloadExternalSubtitle(
     serverBase: string,
     itemId: string,
@@ -171,42 +213,7 @@ export function createMediaActionsManager({
         subtitleUrl = `${cleanBase}/Videos/${encodeURIComponent(itemId)}/${encodeURIComponent(effectiveMediaSourceId || itemId)}/Subtitles/${streamIndex}/Stream.${extension}?api_key=${encodeURIComponent(apiKey)}`;
       }
 
-      // Build a clean, human-readable track name for IINA's subtitle menu
-      let trackLabel = (subtitleTitle || "").trim();
-      if (!trackLabel) {
-        if (language && language !== "und" && language !== "unknown") {
-          trackLabel = language.toUpperCase();
-        } else {
-          trackLabel = "字幕";
-        }
-      }
-
-      // Map raw ISO language codes to readable names if title is just the code
-      const lower = trackLabel.toLowerCase();
-      if (lower === "chi" || lower === "zho" || lower === "zh" || lower === "zh-cn") {
-        trackLabel = "简体中文";
-      } else if (lower === "zh-tw" || lower === "zh-hk") {
-        trackLabel = "繁体中文";
-      } else if (lower === "eng" || lower === "en") {
-        trackLabel = "英语";
-      } else if (lower === "jpn" || lower === "ja") {
-        trackLabel = "日语";
-      } else if (lower === "kor" || lower === "ko") {
-        trackLabel = "韩语";
-      }
-
-      // Strip redundant extension from the label if present
-      trackLabel = trackLabel.replace(new RegExp(`\\.${extension}$`, "i"), "").trim();
-
-      // Ensure clear [外挂] prefix so it's distinguishable in IINA subtitle menu
-      if (!trackLabel.startsWith("[外挂]")) {
-        trackLabel = `[外挂] ${trackLabel}`;
-      }
-
-      // Sanitize forbidden filesystem characters without stripping Chinese/Unicode characters
-      const safeTitle = trackLabel.replace(/[/\\:*?"<>|\x00-\x1f]/g, "_").trim() || `[外挂] 字幕`;
-      const fileName = `${safeTitle}.${extension}`;
-
+      const fileName = formatExternalSubtitleFileName(subtitleTitle, language, extension);
       const sanitizedItemId = String(itemId).replace(/[^a-zA-Z0-9_-]/g, "_");
       const safeStreamIndex = typeof streamIndex === "number" ? streamIndex : 0;
       const localPath = `@tmp/emby_${sanitizedItemId}_${safeStreamIndex}/${fileName}`;
