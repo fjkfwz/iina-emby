@@ -131,6 +131,8 @@ export interface EmbyMediaStream {
   Codec?: string;
   Language?: string;
   DisplayTitle?: string;
+  Title?: string;
+  DisplayLanguage?: string;
   IsTextSubtitleStream?: boolean;
   IsExternal?: boolean;
   DeliveryUrl?: string;

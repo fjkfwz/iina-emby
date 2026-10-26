@@ -323,7 +323,7 @@ function applySelectedAudioTrack(itemId: string): void {
         debugLog(`Setting audio track id: ${aidStr} (current was ${currentAid})`);
         try {
           if (core?.audio) {
-            core.audio.currentTrack = targetAid;
+            (core.audio as any).currentTrack = targetAid;
           }
         } catch {}
         try {
@@ -463,7 +463,7 @@ async function applySelectedSubtitleTrack(
         debugLog(`Setting subtitle track id: ${sidStr} (current was ${currentSid})`);
         try {
           if (core?.subtitle) {
-            core.subtitle.currentTrack = targetSid;
+            (core.subtitle as any).currentTrack = targetSid;
           }
         } catch {}
         try {
@@ -715,7 +715,7 @@ event.on("mpv.sid.changed", (newSidVal: unknown) => {
       enforcementReapplyCount++;
       try {
         if (core?.subtitle) {
-          core.subtitle.currentTrack = null;
+          (core.subtitle as any).currentTrack = null;
         }
       } catch {}
       try {
@@ -732,7 +732,7 @@ event.on("mpv.sid.changed", (newSidVal: unknown) => {
       enforcementReapplyCount++;
       try {
         if (core?.subtitle) {
-          core.subtitle.currentTrack = targetSidToEnforce;
+          (core.subtitle as any).currentTrack = targetSidToEnforce;
         }
       } catch {}
       try {
@@ -761,7 +761,7 @@ event.on("mpv.aid.changed", (newAidVal: unknown) => {
     enforcementReapplyCount++;
     try {
       if (core?.audio) {
-        core.audio.currentTrack = targetAidToEnforce;
+        (core.audio as any).currentTrack = targetAidToEnforce;
       }
     } catch {}
     try {

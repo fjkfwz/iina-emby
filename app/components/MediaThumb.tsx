@@ -14,6 +14,7 @@ import { IconCheck, IconDots, IconInfoCircle, IconMovie, IconPlayerPlay } from "
 import type React from "react";
 import { memo, useCallback, useState } from "react";
 import { useNavigate } from "react-router";
+import { useInView } from "../hooks/useInView";
 import { useItemPlayedStatus } from "../hooks/useItemPlayedStatus";
 import { buildStreamUrl } from "../lib/emby-library-client";
 import { useTranslation } from "../lib/i18n";
@@ -121,8 +122,16 @@ export const MediaThumb = memo(function MediaThumb({
       })
     : undefined;
 
+  const isNativeLazy = isNativeLazyLoadingSupported();
   const isCached = Boolean(imageUrl && loadedThumbUrls.has(imageUrl));
+  const [cardRef, isInView] = useInView<HTMLDivElement>({
+    rootMargin: "350px",
+    enabled: !isNativeLazy && !isCached,
+  });
   const [isLoaded, setIsLoaded] = useState(isCached);
+
+  const shouldRenderImage = isNativeLazy || isInView || isCached;
+  const activeImageUrl = shouldRenderImage ? imageUrl : undefined;
 
   const handleImgLoad = useCallback(() => {
     if (imageUrl) loadedThumbUrls.add(imageUrl);
@@ -178,7 +187,7 @@ export const MediaThumb = memo(function MediaThumb({
   };
 
   return (
-    <div className={`${classes.card} ${className || ""}`} style={{ width: width || "100%" }}>
+    <div ref={cardRef} className={`${classes.card} ${className || ""}`} style={{ width: width || "100%" }}>
       <div className={classes.preview}>
         <button
           type="button"
@@ -187,13 +196,13 @@ export const MediaThumb = memo(function MediaThumb({
           onClick={handlePlayClick}
           aria-label={`Play ${fullPlayTitle}`}
         ></button>
-        {imageUrl && !imageError ? (
+        {activeImageUrl && !imageError ? (
           <img
             ref={handleRef}
-            src={imageUrl}
+            src={activeImageUrl}
             alt=""
             className={classes.image}
-            loading={isNativeLazyLoadingSupported() ? "lazy" : undefined}
+            loading={isNativeLazy ? "lazy" : undefined}
             decoding="async"
             style={{ opacity: isLoaded ? 1 : 0, transition: isCached ? "none" : "opacity 0.2s ease" }}
             onLoad={handleImgLoad}

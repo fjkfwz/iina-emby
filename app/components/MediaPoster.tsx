@@ -4,6 +4,7 @@ import { IconCheck, IconDots, IconFingerprint, IconInfoCircle, IconMovie } from 
 import type React from "react";
 import { memo, useCallback, useState } from "react";
 import { useNavigate } from "react-router";
+import { useInView } from "../hooks/useInView";
 import { useItemPlayedStatus } from "../hooks/useItemPlayedStatus";
 import { isIdentifySupported } from "../lib/emby-library-client";
 import { useTranslation } from "../lib/i18n";
@@ -96,8 +97,16 @@ export const MediaPoster = memo(function MediaPoster({
       })
     : undefined;
 
+  const isNativeLazy = isNativeLazyLoadingSupported();
   const isCached = Boolean(imageUrl && loadedPosterUrls.has(imageUrl));
+  const [cardRef, isInView] = useInView<HTMLDivElement>({
+    rootMargin: "350px",
+    enabled: !isNativeLazy && !isCached,
+  });
   const [isLoaded, setIsLoaded] = useState(isCached);
+
+  const shouldRenderImage = isNativeLazy || isInView || isCached;
+  const activeImageUrl = shouldRenderImage ? imageUrl : undefined;
 
   const handleImgLoad = useCallback(() => {
     if (imageUrl) loadedPosterUrls.add(imageUrl);
@@ -128,16 +137,16 @@ export const MediaPoster = memo(function MediaPoster({
   };
 
   return (
-    <div className={`${classes.card} ${className || ""}`}>
+    <div ref={cardRef} className={`${classes.card} ${className || ""}`}>
       <button type="button" className={classes.cardButton} onClick={handleClick} aria-label={`View ${item.Name || "Media"}`}></button>
       <div className={classes.posterWrapper} onClick={handleClick} style={{ cursor: "pointer" }}>
-        {imageUrl && !imgError ? (
+        {activeImageUrl && !imgError ? (
           <img
             ref={handleRef}
-            src={imageUrl}
+            src={activeImageUrl}
             alt=""
             className={classes.image}
-            loading={isNativeLazyLoadingSupported() ? "lazy" : undefined}
+            loading={isNativeLazy ? "lazy" : undefined}
             decoding="async"
             style={{ opacity: isLoaded ? 1 : 0, transition: isCached ? "none" : "opacity 0.2s ease" }}
             onLoad={handleImgLoad}

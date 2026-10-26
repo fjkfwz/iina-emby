@@ -1,8 +1,16 @@
 import type { EmbyServer, EmbyView } from "@shared";
-import { decodeWebpToPng, getCachedDecodedWebp, getItemImageUrl, isWebpSupported } from "@shared";
+import {
+  decodeWebpToPng,
+  getCachedDecodedWebp,
+  getItemImageUrl,
+  isNativeLazyLoadingSupported,
+  isWebpSupported,
+  prefetchDecodedWebp,
+} from "@shared";
 import { IconDeviceTv, IconFolder, IconMovie } from "@tabler/icons-react";
 import { memo, useEffect, useState } from "react";
 import { useNavigate } from "react-router";
+import { useInView } from "../hooks/useInView";
 import { useUserViews } from "../hooks/useUserViews";
 import { useTranslation } from "../lib/i18n";
 import styles from "./CategoriesShelf.module.css";
@@ -35,6 +43,13 @@ const CategoryCard = memo(function CategoryCard({ view, server }: CategoryCardPr
   const [imgError, setImgError] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
 
+  const isWebp = isWebpSupported();
+  const isNativeLazy = isNativeLazyLoadingSupported();
+  const [cardRef, isInView] = useInView<HTMLDivElement>({
+    rootMargin: "300px",
+    triggerOnce: true,
+  });
+
   const rawImageUrl = getItemImageUrl(server.serverUrl, view, {
     prefer: "primary",
     maxWidth: 500,
@@ -44,10 +59,21 @@ const CategoryCard = memo(function CategoryCard({ view, server }: CategoryCardPr
 
   const [decodedSrc, setDecodedSrc] = useState<string | null>(() => (rawImageUrl ? getCachedDecodedWebp(rawImageUrl) || null : null));
 
-  // If WebP is not natively supported by the browser (such as Safari < 14 on macOS Catalina),
-  // decode the category WebP image to PNG via libwebp polyfill.
+  // Sync memory cache updates (e.g. populated via prefetchDecodedWebp from IndexedDB)
   useEffect(() => {
-    if (!isWebpSupported() && rawImageUrl && !decodedSrc && !imgError) {
+    if (!isWebp && !decodedSrc && rawImageUrl) {
+      const cached = getCachedDecodedWebp(rawImageUrl);
+      if (cached) {
+        setDecodedSrc(cached);
+        setIsLoaded(true);
+      }
+    }
+  }, [isWebp, rawImageUrl, decodedSrc]);
+
+  // If WebP is not natively supported by the browser (such as Safari < 14 on macOS Catalina),
+  // decode the category WebP image to PNG via libwebp polyfill once the card enters/approaches the viewport.
+  useEffect(() => {
+    if (!isWebp && rawImageUrl && !decodedSrc && !imgError && isInView) {
       let cancelled = false;
       decodeWebpToPng(rawImageUrl)
         .then((png) => {
@@ -66,16 +92,18 @@ const CategoryCard = memo(function CategoryCard({ view, server }: CategoryCardPr
         cancelled = true;
       };
     }
-  }, [rawImageUrl, decodedSrc, imgError]);
+  }, [isWebp, rawImageUrl, decodedSrc, imgError, isInView]);
 
-  const activeSrc = decodedSrc || (!imgError ? rawImageUrl : undefined);
+  const activeSrc = !isWebp
+    ? decodedSrc || undefined
+    : (!imgError && (isInView || isNativeLazy) ? rawImageUrl : undefined);
 
   const handleClick = () => {
     navigate(`/section/${view.Id}`, { state: { name: view.Name } });
   };
 
   const handleImgError = () => {
-    if (!isWebpSupported() && rawImageUrl && !decodedSrc) {
+    if (!isWebp && rawImageUrl && !decodedSrc) {
       decodeWebpToPng(rawImageUrl)
         .then((png) => {
           setDecodedSrc(png);
@@ -96,7 +124,7 @@ const CategoryCard = memo(function CategoryCard({ view, server }: CategoryCardPr
   };
 
   return (
-    <div className={styles.card}>
+    <div ref={cardRef} className={styles.card}>
       <button
         type="button"
         className={styles.cardButton}
@@ -109,7 +137,7 @@ const CategoryCard = memo(function CategoryCard({ view, server }: CategoryCardPr
             src={activeSrc}
             alt=""
             className={styles.image}
-            loading="eager"
+            loading={isNativeLazy ? "lazy" : undefined}
             decoding="async"
             style={{ opacity: isLoaded ? 1 : 0, transition: "opacity 0.2s ease" }}
             onLoad={() => setIsLoaded(true)}
@@ -144,6 +172,23 @@ export const CategoriesShelf = memo(function CategoriesShelf({ server }: Categor
   const { t } = useTranslation();
   const { views, loading } = useUserViews(server);
   const titleText = t("categoriesNav", "Categories");
+
+  // Prefetch cached PNGs from persistent IndexedDB as soon as views are known
+  useEffect(() => {
+    if (!isWebpSupported() && server && views.length > 0) {
+      const urls = views
+        .map((view) =>
+          getItemImageUrl(server.serverUrl, view, {
+            prefer: "primary",
+            maxWidth: 500,
+            quality: 85,
+            accessToken: server.accessToken,
+          }),
+        )
+        .filter(Boolean) as string[];
+      prefetchDecodedWebp(urls);
+    }
+  }, [server, views]);
 
   if (loading && views.length === 0) {
     return (
