@@ -9,8 +9,13 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/Platform-macOS-lightgrey.svg)](https://apple.com/macos)
 [![IINA Compatibility](https://img.shields.io/badge/IINA-%3E%3D%201.4.0-brightgreen.svg)](https://iina.io)
+[![Latest Release](https://img.shields.io/github/v/release/fjkfwz/iina-emby?color=orange)](https://github.com/fjkfwz/iina-emby/releases)
 
-<img src="docs/screenshot.webp" alt="IINA Emby Browser" width="820" style="border-radius: 12px; box-shadow: 0 8px 30px rgba(0,0,0,0.3);" />
+<br/>
+
+<img src="docs/home.webp" alt="IINA Emby Home Browser" width="880" style="border-radius: 12px; box-shadow: 0 8px 30px rgba(0,0,0,0.35); margin-bottom: 16px;" />
+
+<img src="docs/detail.webp" alt="IINA Emby Media Detail View" width="880" style="border-radius: 12px; box-shadow: 0 8px 30px rgba(0,0,0,0.35);" />
 
 </div>
 
@@ -22,11 +27,12 @@
 - **Smooth Scroll-Driven Header**: Dynamic top navigation bar with continuous frosted-glass and gradient shadow interpolation that smoothly fades in on scroll.
 - **Featured Hero Carousel & Shelves**: Automatically cycles top featured media banners and quick-access 16:9 category shelves.
 - **Native Hardware-Accelerated Playback**: Launches IINA player windows using MPV with direct stream playback and hardware decoding.
-- **Play Button Resume Progress**: Item details page displays visual progress track and readable timestamp directly on the play button (e.g. `继续播放 (00:34:42 · 28%)`).
+- **Resume Progress & Interactive Glass Feedback**: Item details page displays visual progress track and readable timestamp directly on the play button (e.g. `继续播放 (00:50:20 · 40%)`) with responsive hover and active states.
 - **Crash-Free Playback Architecture**: Progress reporting (`Playing`, `Progress`, `Stopped`) is bridged safely through WebKit networking, completely avoiding JavaScriptCore thread blocking.
-- **Subtitle & Audio Stream Selector**: Intuitive track switching with stream index mapping, language code matching, and external subtitle download.
+- **Subtitle & Audio Stream Selector**: Intuitive track switching with stream index mapping, language code matching, and local download of external subtitles.
 - **Real-Time WebSocket Sync**: Instant updates for continue watching and library item changes via Emby WebSocket connection.
 - **Multi-Server Management**: Easily add, switch, and manage multiple Emby server profiles and user tokens.
+- **Universal Compatibility**: Full support for macOS Catalina 10.15.7 (Safari 13) through macOS Sonoma/Sequoia with built-in WebP decoding and IndexedDB caching.
 
 ---
 
@@ -37,14 +43,23 @@
 If you are using an AI coding assistant (such as **Antigravity**, **Claude Code**, or **Cursor**), simply paste this instruction into the chat:
 
 ```text
-Please build and install the iina-emby plugin into my local IINA player, and restart IINA to activate it.
+Please install the latest iina-emby plugin into my local IINA player:
+Directly download the latest `.iinaplgz` package from https://github.com/fjkfwz/iina-emby/releases/latest, extract it into my local IINA plugins directory (~/Library/Application Support/com.colliderli.iina/plugins/com.ghotriw.iina-emby.iinaplugin/), and restart IINA to activate it.
 ```
 
-The agent will automatically locate the project, build the production bundle, copy the plugin bundle to your IINA plugins folder, and restart the player.
+The agent will download the pre-built release package, extract it directly into your IINA plugins folder with zero build dependencies, and restart IINA.
 
 ---
 
-### Option 2: One-Line Terminal Command
+### Option 2: Download Release Package (.iinaplgz)
+
+Download the latest pre-built plugin package (`com.ghotriw.iina-emby-*.iinaplgz`) from [GitHub Releases](https://github.com/fjkfwz/iina-emby/releases/latest).
+
+Double-click the downloaded `.iinaplgz` file or drag it directly into the IINA window to install.
+
+---
+
+### Option 3: One-Line Terminal Command
 
 Run the following command in Terminal to clone, build, and install the latest version:
 
@@ -54,7 +69,7 @@ git clone https://github.com/fjkfwz/iina-emby.git /tmp/iina-emby && cd /tmp/iina
 
 ---
 
-### Option 3: Install from Local Repository
+### Option 4: Install from Local Repository
 
 If you have already cloned this repository, run:
 
@@ -71,11 +86,27 @@ pnpm run install:plugin
 
 ---
 
-### Option 4: Install via IINA GUI
+### Option 5: Install via IINA GUI
 
 1. Open **IINA Preferences** (`⌘,`) -> **Plugins**.
 2. Click **Install from GitHub / URL**.
 3. Enter `fjkfwz/iina-emby` and click **Install**.
+
+---
+
+## 🖼 Screenshots & UI Showcase
+
+| Home View (Hero Carousel & Quick Categories) |
+| :---: |
+| <img src="docs/home.webp" width="100%" alt="Home View" /> |
+
+| Media Detail View (Streams, Audio/Subtitle Badges & Specs) |
+| :---: |
+| <img src="docs/detail.webp" width="100%" alt="Media Detail View" /> |
+
+| Media Shelf Browser (Posters & Continue Watching) |
+| :---: |
+| <img src="docs/screenshot.webp" width="100%" alt="Shelf Browser" /> |
 
 ---
 
