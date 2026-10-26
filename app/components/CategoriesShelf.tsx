@@ -1,7 +1,7 @@
 import type { EmbyServer, EmbyView } from "@shared";
-import { getItemImageUrl } from "@shared";
+import { decodeWebpToPng, getCachedDecodedWebp, getItemImageUrl, isWebpSupported } from "@shared";
 import { IconDeviceTv, IconFolder, IconMovie } from "@tabler/icons-react";
-import { memo, useState } from "react";
+import { memo, useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { useUserViews } from "../hooks/useUserViews";
 import { useTranslation } from "../lib/i18n";
@@ -35,17 +35,58 @@ const CategoryCard = memo(function CategoryCard({ view, server }: CategoryCardPr
   const [imgError, setImgError] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
 
-  const imageUrl = !imgError
-    ? getItemImageUrl(server.serverUrl, view, {
-        prefer: "primary",
-        maxWidth: 500,
-        quality: 85,
-        accessToken: server.accessToken,
-      })
-    : undefined;
+  const rawImageUrl = getItemImageUrl(server.serverUrl, view, {
+    prefer: "primary",
+    maxWidth: 500,
+    quality: 85,
+    accessToken: server.accessToken,
+  });
+
+  const [decodedSrc, setDecodedSrc] = useState<string | null>(() => (rawImageUrl ? getCachedDecodedWebp(rawImageUrl) || null : null));
+
+  // If WebP is not natively supported by the browser (such as Safari < 14 on macOS Catalina),
+  // decode the category WebP image to PNG via libwebp polyfill.
+  useEffect(() => {
+    if (!isWebpSupported() && rawImageUrl && !decodedSrc && !imgError) {
+      let cancelled = false;
+      decodeWebpToPng(rawImageUrl)
+        .then((png) => {
+          if (!cancelled) {
+            setDecodedSrc(png);
+            setIsLoaded(true);
+          }
+        })
+        .catch((err) => {
+          if (!cancelled) {
+            console.warn("Failed to polyfill category WebP image:", err);
+            setImgError(true);
+          }
+        });
+      return () => {
+        cancelled = true;
+      };
+    }
+  }, [rawImageUrl, decodedSrc, imgError]);
+
+  const activeSrc = decodedSrc || (!imgError ? rawImageUrl : undefined);
 
   const handleClick = () => {
     navigate(`/section/${view.Id}`, { state: { name: view.Name } });
+  };
+
+  const handleImgError = () => {
+    if (!isWebpSupported() && rawImageUrl && !decodedSrc) {
+      decodeWebpToPng(rawImageUrl)
+        .then((png) => {
+          setDecodedSrc(png);
+          setIsLoaded(true);
+        })
+        .catch(() => {
+          setImgError(true);
+        });
+    } else {
+      setImgError(true);
+    }
   };
 
   const renderIcon = () => {
@@ -63,20 +104,19 @@ const CategoryCard = memo(function CategoryCard({ view, server }: CategoryCardPr
         aria-label={`View category ${view.Name}`}
       />
       <div className={styles.preview}>
-        {imageUrl && !imgError ? (
+        {activeSrc && !imgError ? (
           <img
-            src={imageUrl}
+            src={activeSrc}
             alt=""
             className={styles.image}
             loading="eager"
             decoding="async"
             style={{ opacity: isLoaded ? 1 : 0, transition: "opacity 0.2s ease" }}
             onLoad={() => setIsLoaded(true)}
-            onError={() => setImgError(true)}
+            onError={handleImgError}
             ref={(el) => {
-              if (el && el.complete) {
-                if (el.naturalWidth > 0) setIsLoaded(true);
-                else setImgError(true);
+              if (el && el.complete && el.naturalWidth > 0) {
+                setIsLoaded(true);
               }
             }}
           />

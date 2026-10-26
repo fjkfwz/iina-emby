@@ -110,8 +110,13 @@ function appendToFile(fileApi: LoggerFileApi | undefined, text: string) {
     const line = `[${timestamp}] ${text}\n`;
     if (typeof fileApi.handle === "function") {
       const h = fileApi.handle(LOG_FILE_PATH, "write");
-      h.seekToEnd();
-      h.write(line);
+      if (h) {
+        h.seekToEnd();
+        h.write(line);
+        if (typeof (h as any).close === "function") {
+          (h as any).close();
+        }
+      }
     }
   } catch {
     // Ignore file write errors

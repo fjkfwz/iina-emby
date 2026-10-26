@@ -1,3 +1,51 @@
+let cachedWebpSupported: boolean | null = null;
+
+/**
+ * Detects whether the current runtime environment supports WebP decoding.
+ * - In browser/WKWebView environments, uses an HTML5 Canvas to test WebP encoding/decoding.
+ * - Returns false on legacy WebKit (such as Safari < 14 on macOS Catalina 10.15).
+ * - Defaults to true in non-browser environments (e.g. Node.js unit tests).
+ */
+export function isWebpSupported(): boolean {
+  if (cachedWebpSupported !== null) {
+    return cachedWebpSupported;
+  }
+
+  if (typeof window === "undefined" || typeof document === "undefined") {
+    return true;
+  }
+
+  try {
+    const canvas = document.createElement("canvas");
+    if (canvas && typeof canvas.toDataURL === "function") {
+      const isSupported = canvas.toDataURL("image/webp").indexOf("data:image/webp") === 0;
+      cachedWebpSupported = isSupported;
+      return isSupported;
+    }
+  } catch {
+    // ignore
+  }
+
+  cachedWebpSupported = false;
+  return false;
+}
+
+/**
+ * For testing purposes only: resets or overrides the cached WebP support state.
+ */
+export function _setWebpSupportedForTest(val: boolean | null): void {
+  cachedWebpSupported = val;
+}
+
+/**
+ * Detects whether native image lazy loading (loading="lazy") is supported by the current browser.
+ * Safari < 15.4 does not support native lazy loading on <img> elements.
+ */
+export function isNativeLazyLoadingSupported(): boolean {
+  if (typeof HTMLImageElement === "undefined") return false;
+  return "loading" in HTMLImageElement.prototype;
+}
+
 export interface EmbyImageUrlOptions {
   imageType?: "Primary" | "Backdrop" | "Thumb" | "Banner" | "Logo";
   maxWidth?: number;
@@ -16,7 +64,7 @@ export function getEmbyImageUrl(serverUrl: string, itemId: string, options?: Emb
   if (options?.maxWidth) params.set("maxWidth", String(options.maxWidth));
   if (options?.maxHeight) params.set("maxHeight", String(options.maxHeight));
   params.set("quality", String(options?.quality ?? 85));
-  params.set("format", options?.format ?? "webp");
+  params.set("format", options?.format ?? (isWebpSupported() ? "webp" : "jpg"));
   if (options?.tag) params.set("tag", options.tag);
   if (options?.accessToken) params.set("api_key", options.accessToken);
 

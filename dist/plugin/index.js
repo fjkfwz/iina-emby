@@ -90,6 +90,9 @@ function sanitizeStreamUrl(rawUrl) {
   return cleaned;
 }
 
+// shared/utils/webp-decoder.ts
+var decodeQueue = Promise.resolve();
+
 // plugin/src/lib/autoplay-manager.ts
 function createAutoplayManager({
   http: http2,
@@ -441,8 +444,13 @@ function appendToFile(fileApi, text) {
 `;
     if (typeof fileApi.handle === "function") {
       const h = fileApi.handle(LOG_FILE_PATH, "write");
-      h.seekToEnd();
-      h.write(line);
+      if (h) {
+        h.seekToEnd();
+        h.write(line);
+        if (typeof h.close === "function") {
+          h.close();
+        }
+      }
     }
   } catch {
   }
@@ -1086,6 +1094,9 @@ function createPlaybackCoordinator({
     const streamUrl = message.streamUrl;
     if (streamUrl) {
       const match = (String(streamUrl).match(/\/(?:Items|Videos|Audio)\/([^/?]+)/) || [])[1];
+      if (match && currentPlaybackItemId && match !== currentPlaybackItemId) {
+        clearPendingTracks2();
+      }
       if (match) {
         currentPlaybackItemId = match;
       }
@@ -2261,6 +2272,227 @@ function createServerSessionStore({ preferences: preferences2, sidebar, standalo
   };
 }
 
+// plugin/src/lib/track-matcher.ts
+var LANGUAGE_CANONICAL_MAP = {
+  // Chinese
+  chi: "zh",
+  zho: "zh",
+  zh: "zh",
+  cmn: "zh",
+  chinese: "zh",
+  \u4E2D\u6587: "zh",
+  \u6C49\u8BED: "zh",
+  \u6F22\u8A9E: "zh",
+  // English
+  eng: "en",
+  en: "en",
+  english: "en",
+  \u82F1\u6587: "en",
+  \u82F1\u8BED: "en",
+  // Japanese
+  jpn: "ja",
+  ja: "ja",
+  japanese: "ja",
+  \u65E5\u6587: "ja",
+  \u65E5\u8BED: "ja",
+  // Korean
+  kor: "ko",
+  ko: "ko",
+  korean: "ko",
+  \u97E9\u6587: "ko",
+  \u97E9\u8BED: "ko",
+  // French
+  fre: "fr",
+  fra: "fr",
+  fr: "fr",
+  french: "fr",
+  \u6CD5\u6587: "fr",
+  \u6CD5\u8BED: "fr",
+  // German
+  ger: "de",
+  deu: "de",
+  de: "de",
+  german: "de",
+  \u5FB7\u6587: "de",
+  \u5FB7\u8BED: "de",
+  // Spanish
+  spa: "es",
+  es: "es",
+  spanish: "es",
+  \u897F\u73ED\u7259\u8BED: "es",
+  // Russian
+  rus: "ru",
+  ru: "ru",
+  russian: "ru",
+  \u4FC4\u6587: "ru",
+  \u4FC4\u8BED: "ru",
+  // Italian
+  ita: "it",
+  it: "it",
+  italian: "it",
+  \u610F\u5927\u5229\u8BED: "it",
+  // Portuguese
+  por: "pt",
+  pt: "pt",
+  portuguese: "pt",
+  \u8461\u8404\u7259\u8BED: "pt",
+  // Vietnamese
+  vie: "vi",
+  vi: "vi",
+  vietnamese: "vi",
+  \u8D8A\u5357\u8BED: "vi",
+  // Thai
+  tha: "th",
+  th: "th",
+  thai: "th",
+  \u6CF0\u6587: "th",
+  \u6CF0\u8BED: "th",
+  // Arabic
+  ara: "ar",
+  ar: "ar",
+  arabic: "ar",
+  \u963F\u62C9\u4F2F\u8BED: "ar",
+  // Cantonese
+  yue: "yue",
+  cantonese: "yue",
+  \u7CA4\u8BED: "yue",
+  \u5E7F\u4E1C\u8BDD: "yue"
+};
+function canonicalizeLanguage(lang) {
+  if (!lang) return null;
+  const clean = lang.trim().toLowerCase();
+  if (LANGUAGE_CANONICAL_MAP[clean]) {
+    return LANGUAGE_CANONICAL_MAP[clean];
+  }
+  const prefix = clean.split(/[-_]/)[0];
+  if (LANGUAGE_CANONICAL_MAP[prefix]) {
+    return LANGUAGE_CANONICAL_MAP[prefix];
+  }
+  return clean;
+}
+function detectChineseVariant(text) {
+  if (!text) return "unknown";
+  const clean = text.toLowerCase();
+  if (clean.includes("simplified") || clean.includes("hans") || clean.includes("chs") || clean.includes("sc") || clean.includes("\u7B80\u4F53") || clean.includes("\u7B80\u4E2D") || clean.includes("\u7B80")) {
+    return "simplified";
+  }
+  if (clean.includes("traditional") || clean.includes("hant") || clean.includes("cht") || clean.includes("tc") || clean.includes("\u7E41\u4F53") || clean.includes("\u7E41\u4E2D") || clean.includes("\u7E41")) {
+    return "traditional";
+  }
+  return "unknown";
+}
+function findMatchingSubtitleTrack(subTracks, criteria) {
+  if (!Array.isArray(subTracks) || subTracks.length === 0) {
+    return void 0;
+  }
+  const { trackNumber, streamIndex, language, title, codec } = criteria;
+  const targetCanonLang = canonicalizeLanguage(language);
+  const targetVariant = detectChineseVariant((title || "") + " " + (language || ""));
+  let bestMatch;
+  let highestScore = -1;
+  for (let i = 0; i < subTracks.length; i++) {
+    const track = subTracks[i];
+    let score = 0;
+    const trackCanonLang = canonicalizeLanguage(track.lang);
+    const trackVariant = detectChineseVariant((track.title || "") + " " + (track.lang || ""));
+    const isPositionMatch = typeof trackNumber === "number" && trackNumber > 0 && i === trackNumber - 1;
+    if (isPositionMatch) {
+      score += 100;
+    }
+    if (typeof streamIndex === "number" && typeof track["ff-index"] === "number" && track["ff-index"] === streamIndex) {
+      score += 90;
+    }
+    if (targetCanonLang && trackCanonLang && targetCanonLang === trackCanonLang) {
+      score += 50;
+      if (targetCanonLang === "zh") {
+        if (targetVariant !== "unknown" && trackVariant !== "unknown") {
+          if (targetVariant === trackVariant) {
+            score += 60;
+          } else {
+            score -= 50;
+          }
+        }
+      }
+    }
+    if (title && track.title) {
+      const cleanTargetTitle = title.trim().toLowerCase();
+      const cleanTrackTitle = track.title.trim().toLowerCase();
+      if (cleanTrackTitle === cleanTargetTitle) {
+        score += 40;
+      } else if (cleanTargetTitle.includes(cleanTrackTitle) || cleanTrackTitle.includes(cleanTargetTitle)) {
+        score += 25;
+      }
+    }
+    if (codec && track.codec) {
+      const cleanTargetCodec = codec.trim().toLowerCase();
+      const cleanTrackCodec = track.codec.trim().toLowerCase();
+      if (cleanTrackCodec.includes(cleanTargetCodec) || cleanTargetCodec.includes(cleanTrackCodec)) {
+        score += 10;
+      }
+    }
+    if (typeof trackNumber === "number" && track.id === trackNumber || typeof streamIndex === "number" && track.id === streamIndex) {
+      score += 15;
+    }
+    if (score > highestScore) {
+      highestScore = score;
+      bestMatch = track;
+    }
+  }
+  if (bestMatch && highestScore > 0) {
+    return bestMatch;
+  }
+  if (typeof trackNumber === "number" && trackNumber > 0 && trackNumber <= subTracks.length) {
+    return subTracks[trackNumber - 1];
+  }
+  return void 0;
+}
+function findMatchingAudioTrack(audioTracks, criteria) {
+  if (!Array.isArray(audioTracks) || audioTracks.length === 0) {
+    return void 0;
+  }
+  const { trackNumber, streamIndex, language, title } = criteria;
+  const targetCanonLang = canonicalizeLanguage(language);
+  let bestMatch;
+  let highestScore = -1;
+  for (let i = 0; i < audioTracks.length; i++) {
+    const track = audioTracks[i];
+    let score = 0;
+    const trackCanonLang = canonicalizeLanguage(track.lang);
+    if (typeof trackNumber === "number" && trackNumber > 0 && i === trackNumber - 1) {
+      score += 100;
+    }
+    if (typeof streamIndex === "number" && typeof track["ff-index"] === "number" && track["ff-index"] === streamIndex) {
+      score += 90;
+    }
+    if (targetCanonLang && trackCanonLang && targetCanonLang === trackCanonLang) {
+      score += 50;
+    }
+    if (title && track.title) {
+      const cleanTargetTitle = title.trim().toLowerCase();
+      const cleanTrackTitle = track.title.trim().toLowerCase();
+      if (cleanTrackTitle === cleanTargetTitle) {
+        score += 40;
+      } else if (cleanTargetTitle.includes(cleanTrackTitle) || cleanTrackTitle.includes(cleanTargetTitle)) {
+        score += 25;
+      }
+    }
+    if (typeof trackNumber === "number" && track.id === trackNumber || typeof streamIndex === "number" && track.id === streamIndex) {
+      score += 15;
+    }
+    if (score > highestScore) {
+      highestScore = score;
+      bestMatch = track;
+    }
+  }
+  if (bestMatch && highestScore > 0) {
+    return bestMatch;
+  }
+  if (typeof trackNumber === "number" && trackNumber > 0 && trackNumber <= audioTracks.length) {
+    return audioTracks[trackNumber - 1];
+  }
+  return void 0;
+}
+
 // plugin/src/index.ts
 var { core, console: iinaConsole, menu, event, http, utils, preferences, mpv, global: iinaGlobal, file } = iina;
 var debugLog = createDebugLogger(preferences, iinaConsole, file);
@@ -2390,12 +2622,13 @@ if (iinaGlobal && typeof iinaGlobal.onMessage === "function") {
     if (!data) return;
     markLaunchedFromBrowser();
     setPendingPlaybackData(data);
-    if (typeof data.startPositionSeconds === "number" && data.startPositionSeconds > 0) {
+    const startPosSeconds = typeof data.startPositionSeconds === "number" && data.startPositionSeconds > 0 ? data.startPositionSeconds : typeof data.startPositionTicks === "number" && data.startPositionTicks > 0 ? ticksToSeconds2(data.startPositionTicks) : null;
+    if (typeof startPosSeconds === "number" && startPosSeconds > 0) {
       try {
         const timePos = mpv.getNumber("time-pos") || 0;
         if (timePos < 2) {
-          debugLog(`Seeking to pending start position: ${data.startPositionSeconds}s`);
-          mpv.set("time-pos", data.startPositionSeconds);
+          debugLog(`Seeking to pending start position: ${startPosSeconds}s`);
+          mpv.set("time-pos", startPosSeconds);
         }
       } catch {
       }
@@ -2445,6 +2678,46 @@ function getEffectiveFileUrl(fileUrl) {
   }
   return void 0;
 }
+var targetSidToEnforce = null;
+var targetAidToEnforce = null;
+var enforcementStartTime = 0;
+var enforcementReapplyCount = 0;
+var enforcementItemId = null;
+var ENFORCEMENT_DURATION_MS = 1e4;
+var MAX_ENFORCEMENT_REAPPLIES = 8;
+var enforcementTimer = null;
+function startEnforcingTracks(itemId, sid, aid) {
+  enforcementItemId = itemId;
+  if (sid !== null) {
+    targetSidToEnforce = sid;
+  }
+  if (aid !== null) {
+    targetAidToEnforce = aid;
+  }
+  enforcementStartTime = Date.now();
+  enforcementReapplyCount = 0;
+  if (enforcementTimer) {
+    clearTimeout(enforcementTimer);
+  }
+  enforcementTimer = setTimeout(() => {
+    const expiredItemId = enforcementItemId;
+    stopEnforcingTracks();
+    if (expiredItemId) {
+      clearPendingTracks(expiredItemId);
+    }
+  }, ENFORCEMENT_DURATION_MS);
+}
+function stopEnforcingTracks() {
+  if (enforcementTimer) {
+    clearTimeout(enforcementTimer);
+    enforcementTimer = null;
+  }
+  targetSidToEnforce = null;
+  targetAidToEnforce = null;
+  enforcementStartTime = 0;
+  enforcementReapplyCount = 0;
+  enforcementItemId = null;
+}
 function applySelectedAudioTrack(itemId) {
   const pendingAudio = getPendingAudioIndex(itemId);
   const pendingAudioTrackNum = getPendingAudioTrackNumber(itemId);
@@ -2463,56 +2736,31 @@ function applySelectedAudioTrack(itemId) {
       debugLog("No audio tracks found in mpv track-list");
       return;
     }
-    let match;
-    if (typeof pendingAudioTrackNum === "number" && pendingAudioTrackNum > 0 && pendingAudioTrackNum <= audioTracks.length) {
-      match = audioTracks[pendingAudioTrackNum - 1];
-    }
-    if (!match && typeof pendingAudio === "number") {
-      match = audioTracks.find((t) => typeof t["ff-index"] === "number" && t["ff-index"] === pendingAudio);
-    }
-    if (!match && pendingAudioLang) {
-      const cleanLang = pendingAudioLang.toLowerCase();
-      match = audioTracks.find((t) => {
-        const tLang = (t.lang || "").toLowerCase();
-        return tLang === cleanLang || tLang.startsWith(cleanLang) || cleanLang.startsWith(tLang);
-      });
-    }
-    if (!match) {
-      match = audioTracks.find((t) => t.id === pendingAudioTrackNum || t.id === pendingAudio);
-    }
+    const match = findMatchingAudioTrack(audioTracks, {
+      trackNumber: pendingAudioTrackNum,
+      streamIndex: pendingAudio,
+      language: pendingAudioLang
+    });
     const targetAid = match && typeof match.id === "number" ? match.id : typeof pendingAudioTrackNum === "number" && pendingAudioTrackNum > 0 ? pendingAudioTrackNum : null;
     if (targetAid !== null) {
-      const currentAid = mpv.getNumber("aid");
-      let coreAudioId = null;
-      try {
-        if (core.audio && typeof core.audio.id === "number") {
-          coreAudioId = core.audio.id;
-        }
-      } catch {
-      }
-      debugLog(`Applying audio track targetAid=${targetAid}, current mpv.aid=${currentAid}, coreAudioId=${coreAudioId}`);
-      if (coreAudioId !== targetAid) {
+      const currentAid = mpv.getString("aid") || "";
+      const aidStr = String(targetAid);
+      debugLog(`Applying audio track targetAid=${targetAid}, current mpv.aid=${currentAid}`);
+      if (currentAid !== aidStr) {
+        debugLog(`Setting audio track id: ${aidStr} (current was ${currentAid})`);
         try {
-          if (core.audio) {
-            core.audio.id = targetAid;
-            debugLog(`Set core.audio.id = ${targetAid}`);
+          if (core?.audio) {
+            core.audio.currentTrack = targetAid;
           }
-        } catch (e) {
-          debugLog("core.audio.id error:", e);
+        } catch {
         }
-      }
-      if (currentAid !== targetAid) {
-        debugLog(`Setting audio track id: ${targetAid} (current was ${currentAid})`);
         try {
-          mpv.set("aid", targetAid);
-          mpv.command("set", ["aid", String(targetAid)]);
+          mpv.set("aid", aidStr);
         } catch (e) {
           debugLog("mpv.set aid error:", e);
         }
       }
-      setTimeout(() => {
-        clearPendingAudio(itemId);
-      }, 3500);
+      startEnforcingTracks(itemId, null, targetAid);
     }
   } catch (err) {
     debugLog("Failed to set audio track:", err);
@@ -2528,28 +2776,21 @@ async function applySelectedSubtitleTrack(serverBase, itemId, apiKey) {
   const subPath = getPendingSubtitlePath(itemId);
   const mediaSourceId = getPendingMediaSourceId(itemId);
   const deliveryUrl = getPendingSubtitleDeliveryUrl(itemId);
+  const subtitleTitle = getPendingSubtitleTitle(itemId);
   if (typeof pendingSubtitle !== "number" && typeof pendingSubTrackNum !== "number") {
     return;
   }
   if (pendingSubtitle === -1) {
     debugLog("User selected to turn off subtitles");
     try {
-      if (core.subtitle) {
-        core.subtitle.id = null;
-      }
-    } catch {
-    }
-    try {
       const currentSid = mpv.getString("sid");
       if (currentSid !== "no" && currentSid !== "0") {
         mpv.set("sid", "no");
-        mpv.command("set", ["sid", "no"]);
+        mpv.set("sub-visibility", false);
       }
     } catch {
     }
-    setTimeout(() => {
-      clearPendingSubtitle(itemId);
-    }, 3500);
+    startEnforcingTracks(itemId, "no", null);
     return;
   }
   if (isExternal && typeof pendingSubtitle === "number") {
@@ -2565,7 +2806,6 @@ async function applySelectedSubtitleTrack(serverBase, itemId, apiKey) {
     debugLog(`Selected subtitle is external (Index: ${pendingSubtitle}, MediaSourceId: ${mediaSourceId || "none"}). Downloading and loading...`);
     try {
       isDownloadingExternalSubtitle = true;
-      const subtitleTitle = getPendingSubtitleTitle(itemId);
       const loaded = await downloadExternalSubtitle(
         serverBase,
         itemId,
@@ -2593,66 +2833,49 @@ async function applySelectedSubtitleTrack(serverBase, itemId, apiKey) {
     return;
   }
   try {
-    debugLog(`Applying embedded subtitle track: Index=${pendingSubtitle}, TrackNum=${pendingSubTrackNum}, Lang=${pendingSubLang}`);
+    debugLog(
+      `Applying embedded subtitle track: Index=${pendingSubtitle}, TrackNum=${pendingSubTrackNum}, Lang=${pendingSubLang}, Title=${subtitleTitle}`
+    );
     const trackList = mpv.getNative("track-list");
     if (!Array.isArray(trackList) || trackList.length === 0) {
+      debugLog("Tracks not ready yet in track-list, will be applied on tracks-changed");
       return;
     }
     const subTracks = trackList.filter((t) => t.type === "sub");
     if (subTracks.length === 0) {
-      debugLog("No subtitle tracks found in mpv track-list");
+      debugLog("No subtitle tracks found in mpv track-list yet, will be applied on tracks-changed");
       return;
     }
-    let match;
-    if (typeof pendingSubTrackNum === "number" && pendingSubTrackNum > 0 && pendingSubTrackNum <= subTracks.length) {
-      match = subTracks[pendingSubTrackNum - 1];
-    }
-    if (!match && typeof pendingSubtitle === "number") {
-      match = subTracks.find((t) => typeof t["ff-index"] === "number" && t["ff-index"] === pendingSubtitle);
-    }
-    if (!match && pendingSubLang) {
-      const cleanLang = pendingSubLang.toLowerCase();
-      match = subTracks.find((t) => {
-        const tLang = (t.lang || "").toLowerCase();
-        return tLang === cleanLang || tLang.startsWith(cleanLang) || cleanLang.startsWith(tLang);
-      });
-    }
-    if (!match) {
-      match = subTracks.find((t) => t.id === pendingSubTrackNum || t.id === pendingSubtitle);
-    }
+    const match = findMatchingSubtitleTrack(subTracks, {
+      trackNumber: pendingSubTrackNum,
+      streamIndex: pendingSubtitle,
+      language: pendingSubLang,
+      title: subtitleTitle,
+      codec: subCodec
+    });
     const targetSid = match && typeof match.id === "number" ? match.id : typeof pendingSubTrackNum === "number" && pendingSubTrackNum > 0 ? pendingSubTrackNum : null;
     if (targetSid !== null) {
-      const currentSid = mpv.getNumber("sid");
-      let coreSubId = null;
-      try {
-        if (core.subtitle && typeof core.subtitle.id === "number") {
-          coreSubId = core.subtitle.id;
-        }
-      } catch {
-      }
-      debugLog(`Applying subtitle track targetSid=${targetSid}, current mpv.sid=${currentSid}, coreSubId=${coreSubId}`);
-      if (coreSubId !== targetSid) {
+      const currentSid = mpv.getString("sid") || "";
+      const sidStr = String(targetSid);
+      debugLog(
+        `Applying subtitle track targetSid=${targetSid} (matched id: ${match?.id}, lang: ${match?.lang}, title: ${match?.title}), current mpv.sid=${currentSid}`
+      );
+      if (currentSid !== sidStr) {
+        debugLog(`Setting subtitle track id: ${sidStr} (current was ${currentSid})`);
         try {
-          if (core.subtitle) {
-            core.subtitle.id = targetSid;
-            debugLog(`Set core.subtitle.id = ${targetSid}`);
+          if (core?.subtitle) {
+            core.subtitle.currentTrack = targetSid;
           }
-        } catch (e) {
-          debugLog("core.subtitle.id error:", e);
+        } catch {
         }
-      }
-      if (currentSid !== targetSid) {
-        debugLog(`Setting subtitle track id: ${targetSid} (current was ${currentSid})`);
         try {
-          mpv.set("sid", targetSid);
-          mpv.command("set", ["sid", String(targetSid)]);
+          mpv.set("sid", sidStr);
+          mpv.set("sub-visibility", true);
         } catch (e) {
           debugLog("mpv.set sid error:", e);
         }
       }
-      setTimeout(() => {
-        clearPendingSubtitle(itemId);
-      }, 3500);
+      startEnforcingTracks(itemId, targetSid, null);
     }
   } catch (err) {
     debugLog("Failed to set subtitle track:", err);
@@ -2667,10 +2890,23 @@ function onFileLoaded(fileUrl) {
     return;
   }
   if (currentLoadedFileUrl === resolvedUrl) {
-    debugLog(`File ${resolvedUrl} already initialized, skipping duplicate file-loaded event`);
+    debugLog(`File ${resolvedUrl} already initialized, re-checking pending tracks`);
+    const embyInfo2 = parseEmbyUrl(resolvedUrl);
+    if (embyInfo2) {
+      let reportServerBase = embyInfo2.serverBase;
+      let reportApiKey = embyInfo2.apiKey;
+      const session = getStoredEmbySession();
+      if (preferences.get("use_connected_account") && session?.accessToken && isSameEmbyHost(session.serverUrl, embyInfo2.serverBase)) {
+        reportServerBase = session.serverUrl;
+        reportApiKey = session.accessToken;
+      }
+      applySelectedAudioTrack(embyInfo2.itemId);
+      applySelectedSubtitleTrack(reportServerBase, embyInfo2.itemId, reportApiKey);
+    }
     return;
   }
   currentLoadedFileUrl = resolvedUrl;
+  stopEnforcingTracks();
   flushPendingPlaylistQueue(resolvedUrl);
   stopPlaybackTracking();
   const embyInfo = updateFromFileUrl(resolvedUrl);
@@ -2750,10 +2986,11 @@ function onFileLoaded(fileUrl) {
         const currentSid = mpv.getString("sid");
         if (currentSid !== "no" && currentSid !== "0") {
           mpv.set("sid", "no");
+          mpv.command("set", ["sid", "no"]);
         }
       } catch {
       }
-      clearPendingSubtitle(embyInfo.itemId);
+      startEnforcingTracks(embyInfo.itemId, "no", null);
     }
     if (iinaGlobal && typeof iinaGlobal.postMessage === "function") {
       iinaGlobal.postMessage("player-file-loaded", {
@@ -2787,9 +3024,10 @@ event.on("mpv.file-loaded", () => {
   isWindowClosing = false;
   onFileLoaded();
 });
-event.on("mpv.tracks-changed", () => {
+var handleTracksChanged = () => {
   if (isWindowClosing) return;
   const resolvedUrl = getEffectiveFileUrl();
+  debugLog(`Track list changed event received for URL: ${resolvedUrl}`);
   if (resolvedUrl) {
     const embyInfo = parseEmbyUrl(resolvedUrl);
     if (embyInfo) {
@@ -2804,10 +3042,84 @@ event.on("mpv.tracks-changed", () => {
       applySelectedSubtitleTrack(reportServerBase, embyInfo.itemId, reportApiKey);
     }
   }
+};
+event.on("mpv.track-list.changed", handleTracksChanged);
+event.on("mpv.tracks-changed", handleTracksChanged);
+event.on("mpv.sid.changed", (newSidVal) => {
+  if (isWindowClosing || targetSidToEnforce === null) return;
+  const elapsed = Date.now() - enforcementStartTime;
+  if (elapsed > ENFORCEMENT_DURATION_MS || enforcementReapplyCount >= MAX_ENFORCEMENT_REAPPLIES) {
+    debugLog(`Track enforcement window ended for sid (elapsed=${elapsed}ms, reapplies=${enforcementReapplyCount})`);
+    targetSidToEnforce = null;
+    return;
+  }
+  const currentSidStr = String(newSidVal ?? "");
+  if (targetSidToEnforce === "no") {
+    if (currentSidStr !== "no" && currentSidStr !== "0" && currentSidStr !== "false" && newSidVal !== null) {
+      debugLog(`Enforcement: Re-disabling subtitles (was set to ${newSidVal} by player core)`);
+      enforcementReapplyCount++;
+      try {
+        if (core?.subtitle) {
+          core.subtitle.currentTrack = null;
+        }
+      } catch {
+      }
+      try {
+        mpv.set("sid", "no");
+        mpv.set("sub-visibility", false);
+      } catch (err) {
+        debugLog("Error re-disabling subtitles:", err);
+      }
+    }
+  } else if (targetSidToEnforce !== null) {
+    const targetStr = String(targetSidToEnforce);
+    if (currentSidStr !== targetStr) {
+      debugLog(`Enforcement: Re-applying target subtitle track ${targetStr} (was set to ${newSidVal} by player core)`);
+      enforcementReapplyCount++;
+      try {
+        if (core?.subtitle) {
+          core.subtitle.currentTrack = targetSidToEnforce;
+        }
+      } catch {
+      }
+      try {
+        mpv.set("sid", targetStr);
+        mpv.set("sub-visibility", true);
+      } catch (err) {
+        debugLog("Error re-applying subtitle track:", err);
+      }
+    }
+  }
+});
+event.on("mpv.aid.changed", (newAidVal) => {
+  if (isWindowClosing || targetAidToEnforce === null) return;
+  const elapsed = Date.now() - enforcementStartTime;
+  if (elapsed > ENFORCEMENT_DURATION_MS || enforcementReapplyCount >= MAX_ENFORCEMENT_REAPPLIES) {
+    targetAidToEnforce = null;
+    return;
+  }
+  const currentAidStr = String(newAidVal ?? "");
+  const targetStr = String(targetAidToEnforce);
+  if (currentAidStr !== targetStr) {
+    debugLog(`Enforcement: Re-applying target audio track ${targetStr} (was set to ${newAidVal})`);
+    enforcementReapplyCount++;
+    try {
+      if (core?.audio) {
+        core.audio.currentTrack = targetAidToEnforce;
+      }
+    } catch {
+    }
+    try {
+      mpv.set("aid", targetStr);
+    } catch (err) {
+      debugLog("Error re-applying audio track:", err);
+    }
+  }
 });
 event.on("mpv.path.changed", (newPath) => {
   if (typeof newPath === "string" && newPath.trim().length > 0) {
     isWindowClosing = false;
+    currentLoadedFileUrl = null;
     onFileLoaded(newPath);
   }
 });
@@ -2851,6 +3163,8 @@ event.on("mpv.end-file", () => {
     return;
   }
   currentLoadedFileUrl = null;
+  stopEnforcingTracks();
+  clearPendingTracks();
   stopPlaybackTracking();
   handlePlaybackTermination("end-file");
 });
@@ -2861,6 +3175,8 @@ event.on("iina.window-will-close", () => {
   currentLoadedFileUrl = null;
   resetForNewFile();
   clearQueuedFlag();
+  stopEnforcingTracks();
+  clearPendingTracks();
   if (iinaGlobal && typeof iinaGlobal.postMessage === "function") {
     iinaGlobal.postMessage("player-unregistered", {});
     iinaGlobal.postMessage("player-inactive", {});

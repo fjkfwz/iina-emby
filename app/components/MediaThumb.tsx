@@ -6,6 +6,7 @@ import {
   formatEpisodeSubtitle,
   formatTimeProgress,
   getItemImageUrl,
+  isNativeLazyLoadingSupported,
   type PlayMediaPayload,
   ticksToSeconds,
 } from "@shared";
@@ -131,13 +132,9 @@ export const MediaThumb = memo(function MediaThumb({
   const handleRef = useCallback(
     (el: HTMLImageElement | null) => {
       if (!el) return;
-      if (el.complete) {
-        if (el.naturalWidth > 0) {
-          if (imageUrl) loadedThumbUrls.add(imageUrl);
-          setIsLoaded(true);
-        } else {
-          setImageError(true);
-        }
+      if (el.complete && el.naturalWidth > 0) {
+        if (imageUrl) loadedThumbUrls.add(imageUrl);
+        setIsLoaded(true);
       }
     },
     [imageUrl],
@@ -196,7 +193,7 @@ export const MediaThumb = memo(function MediaThumb({
             src={imageUrl}
             alt=""
             className={classes.image}
-            loading="lazy"
+            loading={isNativeLazyLoadingSupported() ? "lazy" : undefined}
             decoding="async"
             style={{ opacity: isLoaded ? 1 : 0, transition: isCached ? "none" : "opacity 0.2s ease" }}
             onLoad={handleImgLoad}

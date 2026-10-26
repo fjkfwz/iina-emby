@@ -23,6 +23,9 @@ importers:
       react-router:
         specifier: ^8.4.0
         version: 8.4.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
+      webp-hero:
+        specifier: ^0.0.2
+        version: 0.0.2
     devDependencies:
       '@biomejs/biome':
         specifier: ^2.5.15
@@ -1102,6 +1105,9 @@ packages:
       jsdom:
         optional: true
 
+  webp-hero@0.0.2:
+    resolution: {integrity: sha512-XDN8k2DZerXAawblkGKbcRXAz3WjY6Id5fTmrsOvblzFg5jELfoDCOxRDHD3zIGJo3OPEjLRsVS6Kzl36HxjqA==}
+
   why-is-node-running@3.2.1:
     resolution: {integrity: sha512-Tb2FUhB4vUsGQlfSquQLYkApkuPAFQXGFzxWKHHumVz2dK+X1RUm/HnID4+TfIGYJ1kTcwOaCk/buYCEJr6YjQ==}
     engines: {node: '>=20.11'}
@@ -1835,5 +1841,7 @@ snapshots:
       '@types/node': 22.20.4
     transitivePeerDependencies:
       - msw
+
+  webp-hero@0.0.2: {}
 
   why-is-node-running@3.2.1: {}

@@ -1,5 +1,5 @@
 import { IconChevronLeft, IconReload, IconSearch, IconSettings2 } from "@tabler/icons-react";
-import { forwardRef, type ReactNode, useEffect } from "react";
+import { forwardRef, type ReactNode, useCallback, useEffect, useRef } from "react";
 import { useLocation, useNavigate } from "react-router";
 import { useTranslation } from "../lib/i18n";
 import styles from "./PageHeader.module.css";
@@ -17,6 +17,8 @@ export interface PageHeaderProps {
   showSettings?: boolean;
   hideSearch?: boolean;
   transparent?: boolean;
+  shadowOnScroll?: boolean;
+  forceShadow?: boolean;
   className?: string;
   style?: React.CSSProperties;
 }
@@ -34,6 +36,8 @@ export const PageHeader = forwardRef<HTMLElement, PageHeaderProps>(function Page
     showSettings,
     hideSearch = false,
     transparent = false,
+    shadowOnScroll = false,
+    forceShadow = false,
     className,
     style,
   },
@@ -43,6 +47,70 @@ export const PageHeader = forwardRef<HTMLElement, PageHeaderProps>(function Page
   const backTitle = backTitleProp || t("back", "Back");
   const navigate = useNavigate();
   const location = useLocation();
+  const internalRef = useRef<HTMLElement | null>(null);
+
+  const setHeaderRef = useCallback(
+    (node: HTMLElement | null) => {
+      internalRef.current = node;
+      if (typeof ref === "function") {
+        ref(node);
+      } else if (ref) {
+        (ref as React.MutableRefObject<HTMLElement | null>).current = node;
+      }
+    },
+    [ref],
+  );
+
+  useEffect(() => {
+    if (!shadowOnScroll) return;
+
+    const rootEl = document.getElementById("root");
+    let rafId: number | null = null;
+    let lastState: "top" | "scrolled" | null = null;
+
+    const updateHeader = (top: number) => {
+      if (!internalRef.current) return;
+      if (forceShadow) {
+        if (lastState !== "scrolled") {
+          internalRef.current.style.setProperty("--header-shadow-opacity", "1");
+          lastState = "scrolled";
+        }
+        return;
+      }
+      const isScrolled = top > 25;
+      const nextState = isScrolled ? "scrolled" : "top";
+      if (nextState !== lastState) {
+        lastState = nextState;
+        internalRef.current.style.setProperty("--header-shadow-opacity", isScrolled ? "1" : "0");
+      }
+    };
+
+    const handleScroll = () => {
+      if (rafId !== null) return;
+      rafId = requestAnimationFrame(() => {
+        rafId = null;
+        const top = rootEl ? rootEl.scrollTop : window.scrollY;
+        updateHeader(top);
+      });
+    };
+
+    if (rootEl) {
+      rootEl.addEventListener("scroll", handleScroll, { passive: true });
+    }
+    window.addEventListener("scroll", handleScroll, { passive: true });
+
+    // Initial sync
+    const initialTop = rootEl ? rootEl.scrollTop : window.scrollY;
+    updateHeader(initialTop);
+
+    return () => {
+      if (rafId !== null) cancelAnimationFrame(rafId);
+      if (rootEl) {
+        rootEl.removeEventListener("scroll", handleScroll);
+      }
+      window.removeEventListener("scroll", handleScroll);
+    };
+  }, [shadowOnScroll, forceShadow]);
 
   const isSettingsRoute = location.pathname === "/settings" || location.pathname === "/system-info";
   const shouldShowSettings = showSettings ?? !isSettingsRoute;
@@ -64,9 +132,9 @@ export const PageHeader = forwardRef<HTMLElement, PageHeaderProps>(function Page
 
   return (
     <header
-      ref={ref}
+      ref={setHeaderRef}
       style={style}
-      className={`${styles.header} ${transparent ? styles.transparent : ""} ${className || ""}`}
+      className={`${styles.header} ${transparent ? styles.transparent : ""} ${shadowOnScroll ? styles.shadowOnScroll : ""} ${className || ""}`}
       data-window-drag
     >
       <div className={styles.headerLeft}>

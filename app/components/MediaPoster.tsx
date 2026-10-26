@@ -1,5 +1,5 @@
 import type { EmbyItemMetadata, EmbyServer, EmbyUserData, RemoteSearchResult } from "@shared";
-import { getItemImageUrl } from "@shared";
+import { getItemImageUrl, isNativeLazyLoadingSupported } from "@shared";
 import { IconCheck, IconDots, IconFingerprint, IconInfoCircle, IconMovie } from "@tabler/icons-react";
 import type React from "react";
 import { memo, useCallback, useState } from "react";
@@ -107,13 +107,9 @@ export const MediaPoster = memo(function MediaPoster({
   const handleRef = useCallback(
     (el: HTMLImageElement | null) => {
       if (!el) return;
-      if (el.complete) {
-        if (el.naturalWidth > 0) {
-          if (imageUrl) loadedPosterUrls.add(imageUrl);
-          setIsLoaded(true);
-        } else {
-          setImgError(true);
-        }
+      if (el.complete && el.naturalWidth > 0) {
+        if (imageUrl) loadedPosterUrls.add(imageUrl);
+        setIsLoaded(true);
       }
     },
     [imageUrl],
@@ -141,7 +137,7 @@ export const MediaPoster = memo(function MediaPoster({
             src={imageUrl}
             alt=""
             className={classes.image}
-            loading="lazy"
+            loading={isNativeLazyLoadingSupported() ? "lazy" : undefined}
             decoding="async"
             style={{ opacity: isLoaded ? 1 : 0, transition: isCached ? "none" : "opacity 0.2s ease" }}
             onLoad={handleImgLoad}

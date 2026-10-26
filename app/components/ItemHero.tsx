@@ -168,6 +168,7 @@ export function ItemHero({
         onRefresh={onRefresh}
         isRefreshing={isRefreshing}
         className={styles.pageHeader}
+        shadowOnScroll
         rightSection={
           canIdentify ? (
             <GlassElement
@@ -387,9 +388,8 @@ function CastAvatar({ name, avatarUrl }: { name?: string; avatarUrl: string | nu
       onLoad={() => setIsLoaded(true)}
       onError={() => setHasError(true)}
       ref={(el) => {
-        if (el && el.complete) {
-          if (el.naturalWidth > 0) setIsLoaded(true);
-          else setHasError(true);
+        if (el && el.complete && el.naturalWidth > 0) {
+          setIsLoaded(true);
         }
       }}
     />

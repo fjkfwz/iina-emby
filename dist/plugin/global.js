@@ -85,6 +85,9 @@ function sanitizeStreamUrl(rawUrl) {
   return cleaned;
 }
 
+// shared/utils/webp-decoder.ts
+var decodeQueue = Promise.resolve();
+
 // plugin/src/lib/webview-bridge.ts
 function createBridgeDeps({
   preferences: preferences2,
@@ -432,8 +435,13 @@ function appendToFile(fileApi, text) {
 `;
     if (typeof fileApi.handle === "function") {
       const h = fileApi.handle(LOG_FILE_PATH, "write");
-      h.seekToEnd();
-      h.write(line);
+      if (h) {
+        h.seekToEnd();
+        h.write(line);
+        if (typeof h.close === "function") {
+          h.close();
+        }
+      }
     }
   } catch {
   }
@@ -969,23 +977,17 @@ global.onMessage("player-active", (data, player) => {
   if (player !== void 0 && player !== null) {
     activePlayerTarget = player;
   }
-  if (latestPendingPlayData) {
-    const target = player !== void 0 && player !== null ? player : activePlayerTarget;
-    if (target !== null) {
-      debugLog("Sending pending play data to active player:", target);
-      global.postMessage(target, "apply-pending-media", latestPendingPlayData);
-    }
+  if (latestPendingPlayData && activePlayerTarget !== null) {
+    debugLog("Sending pending play data to active player ID:", activePlayerTarget);
+    global.postMessage(activePlayerTarget, "apply-pending-media", latestPendingPlayData);
   }
 });
 global.onMessage("get-pending-media", (_data, player) => {
   debugLog("Player requested pending media:", player);
-  if (latestPendingPlayData) {
-    const target = player !== void 0 && player !== null ? player : activePlayerTarget;
-    if (target !== null) {
-      debugLog("Replying with pending play data to player:", target);
-      global.postMessage(target, "apply-pending-media", latestPendingPlayData);
-    }
-    global.postMessage(null, "apply-pending-media", latestPendingPlayData);
+  const target = player !== void 0 && player !== null ? player : activePlayerTarget;
+  if (latestPendingPlayData && target !== null) {
+    debugLog("Replying with pending play data to player ID:", target);
+    global.postMessage(target, "apply-pending-media", latestPendingPlayData);
   }
 });
 global.onMessage("player-inactive", (data, player) => {
@@ -1006,12 +1008,10 @@ global.onMessage("player-file-loaded", (data, player) => {
   if (player !== void 0 && player !== null) {
     activePlayerTarget = player;
   }
-  if (latestPendingPlayData) {
-    const target = player !== void 0 && player !== null ? player : activePlayerTarget;
-    if (target !== null) {
-      debugLog("Sending pending play data to player on file-loaded:", target);
-      global.postMessage(target, "apply-pending-media", latestPendingPlayData);
-    }
+  const target = player !== void 0 && player !== null ? player : activePlayerTarget;
+  if (latestPendingPlayData && target !== null) {
+    debugLog("Sending pending play data to player on file-loaded:", target);
+    global.postMessage(target, "apply-pending-media", latestPendingPlayData);
   }
 });
 global.onMessage("player-next-queued", (data) => {
@@ -1033,11 +1033,10 @@ function spawnNewPlayerInstance(playData) {
       disableWindowAnimation: false
     });
     debugLog(`Created player instance ${playerId} for: ${playData.title}`);
-    if (typeof playerId === "number") {
+    if (playerId !== void 0 && playerId !== null) {
       activePlayerTarget = playerId;
       global.postMessage(playerId, "apply-pending-media", playData);
     }
-    global.postMessage(null, "apply-pending-media", playData);
   } catch (err) {
     const errorMsg = err instanceof Error ? err.message : String(err);
     debugLog.error("Failed to create player instance: " + errorMsg);
@@ -1127,11 +1126,9 @@ global.onMessage("create-player", (data, player) => {
       disableWindowAnimation: false
     });
     debugLog(`Created new player instance ${playerId} for: ${title}`);
-    if (typeof playerId === "number") {
+    if (playerId !== void 0 && playerId !== null) {
       activePlayerTarget = playerId;
       global.postMessage(playerId, "apply-pending-media", playData);
-    } else {
-      global.postMessage(null, "apply-pending-media", playData);
     }
     if (player !== void 0 && player !== null) {
       global.postMessage(player, "player-created", {

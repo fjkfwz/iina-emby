@@ -119,57 +119,6 @@ export default function HomeRoute() {
   }, [activeServer]);
 
   const isSearching = Boolean(searchQuery.trim() || urlQ.trim());
-  const headerRef = useRef<HTMLElement>(null);
-
-  // Smoothly toggle header gradient shadow as user scrolls down
-  useEffect(() => {
-    const rootEl = document.getElementById("root");
-    let rafId: number | null = null;
-    let lastState: "top" | "scrolled" | null = null;
-
-    const updateHeader = (top: number) => {
-      if (!headerRef.current) return;
-      if (isSearching) {
-        if (lastState !== "scrolled") {
-          headerRef.current.style.setProperty("--header-shadow-opacity", "1");
-          lastState = "scrolled";
-        }
-        return;
-      }
-      const isScrolled = top > 25;
-      const nextState = isScrolled ? "scrolled" : "top";
-      if (nextState !== lastState) {
-        lastState = nextState;
-        headerRef.current.style.setProperty("--header-shadow-opacity", isScrolled ? "1" : "0");
-      }
-    };
-
-    const handleScroll = () => {
-      if (rafId !== null) return;
-      rafId = requestAnimationFrame(() => {
-        rafId = null;
-        const top = rootEl ? rootEl.scrollTop : window.scrollY;
-        updateHeader(top);
-      });
-    };
-
-    if (rootEl) {
-      rootEl.addEventListener("scroll", handleScroll, { passive: true });
-    }
-    window.addEventListener("scroll", handleScroll, { passive: true });
-
-    // Initial sync
-    const initialTop = rootEl ? rootEl.scrollTop : window.scrollY;
-    updateHeader(initialTop);
-
-    return () => {
-      if (rafId !== null) cancelAnimationFrame(rafId);
-      if (rootEl) {
-        rootEl.removeEventListener("scroll", handleScroll);
-      }
-      window.removeEventListener("scroll", handleScroll);
-    };
-  }, [isSearching]);
 
   const handleClearSearch = useCallback(() => {
     setSearchQuery("");
@@ -208,7 +157,6 @@ export default function HomeRoute() {
   return (
     <div className={styles.container}>
       <PageHeader
-        ref={headerRef}
         onBack={handleBack}
         backTitle={isSearching ? t("home", "Home") : t("servers", "Servers")}
         title={activeServer.serverName || "Emby"}
@@ -216,6 +164,8 @@ export default function HomeRoute() {
         onRefresh={handleRefresh}
         isRefreshing={isRefreshing}
         hideSearch
+        shadowOnScroll
+        forceShadow={isSearching}
         centerSection={
           <div className={styles.searchBar} onClick={() => searchInputRef.current?.focus()}>
             <IconSearch size={15} className={styles.searchIcon} aria-hidden="true" />

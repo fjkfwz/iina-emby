@@ -1,4 +1,4 @@
-import { type EmbyItemMetadata, type EmbyServer, getItemImageUrl } from "@shared";
+import { type EmbyItemMetadata, type EmbyServer, getItemImageUrl, isNativeLazyLoadingSupported } from "@shared";
 import { IconChevronLeft, IconChevronRight } from "@tabler/icons-react";
 import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
@@ -109,7 +109,7 @@ export const HomeHero = memo(function HomeHero({ server }: HomeHeroProps) {
               src={getBackdropUrl(item)}
               alt=""
               className={styles.backdropImg}
-              loading={idx === 0 ? "eager" : "lazy"}
+              loading={idx === 0 ? "eager" : isNativeLazyLoadingSupported() ? "lazy" : undefined}
               decoding="async"
               onError={(e) => {
                 (e.currentTarget as HTMLElement).style.display = "none";

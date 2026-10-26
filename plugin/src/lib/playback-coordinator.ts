@@ -82,6 +82,9 @@ export function createPlaybackCoordinator({
     const streamUrl = message.streamUrl;
     if (streamUrl) {
       const match = (String(streamUrl).match(/\/(?:Items|Videos|Audio)\/([^/?]+)/) || [])[1];
+      if (match && currentPlaybackItemId && match !== currentPlaybackItemId) {
+        clearPendingTracks();
+      }
       if (match) {
         currentPlaybackItemId = match;
       }

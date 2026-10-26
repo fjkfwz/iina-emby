@@ -42,7 +42,8 @@
   display: none;
 }
 
-.transparent {
+.transparent,
+.shadowOnScroll {
   --header-shadow-opacity: 0;
 }
 
