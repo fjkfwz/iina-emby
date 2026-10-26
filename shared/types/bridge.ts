@@ -30,6 +30,7 @@ export interface PlayMediaPayload {
   subtitleCodec?: string;
   mediaSourceId?: string;
   subtitleDeliveryUrl?: string;
+  subtitleTitle?: string;
   [key: string]: unknown;
 }
 

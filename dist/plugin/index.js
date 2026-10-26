@@ -732,7 +732,7 @@ function createMediaActionsManager({
     if (codec?.toLowerCase().includes("vtt")) return "vtt";
     return "srt";
   }
-  async function downloadExternalSubtitle2(serverBase, itemId, mediaSourceId, streamIndex, subtitlePath, apiKey, language, codec, deliveryUrl) {
+  async function downloadExternalSubtitle2(serverBase, itemId, mediaSourceId, streamIndex, subtitlePath, apiKey, language, codec, deliveryUrl, subtitleTitle) {
     try {
       const extension = subtitleExtensionForCodec(codec);
       let subtitleUrl;
@@ -759,18 +759,36 @@ function createMediaActionsManager({
         const cleanBase = serverBase.replace(/\/+$/, "");
         subtitleUrl = `${cleanBase}/Videos/${encodeURIComponent(itemId)}/${encodeURIComponent(effectiveMediaSourceId || itemId)}/Subtitles/${streamIndex}/Stream.${extension}?api_key=${encodeURIComponent(apiKey)}`;
       }
-      const sanitizedItemId = String(itemId).replace(/[^a-zA-Z0-9_-]/g, "_");
-      let suffix;
-      if (subtitlePath) {
-        const pathParts = subtitlePath.split(/[/\\]/);
-        suffix = pathParts[pathParts.length - 1].replace(/[^a-zA-Z0-9._-]/g, "_");
-      } else {
-        const sanitizedLanguage = String(language).replace(/[^a-zA-Z0-9_-]/g, "_");
-        suffix = `${sanitizedLanguage}.${extension}`;
+      let trackLabel = (subtitleTitle || "").trim();
+      if (!trackLabel) {
+        if (language && language !== "und" && language !== "unknown") {
+          trackLabel = language.toUpperCase();
+        } else {
+          trackLabel = "\u5B57\u5E55";
+        }
       }
-      const fileName = `emby_${sanitizedItemId}_${streamIndex}_${suffix}`;
-      log(`Using filename: ${fileName}`);
-      const localPath = `@tmp/${fileName}`;
+      const lower = trackLabel.toLowerCase();
+      if (lower === "chi" || lower === "zho" || lower === "zh" || lower === "zh-cn") {
+        trackLabel = "\u7B80\u4F53\u4E2D\u6587";
+      } else if (lower === "zh-tw" || lower === "zh-hk") {
+        trackLabel = "\u7E41\u4F53\u4E2D\u6587";
+      } else if (lower === "eng" || lower === "en") {
+        trackLabel = "\u82F1\u8BED";
+      } else if (lower === "jpn" || lower === "ja") {
+        trackLabel = "\u65E5\u8BED";
+      } else if (lower === "kor" || lower === "ko") {
+        trackLabel = "\u97E9\u8BED";
+      }
+      trackLabel = trackLabel.replace(new RegExp(`\\.${extension}$`, "i"), "").trim();
+      if (!trackLabel.startsWith("[\u5916\u6302]")) {
+        trackLabel = `[\u5916\u6302] ${trackLabel}`;
+      }
+      const safeTitle = trackLabel.replace(/[/\\:*?"<>|\x00-\x1f]/g, "_").trim() || `[\u5916\u6302] \u5B57\u5E55`;
+      const fileName = `${safeTitle}.${extension}`;
+      const sanitizedItemId = String(itemId).replace(/[^a-zA-Z0-9_-]/g, "_");
+      const safeStreamIndex = typeof streamIndex === "number" ? streamIndex : 0;
+      const localPath = `@tmp/emby_${sanitizedItemId}_${safeStreamIndex}/${fileName}`;
+      log(`Using filename: ${fileName}, localPath: ${localPath}`);
       log(`Downloading external subtitle: ${subtitleUrl} to ${localPath}`);
       log(`External subtitle path: ${subtitlePath}`);
       log(`Stream index: ${streamIndex}`);
@@ -857,6 +875,7 @@ function createMediaActionsManager({
         }
         log(`Processing external subtitle: ${language} (${codec}) - Index: ${stream.Index}`);
         try {
+          const streamTitle = stream.DisplayTitle || stream.Title || stream.DisplayLanguage || stream.Language;
           const downloaded = await downloadExternalSubtitle2(
             serverBase,
             itemId,
@@ -866,7 +885,8 @@ function createMediaActionsManager({
             apiKey,
             language,
             codec,
-            stream.DeliveryUrl
+            stream.DeliveryUrl,
+            streamTitle || null
           );
           if (downloaded) {
             downloadedCount++;
@@ -1054,6 +1074,7 @@ function createPlaybackCoordinator({
   let currentPlaybackSubtitleCodec = null;
   let currentPlaybackMediaSourceId = null;
   let currentPlaybackSubtitleDeliveryUrl = null;
+  let currentPlaybackSubtitleTitle = null;
   function setPendingPlaybackData2(message) {
     if (!message) return;
     if (message.title) {
@@ -1103,6 +1124,9 @@ function createPlaybackCoordinator({
     }
     if (typeof message.subtitleDeliveryUrl === "string") {
       currentPlaybackSubtitleDeliveryUrl = message.subtitleDeliveryUrl;
+    }
+    if (typeof message.subtitleTitle === "string") {
+      currentPlaybackSubtitleTitle = message.subtitleTitle;
     }
   }
   function isItemMatching(targetItemId) {
@@ -1176,6 +1200,11 @@ function createPlaybackCoordinator({
     if (!isItemMatching(itemId)) return null;
     return currentPlaybackSubtitleDeliveryUrl;
   }
+  function getPendingSubtitleTitle2(itemId) {
+    if (!currentPlaybackSubtitleTitle) return null;
+    if (!isItemMatching(itemId)) return null;
+    return currentPlaybackSubtitleTitle;
+  }
   function clearPendingSubtitle2(itemId) {
     if (!isItemMatching(itemId)) return;
     currentPlaybackSubtitleIndex = null;
@@ -1186,6 +1215,7 @@ function createPlaybackCoordinator({
     currentPlaybackSubtitleCodec = null;
     currentPlaybackMediaSourceId = null;
     currentPlaybackSubtitleDeliveryUrl = null;
+    currentPlaybackSubtitleTitle = null;
   }
   function clearPendingAudio2(itemId) {
     if (!isItemMatching(itemId)) return;
@@ -1435,6 +1465,7 @@ ${item.streamUrl}
     getPendingSubtitleCodec: getPendingSubtitleCodec2,
     getPendingMediaSourceId: getPendingMediaSourceId2,
     getPendingSubtitleDeliveryUrl: getPendingSubtitleDeliveryUrl2,
+    getPendingSubtitleTitle: getPendingSubtitleTitle2,
     clearPendingSubtitle: clearPendingSubtitle2,
     clearPendingAudio: clearPendingAudio2,
     clearPendingTracks: clearPendingTracks2
@@ -2307,6 +2338,7 @@ var {
   getPendingSubtitleCodec,
   getPendingMediaSourceId,
   getPendingSubtitleDeliveryUrl,
+  getPendingSubtitleTitle,
   clearPendingSubtitle,
   clearPendingAudio,
   clearPendingTracks,
@@ -2530,6 +2562,7 @@ async function applySelectedSubtitleTrack(serverBase, itemId, apiKey) {
     debugLog(`Selected subtitle is external (Index: ${pendingSubtitle}, MediaSourceId: ${mediaSourceId || "none"}). Downloading and loading...`);
     try {
       isDownloadingExternalSubtitle = true;
+      const subtitleTitle = getPendingSubtitleTitle(itemId);
       const loaded = await downloadExternalSubtitle(
         serverBase,
         itemId,
@@ -2539,7 +2572,8 @@ async function applySelectedSubtitleTrack(serverBase, itemId, apiKey) {
         apiKey,
         pendingSubLang || "und",
         subCodec || "srt",
-        deliveryUrl || null
+        deliveryUrl || null,
+        subtitleTitle || null
       );
       if (loaded) {
         debugLog("External subtitle loaded successfully");

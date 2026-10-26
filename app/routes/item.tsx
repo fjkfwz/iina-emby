@@ -145,6 +145,7 @@ export default function ItemDetailRoute() {
         subtitleCodec: selectedSubtitleStream?.Codec,
         mediaSourceId,
         subtitleDeliveryUrl: selectedSubtitleStream?.DeliveryUrl,
+        subtitleTitle: selectedSubtitleStream?.DisplayTitle || selectedSubtitleStream?.Title || selectedSubtitleStream?.DisplayLanguage,
       });
     } finally {
       setIsPlaying(false);
@@ -164,6 +165,7 @@ export default function ItemDetailRoute() {
     let epSubPath = selectedSubtitleStream?.Path;
     let epSubCodec = selectedSubtitleStream?.Codec;
     let epSubDeliveryUrl = selectedSubtitleStream?.DeliveryUrl;
+    let epSubTitle = selectedSubtitleStream?.DisplayTitle || selectedSubtitleStream?.Title || selectedSubtitleStream?.DisplayLanguage;
     const epMediaSourceId = ep.MediaSources?.[0]?.Id || (playTarget || item)?.MediaSources?.[0]?.Id;
 
     const isCurrentPlayTarget = Boolean(playTarget?.Id && String(ep.Id) === String(playTarget.Id));
@@ -210,6 +212,7 @@ export default function ItemDetailRoute() {
           epSubPath = match.Path;
           epSubCodec = match.Codec;
           epSubDeliveryUrl = match.DeliveryUrl;
+          epSubTitle = match.DisplayTitle || match.Title || match.DisplayLanguage || epSubTitle;
         }
       }
     }
@@ -229,6 +232,7 @@ export default function ItemDetailRoute() {
       subtitleCodec: epSubCodec,
       mediaSourceId: epMediaSourceId,
       subtitleDeliveryUrl: epSubDeliveryUrl,
+      subtitleTitle: epSubTitle,
     });
   };
 

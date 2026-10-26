@@ -141,7 +141,6 @@ export function MediaShelf({ title, rightSection, children, itemWidth = 260, gap
         <div
           ref={scrollRef}
           className={classes.scroller}
-          style={{ "--shelf-gap": `${gap}px` } as React.CSSProperties}
           onScroll={checkScroll}
         >
           {validChildren.map((child, index) => (
@@ -150,6 +149,7 @@ export function MediaShelf({ title, rightSection, children, itemWidth = 260, gap
               className={classes.itemWrapper}
               style={{
                 width: itemWidth,
+                marginRight: index < childCount - 1 ? `${gap}px` : undefined,
               }}
             >
               {child}

@@ -89,6 +89,7 @@ describe("playback-coordinator", () => {
       subtitleLanguage: "zh",
       mediaSourceId: "ms-source-123",
       subtitleDeliveryUrl: "/play/subtitle/sub-token-xyz",
+      subtitleTitle: "简中 (默认)",
     });
 
     expect(coordinator.getPendingIsExternalSubtitle("item-789")).toBe(true);
@@ -97,6 +98,7 @@ describe("playback-coordinator", () => {
     expect(coordinator.getPendingSubtitleLanguage("item-789")).toBe("zh");
     expect(coordinator.getPendingMediaSourceId("item-789")).toBe("ms-source-123");
     expect(coordinator.getPendingSubtitleDeliveryUrl("item-789")).toBe("/play/subtitle/sub-token-xyz");
+    expect(coordinator.getPendingSubtitleTitle("item-789")).toBe("简中 (默认)");
   });
 
   it("handles playMedia storing track metadata before opening", () => {

@@ -105,6 +105,7 @@ const {
   getPendingSubtitleCodec,
   getPendingMediaSourceId,
   getPendingSubtitleDeliveryUrl,
+  getPendingSubtitleTitle,
   clearPendingSubtitle,
   clearPendingAudio,
   clearPendingTracks,
@@ -374,6 +375,7 @@ async function applySelectedSubtitleTrack(
     debugLog(`Selected subtitle is external (Index: ${pendingSubtitle}, MediaSourceId: ${mediaSourceId || "none"}). Downloading and loading...`);
     try {
       isDownloadingExternalSubtitle = true;
+      const subtitleTitle = getPendingSubtitleTitle(itemId);
       const loaded = await downloadExternalSubtitle(
         serverBase,
         itemId,
@@ -384,6 +386,7 @@ async function applySelectedSubtitleTrack(
         pendingSubLang || "und",
         subCodec || "srt",
         deliveryUrl || null,
+        subtitleTitle || null,
       );
       if (loaded) {
         debugLog("External subtitle loaded successfully");

@@ -62,7 +62,6 @@
   display: flex;
   overflow-x: auto;
   overflow-y: hidden;
-  gap: var(--shelf-gap, 16px);
   -webkit-overflow-scrolling: touch;
   touch-action: pan-x pan-y;
   contain: layout;

@@ -72,6 +72,7 @@ export function createPlaybackCoordinator({
   let currentPlaybackSubtitleCodec: string | null = null;
   let currentPlaybackMediaSourceId: string | null = null;
   let currentPlaybackSubtitleDeliveryUrl: string | null = null;
+  let currentPlaybackSubtitleTitle: string | null = null;
 
   function setPendingPlaybackData(message?: PlayMediaMessage): void {
     if (!message) return;
@@ -125,6 +126,9 @@ export function createPlaybackCoordinator({
     }
     if (typeof message.subtitleDeliveryUrl === "string") {
       currentPlaybackSubtitleDeliveryUrl = message.subtitleDeliveryUrl;
+    }
+    if (typeof message.subtitleTitle === "string") {
+      currentPlaybackSubtitleTitle = message.subtitleTitle;
     }
   }
 
@@ -213,6 +217,12 @@ export function createPlaybackCoordinator({
     return currentPlaybackSubtitleDeliveryUrl;
   }
 
+  function getPendingSubtitleTitle(itemId?: string): string | null {
+    if (!currentPlaybackSubtitleTitle) return null;
+    if (!isItemMatching(itemId)) return null;
+    return currentPlaybackSubtitleTitle;
+  }
+
   function clearPendingSubtitle(itemId?: string): void {
     if (!isItemMatching(itemId)) return;
     currentPlaybackSubtitleIndex = null;
@@ -223,6 +233,7 @@ export function createPlaybackCoordinator({
     currentPlaybackSubtitleCodec = null;
     currentPlaybackMediaSourceId = null;
     currentPlaybackSubtitleDeliveryUrl = null;
+    currentPlaybackSubtitleTitle = null;
   }
 
   function clearPendingAudio(itemId?: string): void {
@@ -555,6 +566,7 @@ export function createPlaybackCoordinator({
     getPendingSubtitleCodec,
     getPendingMediaSourceId,
     getPendingSubtitleDeliveryUrl,
+    getPendingSubtitleTitle,
     clearPendingSubtitle,
     clearPendingAudio,
     clearPendingTracks,
