@@ -2,14 +2,16 @@ import type React from "react";
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
 
 export type LanguageCode = "zh-CN" | "zh-TW" | "en" | "es" | "ja" | "ko";
+export type LanguageSetting = "auto" | LanguageCode;
 
 export interface LanguageOption {
-  code: LanguageCode;
+  code: LanguageSetting;
   label: string;
   nativeLabel: string;
 }
 
 export const SUPPORTED_LANGUAGES: LanguageOption[] = [
+  { code: "auto", label: "Follow System (Auto)", nativeLabel: "跟随系统 (Auto)" },
   { code: "zh-CN", label: "Simplified Chinese", nativeLabel: "简体中文" },
   { code: "zh-TW", label: "Traditional Chinese", nativeLabel: "繁體中文" },
   { code: "en", label: "English", nativeLabel: "English" },
@@ -40,6 +42,27 @@ export const translations: Record<LanguageCode, Record<string, string>> = {
     confirm: "确认",
     enabled: "已启用",
     disabled: "已禁用",
+    unknown: "未知",
+    more: "更多",
+    viewAll: "查看全部",
+    moreActions: "更多操作",
+    identify: "识别",
+    titleField: "标题",
+    yearField: "年份",
+    replaceAllImages: "替换现有海报与图片",
+    apply: "应用",
+    searching: "正在搜索...",
+    searchingMetadata: "正在搜索元数据...",
+    searchMetadataHint: "在上方输入信息搜索并匹配此媒体的元数据",
+    noIdentifyResults: "未找到结果，请尝试调整标题、年份或 ID。",
+    noInProgress: "暂无播放中的视频",
+    markPlayed: "标记为已播放",
+    markUnplayed: "标记为未播放",
+    errorLoadingItems: "加载内容失败",
+    searchPlaceholder: "搜索电影、剧集、视频...",
+    searchEmptyDesc: "请检查拼写或尝试搜索其他关键词。",
+    noResultsMatchFilters: "没有符合当前筛选条件的结果",
+    filteredFrom: "筛选自",
 
     // Home Modules
     heroBanner: "精选焦点大图",
@@ -52,8 +75,10 @@ export const translations: Record<LanguageCode, Record<string, string>> = {
     season: "季",
     episode: "集",
     episodes: "剧集",
+    movie: "电影",
+    series: "剧集",
 
-    // Detail Page
+    // Detail Page & Media Specs
     audio: "音频",
     subtitle: "字幕",
     subtitlesOff: "关 (关闭字幕)",
@@ -66,12 +91,49 @@ export const translations: Record<LanguageCode, Record<string, string>> = {
     videoStream: "视频流",
     audioStream: "音频流",
     subtitleStream: "字幕流",
+    director: "导演",
+    actor: "演员",
+    writer: "编剧",
+    default: "默认",
+    external: "外挂",
+    embedded: "内置",
+    effects: "特效",
+    resolution: "分辨率",
+    videoCodec: "视频编码",
+    colorSpace: "色彩动态范围",
+    frameRate: "帧率",
+    bitrate: "视频码率",
+    channels: "声道",
+    fileFormat: "封装格式",
+    fileSize: "文件体积",
+    totalBitrate: "总码率",
+    protocol: "传输协议",
+    favorite: "收藏",
+    favorited: "已收藏",
+    addToFavorites: "加入收藏",
+    removeFromFavorites: "移出收藏",
+    noEpisodesAvailable: "当前季暂无可用剧集",
+    noOverviewAvailable: "暂无剧集简介",
+    syncingWithServer: "正在与服务器同步",
+    syncing: "同步中",
+    all: "全部",
+    movies: "电影",
+    allGenres: "全部分类",
+    allYears: "全部年份",
+    reset: "重置",
+    resetFilters: "重置筛选",
+    type: "类型",
+    genre: "分类",
+    year: "年份",
+    format: "格式",
 
     // Settings
     settingsTitle: "设置",
     generalSection: "常规与界面",
     interfaceLanguage: "界面语言",
     interfaceLanguageDesc: "切换应用显示语言，无需重启立即生效",
+    followSystem: "跟随系统",
+    followSystemDesc: "自动匹配 macOS 系统语言设置",
     homeModulesSection: "首页模块设置",
     homeModulesDesc: "自由定制首页显示的内容模块",
     moduleHero: "精选推荐大图 (Hero)",
@@ -112,6 +174,71 @@ export const translations: Record<LanguageCode, Record<string, string>> = {
     addServer: "添加新服务器",
     versionInfo: "版本信息",
     appVersion: "插件版本",
+    unplayed: "未播放",
+    inProgress: "播放中",
+    played: "已播放",
+    sortName: "名称",
+    sortDateAdded: "添加时间",
+    sortReleaseYear: "上映年份",
+    sortRating: "评分",
+    searchByTitle: "按标题搜索...",
+    sortAscending: "升序",
+    sortDescending: "降序",
+    serverInformation: "服务器信息",
+    serverName: "服务器名称",
+    version: "版本",
+    updateAvailable: "有可用更新",
+    upToDate: "已是最新版本",
+    operatingSystem: "操作系统",
+    dataPath: "数据路径",
+    transcodingPath: "转码路径",
+    networkConnectivity: "网络与连接",
+    connectedUrl: "连接地址",
+    localAddress: "局域网地址",
+    wanAddress: "公网地址",
+    webSocketPort: "WebSocket 端口",
+    userAccountAndPrivileges: "用户账户与权限",
+    username: "用户名",
+    password: "密码",
+    adminRole: "管理员",
+    userRole: "普通用户",
+    administrativeRole: "管理角色",
+    fullAdministrator: "完整管理员",
+    standardUser: "普通用户",
+    mediaPermissions: "媒体权限",
+    fullManageAccess: "完全管理与删除权限",
+    allowDeleteMedia: "允许删除媒体",
+    downloadAndPlayback: "下载与播放",
+    playbackOnly: "仅播放",
+    transcoding: "转码支持",
+    directPlayOnly: "仅直接播放",
+    accountCreated: "创建时间",
+    lastActivity: "最后活动",
+    userPreferences: "用户偏好设置",
+    subtitleMode: "字幕模式",
+    introSkipMode: "片头跳过模式",
+    resumeRewind: "续播倒退",
+    refreshing: "正在刷新...",
+    failedToLoadServerInfo: "加载服务器信息失败",
+    editServer: "编辑 Emby 服务器",
+    connectToEmby: "连接到 Emby",
+    serverAddress: "服务器地址",
+    connecting: "正在连接...",
+    saving: "正在保存...",
+    saveChanges: "保存修改",
+    connect: "连接",
+    connectionError: "连接错误",
+    serverUrlAndUsernameRequired: "请输入服务器地址和用户名",
+    savedServers: "已保存的服务器",
+    activeServer: "当前服务器",
+    editServerTooltip: "编辑服务器",
+    removeServerTooltip: "移除服务器",
+    addAnotherServer: "添加其他服务器...",
+    removeServer: "移除服务器",
+    removeServerConfirm: "确定要移除服务器「{name}」吗？移除后需要重新登录。",
+    remove: "移除",
+    renderingError: "渲染遇到错误",
+    backToHome: "返回首页",
   },
 
   "zh-TW": {
@@ -133,6 +260,27 @@ export const translations: Record<LanguageCode, Record<string, string>> = {
     confirm: "確認",
     enabled: "已啟用",
     disabled: "已停用",
+    unknown: "未知",
+    more: "更多",
+    viewAll: "查看全部",
+    moreActions: "更多操作",
+    identify: "識別",
+    titleField: "標題",
+    yearField: "年份",
+    replaceAllImages: "替換現有海報與圖片",
+    apply: "套用",
+    searching: "正在搜尋...",
+    searchingMetadata: "正在搜尋元數據...",
+    searchMetadataHint: "在上方輸入資訊搜尋並匹配此媒體的元數據",
+    noIdentifyResults: "未找到結果，請嘗試調整標題、年份或 ID。",
+    noInProgress: "暫無播放中的影片",
+    markPlayed: "標記為已播放",
+    markUnplayed: "標記為未播放",
+    errorLoadingItems: "載入內容失敗",
+    searchPlaceholder: "搜尋電影、影集、影片...",
+    searchEmptyDesc: "請檢查拼字或嘗試搜尋其他關鍵字。",
+    noResultsMatchFilters: "沒有符合當前篩選條件的結果",
+    filteredFrom: "篩選自",
 
     // Home Modules
     heroBanner: "精選推薦大圖",
@@ -145,8 +293,10 @@ export const translations: Record<LanguageCode, Record<string, string>> = {
     season: "季",
     episode: "集",
     episodes: "劇集",
+    movie: "電影",
+    series: "影集",
 
-    // Detail Page
+    // Detail Page & Media Specs
     audio: "音訊",
     subtitle: "字幕",
     subtitlesOff: "關 (關閉字幕)",
@@ -159,12 +309,49 @@ export const translations: Record<LanguageCode, Record<string, string>> = {
     videoStream: "視訊軌",
     audioStream: "音訊軌",
     subtitleStream: "字幕軌",
+    director: "導演",
+    actor: "演員",
+    writer: "編劇",
+    default: "預設",
+    external: "外掛",
+    embedded: "內建",
+    effects: "特效",
+    resolution: "解析度",
+    videoCodec: "視訊編碼",
+    colorSpace: "色彩動態範圍",
+    frameRate: "影格率",
+    bitrate: "視訊位元速率",
+    channels: "聲道",
+    fileFormat: "封裝格式",
+    fileSize: "檔案大小",
+    totalBitrate: "總位元速率",
+    protocol: "傳輸協議",
+    favorite: "最愛",
+    favorited: "已加入最愛",
+    addToFavorites: "加入最愛",
+    removeFromFavorites: "移出最愛",
+    noEpisodesAvailable: "當前季暫無可用劇集",
+    noOverviewAvailable: "暫無劇集簡介",
+    syncingWithServer: "正在與伺服器同步",
+    syncing: "同步中",
+    all: "全部",
+    movies: "電影",
+    allGenres: "全部分類",
+    allYears: "全部年份",
+    reset: "重設",
+    resetFilters: "重設篩選",
+    type: "類型",
+    genre: "分類",
+    year: "年份",
+    format: "格式",
 
     // Settings
     settingsTitle: "設定",
     generalSection: "一般與介面",
     interfaceLanguage: "介面語言",
     interfaceLanguageDesc: "切換應用程式顯示語言，即時生效無需重啟",
+    followSystem: "跟隨系統",
+    followSystemDesc: "自動符合 macOS 系統語言設定",
     homeModulesSection: "首頁模組設定",
     homeModulesDesc: "自訂首頁顯示的內容區塊",
     moduleHero: "精選推薦大圖 (Hero)",
@@ -205,6 +392,71 @@ export const translations: Record<LanguageCode, Record<string, string>> = {
     addServer: "新增伺服器",
     versionInfo: "版本資訊",
     appVersion: "外掛版本",
+    unplayed: "未播放",
+    inProgress: "播放中",
+    played: "已播放",
+    sortName: "名稱",
+    sortDateAdded: "新增時間",
+    sortReleaseYear: "上映年份",
+    sortRating: "評分",
+    searchByTitle: "按標題搜尋...",
+    sortAscending: "升序",
+    sortDescending: "降序",
+    serverInformation: "伺服器資訊",
+    serverName: "伺服器名稱",
+    version: "版本",
+    updateAvailable: "有可用更新",
+    upToDate: "已是最新版本",
+    operatingSystem: "作業系統",
+    dataPath: "資料路徑",
+    transcodingPath: "轉碼路徑",
+    networkConnectivity: "網路與連線",
+    connectedUrl: "連線位址",
+    localAddress: "區域網路位址",
+    wanAddress: "外網位址",
+    webSocketPort: "WebSocket 連接埠",
+    userAccountAndPrivileges: "使用者帳號與權限",
+    username: "使用者名稱",
+    password: "密碼",
+    adminRole: "管理員",
+    userRole: "一般使用者",
+    administrativeRole: "管理角色",
+    fullAdministrator: "完整管理員",
+    standardUser: "一般使用者",
+    mediaPermissions: "媒體權限",
+    fullManageAccess: "完整管理與刪除權限",
+    allowDeleteMedia: "允許刪除媒體",
+    downloadAndPlayback: "下載與播放",
+    playbackOnly: "僅播放",
+    transcoding: "轉碼支援",
+    directPlayOnly: "僅直接播放",
+    accountCreated: "建立時間",
+    lastActivity: "最後活動",
+    userPreferences: "使用者偏好設定",
+    subtitleMode: "字幕模式",
+    introSkipMode: "片頭略過模式",
+    resumeRewind: "續播倒退",
+    refreshing: "正在重新整理...",
+    failedToLoadServerInfo: "載入伺服器資訊失敗",
+    editServer: "編輯 Emby 伺服器",
+    connectToEmby: "連線至 Emby",
+    serverAddress: "伺服器位址",
+    connecting: "正在連線...",
+    saving: "正在儲存...",
+    saveChanges: "儲存變更",
+    connect: "連線",
+    connectionError: "連線錯誤",
+    serverUrlAndUsernameRequired: "請輸入伺服器位址和使用者名稱",
+    savedServers: "已儲存的伺服器",
+    activeServer: "目前伺服器",
+    editServerTooltip: "編輯伺服器",
+    removeServerTooltip: "移除伺服器",
+    addAnotherServer: "新增其他伺服器...",
+    removeServer: "移除伺服器",
+    removeServerConfirm: "確定要移除伺服器「{name}」嗎？移除後需要重新登入。",
+    remove: "移除",
+    renderingError: "渲染遇到錯誤",
+    backToHome: "返回首頁",
   },
 
   en: {
@@ -226,6 +478,27 @@ export const translations: Record<LanguageCode, Record<string, string>> = {
     confirm: "Confirm",
     enabled: "Enabled",
     disabled: "Disabled",
+    unknown: "Unknown",
+    more: "More",
+    viewAll: "View all",
+    moreActions: "More actions",
+    identify: "Identify",
+    titleField: "Title",
+    yearField: "Year",
+    replaceAllImages: "Replace existing images",
+    apply: "Apply",
+    searching: "Searching...",
+    searchingMetadata: "Searching metadata...",
+    searchMetadataHint: "Search above to find and match metadata for this item",
+    noIdentifyResults: "No results found. Try adjusting title, year, or provider IDs.",
+    noInProgress: "No in-progress movies or episodes right now.",
+    markPlayed: "Mark as played",
+    markUnplayed: "Mark as unplayed",
+    errorLoadingItems: "Error loading items",
+    searchPlaceholder: "Search movies, TV series, episodes...",
+    searchEmptyDesc: "Try checking your spelling or searching for another title.",
+    noResultsMatchFilters: "No results match your active filters",
+    filteredFrom: "filtered from",
 
     // Home Modules
     heroBanner: "Hero Banner",
@@ -238,8 +511,10 @@ export const translations: Record<LanguageCode, Record<string, string>> = {
     season: "Season",
     episode: "Episode",
     episodes: "Episodes",
+    movie: "Movie",
+    series: "TV Series",
 
-    // Detail Page
+    // Detail Page & Media Specs
     audio: "Audio",
     subtitle: "Subtitle",
     subtitlesOff: "Off (Disable Subtitles)",
@@ -252,12 +527,49 @@ export const translations: Record<LanguageCode, Record<string, string>> = {
     videoStream: "Video Stream",
     audioStream: "Audio Stream",
     subtitleStream: "Subtitle Stream",
+    director: "Director",
+    actor: "Actor",
+    writer: "Writer",
+    default: "Default",
+    external: "External",
+    embedded: "Embedded",
+    effects: "Effects",
+    resolution: "Resolution",
+    videoCodec: "Video Codec",
+    colorSpace: "Color Space",
+    frameRate: "Frame Rate",
+    bitrate: "Bitrate",
+    channels: "Channels",
+    fileFormat: "Container",
+    fileSize: "File Size",
+    totalBitrate: "Total Bitrate",
+    protocol: "Protocol",
+    favorite: "Favorite",
+    favorited: "Favorited",
+    addToFavorites: "Add to Favorites",
+    removeFromFavorites: "Remove from Favorites",
+    noEpisodesAvailable: "No episodes available for this season.",
+    noOverviewAvailable: "No overview available for this episode.",
+    syncingWithServer: "Syncing with server",
+    syncing: "Syncing",
+    all: "All",
+    movies: "Movies",
+    allGenres: "All Genres",
+    allYears: "All Years",
+    reset: "Reset",
+    resetFilters: "Reset Filters",
+    type: "Type",
+    genre: "Genre",
+    year: "Year",
+    format: "Format",
 
     // Settings
     settingsTitle: "Settings",
     generalSection: "General & Interface",
     interfaceLanguage: "Interface Language",
     interfaceLanguageDesc: "Change application language with instant live update",
+    followSystem: "Follow System",
+    followSystemDesc: "Automatically match macOS system language settings",
     homeModulesSection: "Home Page Modules",
     homeModulesDesc: "Customize which sections appear on your home screen",
     moduleHero: "Featured Hero Banner",
@@ -282,7 +594,7 @@ export const translations: Record<LanguageCode, Record<string, string>> = {
     reopenBrowserOnEnd: "Reopen browser on playback finish",
     reopenBrowserOnEndDesc: "Bring back the Emby browser window when video finishes or closes",
     autoplayNextEpisode: "Autoplay next episode",
-    autoplayNextEpisodeDesc: "Automatically buffer and start the next episode when current one ends",
+    autoplayNextEpisodeDesc: "Automatically buffer and start the next episode when current ends",
     autoDownloadSubtitles: "Auto-download external subtitles",
     autoDownloadSubtitlesDesc: "Automatically fetch and load external subtitle streams",
     debugLogging: "Verbose debug logging",
@@ -298,6 +610,71 @@ export const translations: Record<LanguageCode, Record<string, string>> = {
     addServer: "Add New Server",
     versionInfo: "About & Version",
     appVersion: "Plugin Version",
+    unplayed: "Unplayed",
+    inProgress: "In Progress",
+    played: "Played",
+    sortName: "Name",
+    sortDateAdded: "Date Added",
+    sortReleaseYear: "Release Year",
+    sortRating: "Rating",
+    searchByTitle: "Search by title...",
+    sortAscending: "Sort Ascending",
+    sortDescending: "Sort Descending",
+    serverInformation: "Server Information",
+    serverName: "Server Name",
+    version: "Version",
+    updateAvailable: "Update available",
+    upToDate: "Up to date",
+    operatingSystem: "Operating System",
+    dataPath: "Data Path",
+    transcodingPath: "Transcoding Path",
+    networkConnectivity: "Network & Connectivity",
+    connectedUrl: "Connected URL",
+    localAddress: "Local Address",
+    wanAddress: "WAN Address",
+    webSocketPort: "WebSocket Port",
+    userAccountAndPrivileges: "User Account & Privileges",
+    username: "Username",
+    password: "Password",
+    adminRole: "Admin",
+    userRole: "User",
+    administrativeRole: "Administrative Role",
+    fullAdministrator: "Full Administrator",
+    standardUser: "Standard User",
+    mediaPermissions: "Media Permissions",
+    fullManageAccess: "Full Manage & Delete Access",
+    allowDeleteMedia: "Allowed to Delete Media",
+    downloadAndPlayback: "Download & Playback",
+    playbackOnly: "Playback Only",
+    transcoding: "Transcoding",
+    directPlayOnly: "Direct Play Only",
+    accountCreated: "Account Created",
+    lastActivity: "Last Activity",
+    userPreferences: "Emby User Preferences",
+    subtitleMode: "Subtitle Mode",
+    introSkipMode: "Intro Skip Mode",
+    resumeRewind: "Resume Rewind",
+    refreshing: "Refreshing...",
+    failedToLoadServerInfo: "Failed to load server info",
+    editServer: "Edit Emby Server",
+    connectToEmby: "Connect to Emby",
+    serverAddress: "Server Address",
+    connecting: "Connecting...",
+    saving: "Saving...",
+    saveChanges: "Save Changes",
+    connect: "Connect",
+    connectionError: "Connection Error",
+    serverUrlAndUsernameRequired: "Server URL and username are required",
+    savedServers: "Saved Servers",
+    activeServer: "Active Server",
+    editServerTooltip: "Edit server",
+    removeServerTooltip: "Remove server",
+    addAnotherServer: "Add Another Server...",
+    removeServer: "Remove Server",
+    removeServerConfirm: "Are you sure you want to remove '{name}'? You will need to sign in again to reconnect.",
+    remove: "Remove",
+    renderingError: "Rendering Error Encountered",
+    backToHome: "Back to Home",
   },
 
   es: {
@@ -319,6 +696,27 @@ export const translations: Record<LanguageCode, Record<string, string>> = {
     confirm: "Confirmar",
     enabled: "Activado",
     disabled: "Desactivado",
+    unknown: "Desconocido",
+    more: "Más",
+    viewAll: "Ver todo",
+    moreActions: "Más acciones",
+    identify: "Identificar",
+    titleField: "Título",
+    yearField: "Año",
+    replaceAllImages: "Reemplazar imágenes existentes",
+    apply: "Aplicar",
+    searching: "Buscando...",
+    searchingMetadata: "Buscando metadatos...",
+    searchMetadataHint: "Busque arriba para encontrar metadatos de este elemento",
+    noIdentifyResults: "No se encontraron resultados. Ajuste título, año o IDs.",
+    noInProgress: "No hay contenido en reproducción en este momento.",
+    markPlayed: "Marcar como visto",
+    markUnplayed: "Marcar como no visto",
+    errorLoadingItems: "Error al cargar los elementos",
+    searchPlaceholder: "Buscar películas, series, episodios...",
+    searchEmptyDesc: "Compruebe la ortografía o intente buscar otro título.",
+    noResultsMatchFilters: "Ningún resultado coincide con los filtros activos",
+    filteredFrom: "filtrado de",
 
     // Home Modules
     heroBanner: "Banner Destacado",
@@ -331,8 +729,10 @@ export const translations: Record<LanguageCode, Record<string, string>> = {
     season: "Temporada",
     episode: "Episodio",
     episodes: "Episodios",
+    movie: "Película",
+    series: "Serie de TV",
 
-    // Detail Page
+    // Detail Page & Media Specs
     audio: "Audio",
     subtitle: "Subtítulo",
     subtitlesOff: "Desactivado",
@@ -345,12 +745,49 @@ export const translations: Record<LanguageCode, Record<string, string>> = {
     videoStream: "Pista de vídeo",
     audioStream: "Pista de audio",
     subtitleStream: "Pista de subtítulos",
+    director: "Director",
+    actor: "Actor",
+    writer: "Guionista",
+    default: "Predeterminado",
+    external: "Externo",
+    embedded: "Integrado",
+    effects: "Efectos",
+    resolution: "Resolución",
+    videoCodec: "Códec de vídeo",
+    colorSpace: "Rango dinámico de color",
+    frameRate: "Tasa de fotogramas",
+    bitrate: "Tasa de bits",
+    channels: "Canales",
+    fileFormat: "Contenedor",
+    fileSize: "Tamaño de archivo",
+    totalBitrate: "Tasa de bits total",
+    protocol: "Protocolo",
+    favorite: "Favorito",
+    favorited: "En favoritos",
+    addToFavorites: "Añadir a Favoritos",
+    removeFromFavorites: "Quitar de Favoritos",
+    noEpisodesAvailable: "No hay episodios disponibles para esta temporada.",
+    noOverviewAvailable: "No hay sinopsis disponible para este episodio.",
+    syncingWithServer: "Sincronizando con el servidor",
+    syncing: "Sincronizando",
+    all: "Todo",
+    movies: "Películas",
+    allGenres: "Todos los géneros",
+    allYears: "Todos los años",
+    reset: "Restablecer",
+    resetFilters: "Restablecer filtros",
+    type: "Tipo",
+    genre: "Género",
+    year: "Año",
+    format: "Formato",
 
     // Settings
     settingsTitle: "Ajustes",
     generalSection: "General e Interfaz",
     interfaceLanguage: "Idioma de la interfaz",
     interfaceLanguageDesc: "Cambiar el idioma visual de la aplicación al instante",
+    followSystem: "Seguir al sistema",
+    followSystemDesc: "Emparejar automáticamente con el idioma del sistema macOS",
     homeModulesSection: "Módulos de la pantalla de inicio",
     homeModulesDesc: "Personaliza las secciones visibles en tu pantalla de inicio",
     moduleHero: "Banner Destacado (Hero)",
@@ -391,6 +828,71 @@ export const translations: Record<LanguageCode, Record<string, string>> = {
     addServer: "Añadir servidor",
     versionInfo: "Acerca de y versión",
     appVersion: "Versión del plugin",
+    unplayed: "Sin reproducir",
+    inProgress: "En curso",
+    played: "Reproducido",
+    sortName: "Nombre",
+    sortDateAdded: "Fecha de adición",
+    sortReleaseYear: "Año de lanzamiento",
+    sortRating: "Calificación",
+    searchByTitle: "Buscar por título...",
+    sortAscending: "Orden ascendente",
+    sortDescending: "Orden descendente",
+    serverInformation: "Información del servidor",
+    serverName: "Nombre del servidor",
+    version: "Versión",
+    updateAvailable: "Actualización disponible",
+    upToDate: "Actualizado",
+    operatingSystem: "Sistema operativo",
+    dataPath: "Ruta de datos",
+    transcodingPath: "Ruta de transcodificación",
+    networkConnectivity: "Red y conectividad",
+    connectedUrl: "URL conectada",
+    localAddress: "Dirección local",
+    wanAddress: "Dirección WAN",
+    webSocketPort: "Puerto WebSocket",
+    userAccountAndPrivileges: "Cuenta de usuario y permisos",
+    username: "Nombre de usuario",
+    password: "Contraseña",
+    adminRole: "Administrador",
+    userRole: "Usuario",
+    administrativeRole: "Rol administrativo",
+    fullAdministrator: "Administrador total",
+    standardUser: "Usuario estándar",
+    mediaPermissions: "Permisos de medios",
+    fullManageAccess: "Acceso total de gestión y eliminación",
+    allowDeleteMedia: "Permitido eliminar medios",
+    downloadAndPlayback: "Descarga y reproducción",
+    playbackOnly: "Solo reproducción",
+    transcoding: "Transcodificación",
+    directPlayOnly: "Solo reproducción directa",
+    accountCreated: "Cuenta creada",
+    lastActivity: "Última actividad",
+    userPreferences: "Preferencias del usuario de Emby",
+    subtitleMode: "Modo de subtítulos",
+    introSkipMode: "Modo de salto de intro",
+    resumeRewind: "Rebobinado al reanudar",
+    refreshing: "Actualizando...",
+    failedToLoadServerInfo: "Error al cargar la información del servidor",
+    editServer: "Editar servidor Emby",
+    connectToEmby: "Conectar a Emby",
+    serverAddress: "Dirección del servidor",
+    connecting: "Conectando...",
+    saving: "Guardando...",
+    saveChanges: "Guardar cambios",
+    connect: "Conectar",
+    connectionError: "Error de conexión",
+    serverUrlAndUsernameRequired: "Se requiere la URL del servidor y el nombre de usuario",
+    savedServers: "Servidores guardados",
+    activeServer: "Servidor activo",
+    editServerTooltip: "Editar servidor",
+    removeServerTooltip: "Eliminar servidor",
+    addAnotherServer: "Añadir otro servidor...",
+    removeServer: "Eliminar servidor",
+    removeServerConfirm: "¿Seguro que deseas eliminar «{name}»? Deberás iniciar sesión de nuevo para reconectarte.",
+    remove: "Eliminar",
+    renderingError: "Se encontró un error de renderizado",
+    backToHome: "Volver al inicio",
   },
 
   ja: {
@@ -412,6 +914,27 @@ export const translations: Record<LanguageCode, Record<string, string>> = {
     confirm: "確認",
     enabled: "有効",
     disabled: "無効",
+    unknown: "不明",
+    more: "もっと見る",
+    viewAll: "すべて見る",
+    moreActions: "その他の操作",
+    identify: "識別",
+    titleField: "タイトル",
+    yearField: "年",
+    replaceAllImages: "既存の画像を置き換える",
+    apply: "適用",
+    searching: "検索中...",
+    searchingMetadata: "メタデータを検索中...",
+    searchMetadataHint: "上で検索してメディアのメタデータを照合します",
+    noIdentifyResults: "結果が見つかりませんでした。タイトルや年を調整してください。",
+    noInProgress: "再生中のコンテンツはありません。",
+    markPlayed: "再生済みにする",
+    markUnplayed: "未再生にする",
+    errorLoadingItems: "アイテムの読み込みに失敗しました",
+    searchPlaceholder: "映画、ドラマ、エピソードを検索...",
+    searchEmptyDesc: "スペルを確認するか、別のキーワードで検索してください。",
+    noResultsMatchFilters: "フィルター条件に一致する結果がありません",
+    filteredFrom: "絞り込み元",
 
     // Home Modules
     heroBanner: "おすすめヒーローバナー",
@@ -424,8 +947,10 @@ export const translations: Record<LanguageCode, Record<string, string>> = {
     season: "シーズン",
     episode: "エピソード",
     episodes: "エピソード一覧",
+    movie: "映画",
+    series: "テレビドラマ",
 
-    // Detail Page
+    // Detail Page & Media Specs
     audio: "音声",
     subtitle: "字幕",
     subtitlesOff: "オフ (字幕なし)",
@@ -438,12 +963,49 @@ export const translations: Record<LanguageCode, Record<string, string>> = {
     videoStream: "映像ストリーム",
     audioStream: "音声ストリーム",
     subtitleStream: "字幕ストリーム",
+    director: "監督",
+    actor: "出演",
+    writer: "脚本",
+    default: "デフォルト",
+    external: "外部",
+    embedded: "内蔵",
+    effects: "エフェクト",
+    resolution: "解像度",
+    videoCodec: "映像コーデック",
+    colorSpace: "ダイナミックレンジ",
+    frameRate: "フレームレート",
+    bitrate: "ビットレート",
+    channels: "チャンネル",
+    fileFormat: "コンテナ",
+    fileSize: "ファイルサイズ",
+    totalBitrate: "総ビットレート",
+    protocol: "プロトコル",
+    favorite: "お気に入り",
+    favorited: "お気に入り済み",
+    addToFavorites: "お気に入りに追加",
+    removeFromFavorites: "お気に入りから削除",
+    noEpisodesAvailable: "このシーズンに利用可能なエピソードはありません。",
+    noOverviewAvailable: "このエピソードのあらすじはありません。",
+    syncingWithServer: "サーバーと同期中",
+    syncing: "同期中",
+    all: "すべて",
+    movies: "映画",
+    allGenres: "すべてのジャンル",
+    allYears: "すべての年",
+    reset: "リセット",
+    resetFilters: "フィルターをリセット",
+    type: "タイプ",
+    genre: "ジャンル",
+    year: "年",
+    format: "フォーマット",
 
     // Settings
     settingsTitle: "設定",
     generalSection: "一般・インターフェース",
     interfaceLanguage: "表示言語",
     interfaceLanguageDesc: "アプリケーションの表示言語を切り替えます（即時反映）",
+    followSystem: "システムに合わせる",
+    followSystemDesc: "macOS システムの言語設定に自動で合わせます",
     homeModulesSection: "ホーム画面モジュール設定",
     homeModulesDesc: "ホーム画面に表示するモジュールをカスタマイズします",
     moduleHero: "注目の大画面バナー (Hero)",
@@ -484,6 +1046,71 @@ export const translations: Record<LanguageCode, Record<string, string>> = {
     addServer: "サーバーを追加",
     versionInfo: "バージョン情報",
     appVersion: "プラグインバージョン",
+    unplayed: "未再生",
+    inProgress: "再生中",
+    played: "再生済み",
+    sortName: "名前",
+    sortDateAdded: "追加日",
+    sortReleaseYear: "公開年",
+    sortRating: "評価",
+    searchByTitle: "タイトルで検索...",
+    sortAscending: "昇順",
+    sortDescending: "降順",
+    serverInformation: "サーバー情報",
+    serverName: "サーバー名",
+    version: "バージョン",
+    updateAvailable: "アップデートあり",
+    upToDate: "最新バージョンです",
+    operatingSystem: "オペレーティングシステム",
+    dataPath: "データパス",
+    transcodingPath: "トランスコードパス",
+    networkConnectivity: "ネットワークと接続",
+    connectedUrl: "接続URL",
+    localAddress: "ローカルアドレス",
+    wanAddress: "WANアドレス",
+    webSocketPort: "WebSocketポート",
+    userAccountAndPrivileges: "ユーザーアカウントと権限",
+    username: "ユーザー名",
+    password: "パスワード",
+    adminRole: "管理者",
+    userRole: "ユーザー",
+    administrativeRole: "管理ロール",
+    fullAdministrator: "完全管理者",
+    standardUser: "標準ユーザー",
+    mediaPermissions: "メディア権限",
+    fullManageAccess: "完全な管理および削除権限",
+    allowDeleteMedia: "メディアの削除を許可",
+    downloadAndPlayback: "ダウンロードと再生",
+    playbackOnly: "再生のみ",
+    transcoding: "トランスコーディング",
+    directPlayOnly: "ダイレクトプレイのみ",
+    accountCreated: "アカウント作成日",
+    lastActivity: "最終アクティビティ",
+    userPreferences: "Embyユーザー設定",
+    subtitleMode: "字幕モード",
+    introSkipMode: "イントロスキップモード",
+    resumeRewind: "再開時の巻き戻し",
+    refreshing: "更新中...",
+    failedToLoadServerInfo: "サーバー情報の読み込みに失敗しました",
+    editServer: "Embyサーバーを編集",
+    connectToEmby: "Embyに接続",
+    serverAddress: "サーバーアドレス",
+    connecting: "接続中...",
+    saving: "保存中...",
+    saveChanges: "変更を保存",
+    connect: "接続",
+    connectionError: "接続エラー",
+    serverUrlAndUsernameRequired: "サーバーアドレスとユーザー名を入力してください",
+    savedServers: "保存済みサーバー",
+    activeServer: "アクティブなサーバー",
+    editServerTooltip: "サーバーを編集",
+    removeServerTooltip: "サーバーを削除",
+    addAnotherServer: "別のサーバーを追加...",
+    removeServer: "サーバーを削除",
+    removeServerConfirm: "「{name}」を削除してもよろしいですか？再接続するには再度ログインが必要です。",
+    remove: "削除",
+    renderingError: "描画エラーが発生しました",
+    backToHome: "ホームに戻る",
   },
 
   ko: {
@@ -505,6 +1132,27 @@ export const translations: Record<LanguageCode, Record<string, string>> = {
     confirm: "확인",
     enabled: "활성화됨",
     disabled: "비활성화됨",
+    unknown: "알 수 없음",
+    more: "더보기",
+    viewAll: "모두 보기",
+    moreActions: "추가 작업",
+    identify: "식별",
+    titleField: "제목",
+    yearField: "연도",
+    replaceAllImages: "기존 이미지 대체",
+    apply: "적용",
+    searching: "검색 중...",
+    searchingMetadata: "메타데이터 검색 중...",
+    searchMetadataHint: "위에서 검색하여 메타데이터를 일치시키세요",
+    noIdentifyResults: "결과를 찾을 수 없습니다. 제목이나 연도를 조정해 보세요.",
+    noInProgress: "현재 재생 중인 콘텐츠가 없습니다.",
+    markPlayed: "시청 완료로 표시",
+    markUnplayed: "시청하지 않음으로 표시",
+    errorLoadingItems: "항목을 불러오는 중 오류가 발생했습니다",
+    searchPlaceholder: "영화, TV 시리즈, 에피소드 검색...",
+    searchEmptyDesc: "맞춤법을 확인하거나 다른 키워드로 검색해 보세요.",
+    noResultsMatchFilters: "현재 필터와 일치하는 결과가 없습니다",
+    filteredFrom: "다음에서 필터링됨",
 
     // Home Modules
     heroBanner: "주요 추천 배너",
@@ -517,8 +1165,10 @@ export const translations: Record<LanguageCode, Record<string, string>> = {
     season: "시즌",
     episode: "화",
     episodes: "에피소드",
+    movie: "영화",
+    series: "TV 시리즈",
 
-    // Detail Page
+    // Detail Page & Media Specs
     audio: "오디오",
     subtitle: "자막",
     subtitlesOff: "끄기 (자막 없음)",
@@ -531,12 +1181,49 @@ export const translations: Record<LanguageCode, Record<string, string>> = {
     videoStream: "비디오 트랙",
     audioStream: "오디오 트랙",
     subtitleStream: "자막 트랙",
+    director: "감독",
+    actor: "배우",
+    writer: "각본",
+    default: "기본값",
+    external: "외부",
+    embedded: "내장",
+    effects: "특수효과",
+    resolution: "해상도",
+    videoCodec: "비디오 코덱",
+    colorSpace: "색상 동적 범위",
+    frameRate: "프레임 레이트",
+    bitrate: "비트레이트",
+    channels: "채널",
+    fileFormat: "컨테이너",
+    fileSize: "파일 크기",
+    totalBitrate: "총 비트레이트",
+    protocol: "프로토콜",
+    favorite: "즐겨찾기",
+    favorited: "즐겨찾기됨",
+    addToFavorites: "즐겨찾기에 추가",
+    removeFromFavorites: "즐겨찾기에서 제거",
+    noEpisodesAvailable: "이 시즌에 이용 가능한 에피소드가 없습니다.",
+    noOverviewAvailable: "이 에피소드에 대한 줄거리가 없습니다.",
+    syncingWithServer: "서버와 동기화 중",
+    syncing: "동기화 중",
+    all: "전체",
+    movies: "영화",
+    allGenres: "모든 장르",
+    allYears: "모든 연도",
+    reset: "재설정",
+    resetFilters: "필터 재설정",
+    type: "유형",
+    genre: "장르",
+    year: "연도",
+    format: "형식",
 
     // Settings
     settingsTitle: "설정",
     generalSection: "일반 및 인터페이스",
     interfaceLanguage: "인터페이스 언어",
     interfaceLanguageDesc: "앱 표시 언어를 즉시 전환합니다 (재시작 불필요)",
+    followSystem: "시스템 설정 따름",
+    followSystemDesc: "macOS 시스템 언어 설정에 자동으로 맞춥니다",
     homeModulesSection: "홈 화면 모듈 설정",
     homeModulesDesc: "홈 화면에 표시할 섹션을 자유롭게 맞춤 설정하세요",
     moduleHero: "추천 하이라이트 배너 (Hero)",
@@ -577,71 +1264,173 @@ export const translations: Record<LanguageCode, Record<string, string>> = {
     addServer: "서버 추가",
     versionInfo: "버전 정보",
     appVersion: "플러그인 버전",
+    unplayed: "미재생",
+    inProgress: "재생 중",
+    played: "재생 완료",
+    sortName: "이름",
+    sortDateAdded: "추가된 날짜",
+    sortReleaseYear: "개봉 연도",
+    sortRating: "평점",
+    searchByTitle: "제목으로 검색...",
+    sortAscending: "오름차순",
+    sortDescending: "내림차순",
+    serverInformation: "서버 정보",
+    serverName: "서버 이름",
+    version: "버전",
+    updateAvailable: "업데이트 가능",
+    upToDate: "최신 버전",
+    operatingSystem: "운영체제",
+    dataPath: "데이터 경로",
+    transcodingPath: "트랜스코딩 경로",
+    networkConnectivity: "네트워크 및 연결",
+    connectedUrl: "연결된 URL",
+    localAddress: "로컬 주소",
+    wanAddress: "WAN 주소",
+    webSocketPort: "WebSocket 포트",
+    userAccountAndPrivileges: "사용자 계정 및 권한",
+    username: "사용자 이름",
+    password: "비밀번호",
+    adminRole: "관리자",
+    userRole: "사용자",
+    administrativeRole: "관리 역할",
+    fullAdministrator: "전체 관리자",
+    standardUser: "일반 사용자",
+    mediaPermissions: "미디어 권한",
+    fullManageAccess: "전체 관리 및 삭제 권한",
+    allowDeleteMedia: "미디어 삭제 허용",
+    downloadAndPlayback: "다운로드 및 재생",
+    playbackOnly: "재생 전용",
+    transcoding: "트랜스코딩",
+    directPlayOnly: "직접 재생 전용",
+    accountCreated: "계정 생성일",
+    lastActivity: "최근 활동",
+    userPreferences: "Emby 사용자 환경설정",
+    subtitleMode: "자막 모드",
+    introSkipMode: "인트로 건너뛰기 모드",
+    resumeRewind: "이어보기 되감기",
+    refreshing: "새로고침 중...",
+    failedToLoadServerInfo: "서버 정보를 불러오지 못했습니다",
+    editServer: "Emby 서버 편집",
+    connectToEmby: "Emby 연결",
+    serverAddress: "서버 주소",
+    connecting: "연결 중...",
+    saving: "저장 중...",
+    saveChanges: "변경사항 저장",
+    connect: "연결",
+    connectionError: "연결 오류",
+    serverUrlAndUsernameRequired: "서버 주소와 사용자 이름을 입력하세요",
+    savedServers: "저장된 서버",
+    activeServer: "활성 서버",
+    editServerTooltip: "서버 편집",
+    removeServerTooltip: "서버 제거",
+    addAnotherServer: "다른 서버 추가...",
+    removeServer: "서버 제거",
+    removeServerConfirm: "「{name}」 서버를 제거하시겠습니까? 다시 연결하려면 로그인해야 합니다.",
+    remove: "제거",
+    renderingError: "렌더링 오류가 발생했습니다",
+    backToHome: "홈으로 이동",
   },
 };
 
-function detectInitialLanguage(): LanguageCode {
+/**
+ * Detects the best matching supported language code from system preferences.
+ */
+export function detectSystemLanguage(): LanguageCode {
+  if (typeof navigator !== "undefined") {
+    const list =
+      Array.isArray(navigator.languages) && navigator.languages.length > 0
+        ? navigator.languages
+        : [navigator.language || ""];
+
+    for (const lang of list) {
+      if (!lang) continue;
+      const lower = lang.toLowerCase();
+      if (
+        lower.includes("tw") ||
+        lower.includes("hk") ||
+        lower.includes("mo") ||
+        lower.includes("hant")
+      ) {
+        return "zh-TW";
+      }
+      if (lower.startsWith("zh")) {
+        return "zh-CN";
+      }
+      if (lower.startsWith("ja")) {
+        return "ja";
+      }
+      if (lower.startsWith("ko")) {
+        return "ko";
+      }
+      if (lower.startsWith("es")) {
+        return "es";
+      }
+      if (lower.startsWith("en")) {
+        return "en";
+      }
+    }
+  }
+
+  return "en";
+}
+
+/**
+ * Reads user saved language setting from localStorage or defaults to "auto" (follow system).
+ */
+export function getSavedLanguageSetting(): LanguageSetting {
   try {
     const saved = localStorage.getItem(LOCAL_STORAGE_LANG_KEY);
-    if (saved && (saved in translations)) {
-      return saved as LanguageCode;
+    if (saved && (saved === "auto" || saved in translations)) {
+      return saved as LanguageSetting;
     }
   } catch {
     // Ignore
   }
-
-  if (typeof navigator !== "undefined" && navigator.language) {
-    const nav = navigator.language.toLowerCase();
-    if (nav.includes("tw") || nav.includes("hk") || nav.includes("hant")) {
-      return "zh-TW";
-    }
-    if (nav.startsWith("zh")) {
-      return "zh-CN";
-    }
-    if (nav.startsWith("ja")) {
-      return "ja";
-    }
-    if (nav.startsWith("ko")) {
-      return "ko";
-    }
-    if (nav.startsWith("es")) {
-      return "es";
-    }
-    if (nav.startsWith("en")) {
-      return "en";
-    }
-  }
-
-  return "zh-CN";
+  return "auto";
 }
 
 interface LanguageContextType {
+  setting: LanguageSetting;
   language: LanguageCode;
-  setLanguage: (lang: LanguageCode) => void;
+  setLanguage: (setting: LanguageSetting) => void;
   t: (key: string, defaultText?: string) => string;
 }
 
 const LanguageContext = createContext<LanguageContextType>({
+  setting: "auto",
   language: "zh-CN",
   setLanguage: () => {},
   t: (key: string, defaultText?: string) => defaultText || key,
 });
 
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
-  const [language, setLanguageState] = useState<LanguageCode>(detectInitialLanguage);
+  const [setting, setSettingState] = useState<LanguageSetting>(getSavedLanguageSetting);
+  const [systemLang, setSystemLang] = useState<LanguageCode>(detectSystemLanguage);
 
-  const setLanguage = useCallback((lang: LanguageCode) => {
-    setLanguageState(lang);
+  // Active language resolved from setting or system default
+  const activeLanguage: LanguageCode = setting === "auto" ? systemLang : setting;
+
+  const setLanguage = useCallback((newSetting: LanguageSetting) => {
+    setSettingState(newSetting);
     try {
-      localStorage.setItem(LOCAL_STORAGE_LANG_KEY, lang);
+      localStorage.setItem(LOCAL_STORAGE_LANG_KEY, newSetting);
     } catch {
       // Ignore
     }
   }, []);
 
+  // Listen to system language changes when following system settings
+  useEffect(() => {
+    const handleLanguageChange = () => {
+      setSystemLang(detectSystemLanguage());
+    };
+    window.addEventListener("languagechange", handleLanguageChange);
+    return () => window.removeEventListener("languagechange", handleLanguageChange);
+  }, []);
+
   const t = useCallback(
     (key: string, defaultText?: string): string => {
-      const dict = translations[language] || translations["zh-CN"];
+      const dict = translations[activeLanguage] || translations["en"] || translations["zh-CN"];
       if (dict && key in dict) {
         return dict[key];
       }
@@ -651,11 +1440,11 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
       }
       return defaultText || key;
     },
-    [language],
+    [activeLanguage],
   );
 
   return (
-    <LanguageContext.Provider value={{ language, setLanguage, t }}>
+    <LanguageContext.Provider value={{ setting, language: activeLanguage, setLanguage, t }}>
       {children}
     </LanguageContext.Provider>
   );

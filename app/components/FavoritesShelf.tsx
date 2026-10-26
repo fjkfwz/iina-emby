@@ -3,6 +3,7 @@ import { IconChevronRight } from "@tabler/icons-react";
 import { memo } from "react";
 import { useNavigate } from "react-router";
 import { useFavorites } from "../hooks/useFavorites";
+import { useTranslation } from "../lib/i18n";
 import styles from "./LibraryShelf.module.css";
 import { MediaPoster, MediaPosterSkeleton } from "./MediaPoster";
 import { MediaShelf } from "./MediaShelf";
@@ -20,10 +21,13 @@ export const FavoritesShelf = memo(function FavoritesShelf({
   onUserDataChange,
 }: FavoritesShelfProps) {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const { items, loading, refetch } = useFavorites(server);
 
+  const favTitle = t("favorites", "Favorites");
+
   const handleOpenSection = () => {
-    navigate("/section/favorites", { state: { name: "我的收藏" } });
+    navigate("/section/favorites", { state: { name: favTitle } });
   };
 
   const moreButton = (
@@ -31,23 +35,23 @@ export const FavoritesShelf = memo(function FavoritesShelf({
       type="button"
       className={styles.moreBtn}
       onClick={handleOpenSection}
-      title="查看所有我的收藏"
-      aria-label="查看所有我的收藏"
+      title={favTitle}
+      aria-label={favTitle}
     >
-      <span>More</span>
+      <span>{t("more", "More")}</span>
       <IconChevronRight size={14} />
     </button>
   );
 
   const titleNode = (
-    <button type="button" className={styles.titleBtn} onClick={handleOpenSection} title="查看所有我的收藏">
-      <h3 className={shelfClasses.title}>我的收藏</h3>
+    <button type="button" className={styles.titleBtn} onClick={handleOpenSection} title={favTitle}>
+      <h3 className={shelfClasses.title}>{favTitle}</h3>
     </button>
   );
 
   if (loading && items.length === 0) {
     return (
-      <MediaShelf title="我的收藏" rightSection={moreButton} itemWidth={140} gap={14}>
+      <MediaShelf title={favTitle} rightSection={moreButton} itemWidth={140} gap={14}>
         {[1, 2, 3, 4, 5].map((id) => (
           <MediaPosterSkeleton key={`fav-skel-${id}`} />
         ))}

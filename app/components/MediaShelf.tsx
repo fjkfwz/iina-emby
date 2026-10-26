@@ -24,6 +24,8 @@ export function MediaShelf({ title, rightSection, children, itemWidth = 260, gap
   const rafIdRef = useRef<number | null>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
+  const lastScrollTimeRef = useRef(0);
+  const scrollVelocityRef = useRef(1);
 
   const checkScroll = useCallback(() => {
     if (rafIdRef.current !== null) return;
@@ -69,33 +71,31 @@ export function MediaShelf({ title, rightSection, children, itemWidth = 260, gap
   const handleScroll = (direction: "left" | "right") => {
     const el = scrollRef.current;
     if (!el) return;
+
+    const now = Date.now();
+    const timeSinceLast = now - lastScrollTimeRef.current;
+    lastScrollTimeRef.current = now;
+
+    if (timeSinceLast < 450) {
+      scrollVelocityRef.current = Math.min(scrollVelocityRef.current + 0.8, 3.0);
+    } else {
+      scrollVelocityRef.current = 1;
+    }
+
     const numericItemWidth = typeof itemWidth === "number" ? itemWidth : Number.parseInt(String(itemWidth), 10) || 260;
     const itemStep = numericItemWidth + gap;
     const visibleItems = Math.max(1, Math.floor(el.clientWidth / itemStep));
-    const scrollAmount = visibleItems * itemStep;
+    const baseScrollAmount = visibleItems * itemStep;
+    const scrollAmount = Math.round(baseScrollAmount * scrollVelocityRef.current);
     const delta = direction === "left" ? -scrollAmount : scrollAmount;
-    const prevLeft = el.scrollLeft;
 
     try {
       el.scrollBy({
         left: delta,
-        behavior: "smooth",
+        behavior: scrollVelocityRef.current > 1.6 ? "auto" : "smooth",
       });
     } catch {
       el.scrollLeft += delta;
-    }
-
-    // Older WebKit (Safari 13) silently ignores { left, behavior } dictionary without throwing
-    if (el.scrollLeft === prevLeft) {
-      if (typeof (el as unknown as { scrollBy?: (x: number, y: number) => void }).scrollBy === "function") {
-        try {
-          (el as unknown as { scrollBy: (x: number, y: number) => void }).scrollBy(delta, 0);
-        } catch {
-          el.scrollLeft += delta;
-        }
-      } else {
-        el.scrollLeft += delta;
-      }
     }
   };
 
@@ -138,14 +138,18 @@ export function MediaShelf({ title, rightSection, children, itemWidth = 260, gap
       )}
 
       {childCount > 0 ? (
-        <div ref={scrollRef} className={classes.scroller} onScroll={checkScroll}>
+        <div
+          ref={scrollRef}
+          className={classes.scroller}
+          style={{ "--shelf-gap": `${gap}px` } as React.CSSProperties}
+          onScroll={checkScroll}
+        >
           {validChildren.map((child, index) => (
             <div
               key={index}
               className={classes.itemWrapper}
               style={{
                 width: itemWidth,
-                marginRight: index < childCount - 1 ? gap : 0,
               }}
             >
               {child}

@@ -2,6 +2,7 @@ import { IconAlertCircle, IconCheck, IconFolderSearch, IconLoader2 } from "@tabl
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useIINABridge } from "~/hooks/useIINABridge";
 import { clearLibraryCache, type EmbyScanTaskStatus, fetchLibraryScanStatus, startLibraryScan } from "~/lib/emby-library-client";
+import { useTranslation } from "~/lib/i18n";
 import styles from "./LibraryScan.module.css";
 import { Alert } from "./ui/Alert";
 import { Button } from "./ui/Button";
@@ -10,6 +11,7 @@ const POLL_INTERVAL_MS = 1500;
 
 export function LibraryScan() {
   const { activeServer } = useIINABridge();
+  const { t } = useTranslation();
   const isAdministrator = Boolean(activeServer?.user?.Policy?.IsAdministrator);
 
   const [status, setStatus] = useState<EmbyScanTaskStatus | null>(null);
@@ -79,7 +81,7 @@ export function LibraryScan() {
 
   return (
     <section className={styles.section}>
-      <h2 className={styles.sectionTitle}>Library Management</h2>
+      <h2 className={styles.sectionTitle}>{t("libraryScanTitle", "Library Management")}</h2>
 
       <div className={styles.card}>
         <div className={styles.content}>
@@ -88,8 +90,8 @@ export function LibraryScan() {
               <IconFolderSearch size={20} />
             </div>
             <div className={styles.textGroup}>
-              <div className={styles.title}>Library Scan</div>
-              <div className={styles.subtitle}>Scan all libraries for new or modified media files</div>
+              <div className={styles.title}>{t("libraryScanTitle", "Library Scan")}</div>
+              <div className={styles.subtitle}>{t("libraryScanDesc", "Scan all libraries for new or modified media files")}</div>
             </div>
           </div>
           <div className={styles.actions}>
@@ -97,10 +99,10 @@ export function LibraryScan() {
               {isRunning ? (
                 <>
                   <IconLoader2 size={14} className={styles.spinning} />
-                  <span>Scanning…</span>
+                  <span>{t("loading", "Scanning…")}</span>
                 </>
               ) : (
-                "Scan Library Files"
+                t("libraryScanTitle", "Scan Library Files")
               )}
             </Button>
           </div>

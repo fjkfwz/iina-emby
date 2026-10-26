@@ -18,6 +18,7 @@ import { Alert } from "~/components/ui";
 import { useIINABridge } from "~/hooks/useIINABridge";
 import { fetchCurrentUser } from "~/lib/emby-auth-client";
 import { fetchServerSystemInfo } from "~/lib/emby-library-client";
+import { useTranslation } from "~/lib/i18n";
 import styles from "./SystemInfo.module.css";
 import { SystemInfoRow } from "./SystemInfoRow";
 import { Button } from "./ui/Button";
@@ -42,6 +43,7 @@ function formatDate(dateStr?: string): string {
 
 export function SystemInfo() {
   const { activeServer } = useIINABridge();
+  const { t } = useTranslation();
 
   const [systemInfo, setSystemInfo] = useState<EmbySystemInfo | null>(null);
   const [userInfo, setUserInfo] = useState<EmbyUser | null>(activeServer?.user || null);
@@ -98,39 +100,39 @@ export function SystemInfo() {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
       {error && (
-        <Alert icon={<IconAlertCircle size={16} />} title="Failed to load server info" mb="md">
+        <Alert icon={<IconAlertCircle size={16} />} title={t("failedToLoadServerInfo", "Failed to load server info")} mb="md">
           {error}
         </Alert>
       )}
 
       {/* 1. Server Details */}
       <section className={styles.section}>
-        <h2 className={styles.sectionTitle}>Server Information</h2>
+        <h2 className={styles.sectionTitle}>{t("serverInformation", "Server Information")}</h2>
 
         <div className={styles.card}>
           <SystemInfoRow
             icon={<IconServer size={18} />}
-            label="Server Name"
+            label={t("serverName", "Server Name")}
             loading={isLoading}
             value={systemInfo?.ServerName || activeServer?.serverName || "Emby Server"}
           />
 
           <SystemInfoRow
             icon={<IconServer size={18} />}
-            label="Version"
+            label={t("version", "Version")}
             loading={isLoading}
             skeletonWidth="35%"
-            value={systemInfo?.Version || "Unknown"}
+            value={systemInfo?.Version || t("unknown", "Unknown")}
           >
             {systemInfo?.HasUpdateAvailable ? (
               <span className={`${styles.badge} ${styles.badgeWarning}`}>
                 <IconArrowUpCircle size={13} />
-                Update available
+                {t("updateAvailable", "Update available")}
               </span>
             ) : systemInfo?.Version ? (
               <span className={`${styles.badge} ${styles.badgeSuccess}`}>
                 <IconCheck size={13} />
-                Up to date
+                {t("upToDate", "Up to date")}
               </span>
             ) : null}
           </SystemInfoRow>
@@ -138,7 +140,7 @@ export function SystemInfo() {
           {(isLoading || systemInfo?.OperatingSystem || systemInfo?.OperatingSystemDisplayName) && (
             <SystemInfoRow
               icon={<IconDeviceDesktop size={18} />}
-              label="Operating System"
+              label={t("operatingSystem", "Operating System")}
               loading={isLoading}
               skeletonWidth="40%"
               value={
@@ -152,7 +154,7 @@ export function SystemInfo() {
           {systemInfo?.ProgramDataPath && (
             <SystemInfoRow
               icon={<IconFolder size={18} />}
-              label="Data Path"
+              label={t("dataPath", "Data Path")}
               loading={isLoading}
               value={systemInfo.ProgramDataPath}
               title={systemInfo.ProgramDataPath}
@@ -162,7 +164,7 @@ export function SystemInfo() {
           {systemInfo?.TranscodingTempPath && (
             <SystemInfoRow
               icon={<IconFolder size={18} />}
-              label="Transcoding Path"
+              label={t("transcodingPath", "Transcoding Path")}
               loading={isLoading}
               value={systemInfo.TranscodingTempPath}
               title={systemInfo.TranscodingTempPath}
@@ -173,19 +175,19 @@ export function SystemInfo() {
 
       {/* 2. Network & Endpoints */}
       <section className={styles.section}>
-        <h2 className={styles.sectionTitle}>Network & Connectivity</h2>
+        <h2 className={styles.sectionTitle}>{t("networkConnectivity", "Network & Connectivity")}</h2>
 
         <div className={styles.card}>
           <SystemInfoRow
             icon={<IconNetwork size={18} />}
-            label="Connected URL"
+            label={t("connectedUrl", "Connected URL")}
             value={activeServer?.serverUrl || "—"}
             title={activeServer?.serverUrl}
           />
 
           {(isLoading || systemInfo?.LocalAddress) && (
             <SystemInfoRow
-              label="Local Address"
+              label={t("localAddress", "Local Address")}
               loading={isLoading}
               value={systemInfo?.LocalAddress || "—"}
               title={systemInfo?.LocalAddress}
@@ -193,65 +195,65 @@ export function SystemInfo() {
           )}
 
           {(isLoading || systemInfo?.WanAddress) && (
-            <SystemInfoRow label="WAN Address" loading={isLoading} value={systemInfo?.WanAddress || "—"} title={systemInfo?.WanAddress} />
+            <SystemInfoRow label={t("wanAddress", "WAN Address")} loading={isLoading} value={systemInfo?.WanAddress || "—"} title={systemInfo?.WanAddress} />
           )}
 
           {systemInfo?.WebSocketPortNumber && (
-            <SystemInfoRow label="WebSocket Port" loading={isLoading} value={String(systemInfo.WebSocketPortNumber)} />
+            <SystemInfoRow label={t("webSocketPort", "WebSocket Port")} loading={isLoading} value={String(systemInfo.WebSocketPortNumber)} />
           )}
         </div>
       </section>
 
       {/* 3. User & Permissions */}
       <section className={styles.section}>
-        <h2 className={styles.sectionTitle}>User Account & Privileges</h2>
+        <h2 className={styles.sectionTitle}>{t("userAccountAndPrivileges", "User Account & Privileges")}</h2>
 
         <div className={styles.card}>
           <SystemInfoRow
             icon={<IconUser size={18} />}
-            label="Username"
+            label={t("username", "Username")}
             loading={isLoading && !userInfo}
             value={userInfo?.Name || activeServer?.username || "—"}
           >
             {isAdministrator ? (
               <span className={`${styles.badge} ${styles.badgeSuccess}`}>
                 <IconShieldCheck size={13} />
-                Admin
+                {t("adminRole", "Admin")}
               </span>
             ) : (
-              <span className={`${styles.badge} ${styles.badgeInfo}`}>User</span>
+              <span className={`${styles.badge} ${styles.badgeInfo}`}>{t("userRole", "User")}</span>
             )}
           </SystemInfoRow>
 
           <SystemInfoRow
             icon={<IconLock size={18} />}
-            label="Administrative Role"
+            label={t("administrativeRole", "Administrative Role")}
             loading={isLoading && !userInfo}
-            value={isAdministrator ? "Full Administrator" : "Standard User"}
+            value={isAdministrator ? t("fullAdministrator", "Full Administrator") : t("standardUser", "Standard User")}
           />
 
           <SystemInfoRow
-            label="Media Permissions"
+            label={t("mediaPermissions", "Media Permissions")}
             loading={isLoading && !userInfo}
             value={
               isAdministrator
-                ? "Full Manage & Delete Access"
+                ? t("fullManageAccess", "Full Manage & Delete Access")
                 : canDelete
-                  ? "Allowed to Delete Media"
+                  ? t("allowDeleteMedia", "Allowed to Delete Media")
                   : canDownload
-                    ? "Download & Playback"
-                    : "Playback Only"
+                    ? t("downloadAndPlayback", "Download & Playback")
+                    : t("playbackOnly", "Playback Only")
             }
           />
 
-          <SystemInfoRow label="Transcoding" loading={isLoading && !userInfo} value={canTranscode ? "Enabled" : "Direct Play Only"} />
+          <SystemInfoRow label={t("transcoding", "Transcoding")} loading={isLoading && !userInfo} value={canTranscode ? t("enabled", "Enabled") : t("directPlayOnly", "Direct Play Only")} />
 
           {userInfo?.DateCreated && (
-            <SystemInfoRow label="Account Created" loading={isLoading && !userInfo} value={formatDate(userInfo.DateCreated)} />
+            <SystemInfoRow label={t("accountCreated", "Account Created")} loading={isLoading && !userInfo} value={formatDate(userInfo.DateCreated)} />
           )}
 
           {userInfo?.LastActivityDate && (
-            <SystemInfoRow label="Last Activity" loading={isLoading && !userInfo} value={formatDate(userInfo.LastActivityDate)} />
+            <SystemInfoRow label={t("lastActivity", "Last Activity")} loading={isLoading && !userInfo} value={formatDate(userInfo.LastActivityDate)} />
           )}
         </div>
       </section>
@@ -259,25 +261,25 @@ export function SystemInfo() {
       {/* 4. Playback & Library Preferences */}
       {(userInfo?.Configuration || isLoading) && (
         <section className={styles.section}>
-          <h2 className={styles.sectionTitle}>Emby User Preferences</h2>
+          <h2 className={styles.sectionTitle}>{t("userPreferences", "Emby User Preferences")}</h2>
 
           <div className={styles.card}>
             <SystemInfoRow
               icon={<IconPlayerPlay size={18} />}
-              label="Auto Play Next Episode"
+              label={t("autoplayNextEpisode", "Auto Play Next Episode")}
               loading={isLoading && !userInfo}
-              value={autoPlayNext !== undefined ? (autoPlayNext ? "Enabled" : "Disabled") : "—"}
+              value={autoPlayNext !== undefined ? (autoPlayNext ? t("enabled", "Enabled") : t("disabled", "Disabled")) : "—"}
             />
 
             {subtitleMode && (
-              <SystemInfoRow icon={<IconSubtask size={18} />} label="Subtitle Mode" loading={isLoading && !userInfo} value={subtitleMode} />
+              <SystemInfoRow icon={<IconSubtask size={18} />} label={t("subtitleMode", "Subtitle Mode")} loading={isLoading && !userInfo} value={subtitleMode} />
             )}
 
-            {introSkip && <SystemInfoRow label="Intro Skip Mode" loading={isLoading && !userInfo} value={introSkip} />}
+            {introSkip && <SystemInfoRow label={t("introSkipMode", "Intro Skip Mode")} loading={isLoading && !userInfo} value={introSkip} />}
 
             {userInfo?.Configuration?.ResumeRewindSeconds !== undefined && (
               <SystemInfoRow
-                label="Resume Rewind"
+                label={t("resumeRewind", "Resume Rewind")}
                 loading={isLoading && !userInfo}
                 value={`${userInfo.Configuration.ResumeRewindSeconds}s`}
               />
@@ -288,7 +290,7 @@ export function SystemInfo() {
 
       <div>
         <Button onClick={handleRefresh} glyph="⌘R" disabled={isRefreshing}>
-          {isRefreshing ? "Refreshing..." : "Refresh"}
+          {isRefreshing ? t("refreshing", "Refreshing...") : t("refresh", "Refresh")}
         </Button>
       </div>
     </div>

@@ -7,6 +7,7 @@ import { Alert } from "../components/ui";
 import { useContinueWatching } from "../hooks/useContinueWatching";
 import { useIINABridge, useOnWindowReopen } from "../hooks/useIINABridge";
 import { useProgressiveScroll } from "../hooks/useProgressiveScroll";
+import { useTranslation } from "../lib/i18n";
 import styles from "./continue-watching.module.css";
 
 const PAGE_SIZE = 24;
@@ -17,6 +18,7 @@ export function meta() {
 
 export default function ContinueWatchingRoute() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const { activeServer, servers, isLoading: isBridgeLoading, playMedia } = useIINABridge();
 
   const { items, loading: isLoading, error, refresh } = useContinueWatching(activeServer, 10000);
@@ -50,7 +52,7 @@ export default function ContinueWatchingRoute() {
 
   const titleNode = (
     <span>
-      Continue Watching
+      {t("continueWatching", "Continue Watching")}
       {totalCount > 0 && <span className={styles.countBadge}>({totalCount})</span>}
     </span>
   );
@@ -59,7 +61,7 @@ export default function ContinueWatchingRoute() {
     <div className={styles.container}>
       <PageHeader
         onBack={handleBack}
-        backTitle="Home"
+        backTitle={t("home", "Home")}
         title={titleNode}
         onRefresh={handleRefresh}
         isRefreshing={isLoading && items.length > 0}
@@ -76,7 +78,7 @@ export default function ContinueWatchingRoute() {
           </div>
         ) : items.length === 0 && !error ? (
           <div className={styles.emptyState}>
-            <p>No in-progress movies or episodes right now.</p>
+            <p>{t("noInProgress", "No in-progress movies or episodes right now.")}</p>
           </div>
         ) : (
           <>

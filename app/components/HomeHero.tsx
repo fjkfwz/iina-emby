@@ -3,6 +3,7 @@ import { IconChevronLeft, IconChevronRight } from "@tabler/icons-react";
 import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { useHeroItems } from "../hooks/useHeroItems";
+import { useTranslation } from "../lib/i18n";
 import styles from "./HomeHero.module.css";
 
 export interface HomeHeroProps {
@@ -11,6 +12,7 @@ export interface HomeHeroProps {
 
 export const HomeHero = memo(function HomeHero({ server }: HomeHeroProps) {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const { items, loading } = useHeroItems(server, 10);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isHovered, setIsHovered] = useState(false);
@@ -85,7 +87,7 @@ export const HomeHero = memo(function HomeHero({ server }: HomeHeroProps) {
   const genre =
     activeItem.Genres?.[0] ||
     (Array.isArray(activeItem.GenreItems) && activeItem.GenreItems[0]?.Name) ||
-    (activeItem.Type === "Movie" ? "电影" : activeItem.Type === "Series" ? "剧集" : null);
+    (activeItem.Type === "Movie" ? t("movie", "Movie") : activeItem.Type === "Series" ? t("series", "Series") : null);
 
   return (
     <section
@@ -109,6 +111,9 @@ export const HomeHero = memo(function HomeHero({ server }: HomeHeroProps) {
               className={styles.backdropImg}
               loading={idx === 0 ? "eager" : "lazy"}
               decoding="async"
+              onError={(e) => {
+                (e.currentTarget as HTMLElement).style.display = "none";
+              }}
             />
           </div>
         );

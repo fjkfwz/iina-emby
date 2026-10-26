@@ -4,6 +4,7 @@ import { IconDeviceTv, IconFolder, IconMovie } from "@tabler/icons-react";
 import { memo, useState } from "react";
 import { useNavigate } from "react-router";
 import { useUserViews } from "../hooks/useUserViews";
+import { useTranslation } from "../lib/i18n";
 import styles from "./CategoriesShelf.module.css";
 import { MediaShelf } from "./MediaShelf";
 import shelfClasses from "./MediaShelf.module.css";
@@ -32,6 +33,7 @@ interface CategoryCardProps {
 const CategoryCard = memo(function CategoryCard({ view, server }: CategoryCardProps) {
   const navigate = useNavigate();
   const [imgError, setImgError] = useState(false);
+  const [isLoaded, setIsLoaded] = useState(false);
 
   const imageUrl = !imgError
     ? getItemImageUrl(server.serverUrl, view, {
@@ -61,14 +63,22 @@ const CategoryCard = memo(function CategoryCard({ view, server }: CategoryCardPr
         aria-label={`View category ${view.Name}`}
       />
       <div className={styles.preview}>
-        {imageUrl ? (
+        {imageUrl && !imgError ? (
           <img
             src={imageUrl}
             alt=""
             className={styles.image}
-            loading="lazy"
+            loading="eager"
             decoding="async"
+            style={{ opacity: isLoaded ? 1 : 0, transition: "opacity 0.2s ease" }}
+            onLoad={() => setIsLoaded(true)}
             onError={() => setImgError(true)}
+            ref={(el) => {
+              if (el && el.complete) {
+                if (el.naturalWidth > 0) setIsLoaded(true);
+                else setImgError(true);
+              }
+            }}
           />
         ) : (
           <div className={styles.placeholder}>
@@ -91,11 +101,13 @@ export interface CategoriesShelfProps {
 }
 
 export const CategoriesShelf = memo(function CategoriesShelf({ server }: CategoriesShelfProps) {
+  const { t } = useTranslation();
   const { views, loading } = useUserViews(server);
+  const titleText = t("categoriesNav", "Categories");
 
   if (loading && views.length === 0) {
     return (
-      <MediaShelf title="分类" itemWidth={240} gap={16}>
+      <MediaShelf title={titleText} itemWidth={240} gap={16}>
         {[1, 2, 3, 4, 5].map((id) => (
           <CategoryCardSkeleton key={`cat-skel-${id}`} />
         ))}
@@ -109,7 +121,7 @@ export const CategoriesShelf = memo(function CategoriesShelf({ server }: Categor
 
   return (
     <MediaShelf
-      title={<h3 className={shelfClasses.title}>分类</h3>}
+      title={<h3 className={shelfClasses.title}>{titleText}</h3>}
       itemWidth={240}
       gap={16}
     >

@@ -14,6 +14,7 @@ import { useIINABridge, useOnWindowReopen } from "../hooks/useIINABridge";
 import { useLibrarySections } from "../hooks/useLibrarySections";
 import { queryClient } from "../lib/query-client";
 import { embyKeys } from "../lib/query-keys";
+import { useTranslation } from "../lib/i18n";
 import styles from "./home.module.css";
 
 export function meta() {
@@ -22,6 +23,7 @@ export function meta() {
 
 export default function HomeRoute() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [searchParams, setSearchParams] = useSearchParams();
   const searchInputRef = useRef<HTMLInputElement>(null);
 
@@ -119,28 +121,26 @@ export default function HomeRoute() {
   const isSearching = Boolean(searchQuery.trim() || urlQ.trim());
   const headerRef = useRef<HTMLElement>(null);
 
-  // Smoothly interpolate header gradient shadow opacity as user scrolls down
+  // Smoothly toggle header gradient shadow as user scrolls down
   useEffect(() => {
     const rootEl = document.getElementById("root");
     let rafId: number | null = null;
-    let lastOpacity = -1;
+    let lastState: "top" | "scrolled" | null = null;
 
-    const updateHeaderOpacity = (top: number) => {
+    const updateHeader = (top: number) => {
       if (!headerRef.current) return;
       if (isSearching) {
-        if (lastOpacity !== 1) {
+        if (lastState !== "scrolled") {
           headerRef.current.style.setProperty("--header-shadow-opacity", "1");
-          lastOpacity = 1;
+          lastState = "scrolled";
         }
         return;
       }
-      // Gradually appear as you scroll down: 0 at top, reaching 1 at 140px
-      const progress = Math.min(1, Math.max(0, top / 140));
-      // Quantize to 0.02 increments to minimize style engine recalculations
-      const quantized = Math.round(progress * 50) / 50;
-      if (quantized !== lastOpacity) {
-        lastOpacity = quantized;
-        headerRef.current.style.setProperty("--header-shadow-opacity", quantized.toString());
+      const isScrolled = top > 25;
+      const nextState = isScrolled ? "scrolled" : "top";
+      if (nextState !== lastState) {
+        lastState = nextState;
+        headerRef.current.style.setProperty("--header-shadow-opacity", isScrolled ? "1" : "0");
       }
     };
 
@@ -149,7 +149,7 @@ export default function HomeRoute() {
       rafId = requestAnimationFrame(() => {
         rafId = null;
         const top = rootEl ? rootEl.scrollTop : window.scrollY;
-        updateHeaderOpacity(top);
+        updateHeader(top);
       });
     };
 
@@ -160,7 +160,7 @@ export default function HomeRoute() {
 
     // Initial sync
     const initialTop = rootEl ? rootEl.scrollTop : window.scrollY;
-    updateHeaderOpacity(initialTop);
+    updateHeader(initialTop);
 
     return () => {
       if (rafId !== null) cancelAnimationFrame(rafId);
@@ -210,7 +210,7 @@ export default function HomeRoute() {
       <PageHeader
         ref={headerRef}
         onBack={handleBack}
-        backTitle={isSearching ? "Home" : "Servers"}
+        backTitle={isSearching ? t("home", "Home") : t("servers", "Servers")}
         title={activeServer.serverName || "Emby"}
         showActiveDot
         onRefresh={handleRefresh}
@@ -231,8 +231,8 @@ export default function HomeRoute() {
                   searchInputRef.current?.blur();
                 }
               }}
-              placeholder="Search movies, TV series, episodes..."
-              aria-label="Search library"
+              placeholder={t("searchPlaceholder", "Search movies, TV series, episodes...")}
+              aria-label={t("search", "Search")}
             />
             {searchQuery ? (
               <button

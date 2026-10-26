@@ -1,5 +1,6 @@
 import type { EmbyServer } from "@shared";
 import { IconEditCircle, IconServer, IconTrash } from "@tabler/icons-react";
+import { useTranslation } from "../lib/i18n";
 import styles from "./ServerList.module.css";
 import { Tooltip } from "./ui";
 
@@ -12,6 +13,8 @@ export interface ServerListProps {
 }
 
 export function ServerList({ servers, activeServerId, onSelectServer, onRequestDelete, onRequestEdit }: ServerListProps) {
+  const { t } = useTranslation();
+
   if (servers.length === 0) {
     return null;
   }
@@ -19,7 +22,7 @@ export function ServerList({ servers, activeServerId, onSelectServer, onRequestD
   return (
     <>
       <div className={styles.sectionHeader}>
-        <span className={styles.sectionTitle}>Saved Servers</span>
+        <span className={styles.sectionTitle}>{t("savedServers", "Saved Servers")}</span>
       </div>
 
       <div className={styles.serverList}>
@@ -39,7 +42,7 @@ export function ServerList({ servers, activeServerId, onSelectServer, onRequestD
                 <div className={styles.serverRowDetails}>
                   <div className={styles.serverRowNameRow}>
                     <span className={styles.serverRowName}>{server.serverName || "Emby Server"}</span>
-                    {isActive && <span className={styles.activeDot} title="Active Server" />}
+                    {isActive && <span className={styles.activeDot} title={t("activeServer", "Active Server")} />}
                   </div>
                   <span className={styles.serverRowSub}>
                     {server.serverUrl}
@@ -49,7 +52,7 @@ export function ServerList({ servers, activeServerId, onSelectServer, onRequestD
               </button>
 
               <div className={styles.serverActions}>
-                <Tooltip label="Edit server">
+                <Tooltip label={t("editServerTooltip", "Edit server")}>
                   <button
                     type="button"
                     className={`${styles.serverActionBtn} ${styles.editBtn}`}
@@ -57,13 +60,13 @@ export function ServerList({ servers, activeServerId, onSelectServer, onRequestD
                       e.stopPropagation();
                       onRequestEdit?.(server);
                     }}
-                    aria-label="Edit server"
+                    aria-label={t("editServerTooltip", "Edit server")}
                   >
                     <IconEditCircle size={18} stroke={1.8} />
                   </button>
                 </Tooltip>
 
-                <Tooltip label="Remove server">
+                <Tooltip label={t("removeServerTooltip", "Remove server")}>
                   <button
                     type="button"
                     className={`${styles.serverActionBtn} ${styles.deleteBtn}`}
@@ -71,7 +74,7 @@ export function ServerList({ servers, activeServerId, onSelectServer, onRequestD
                       e.stopPropagation();
                       onRequestDelete(server);
                     }}
-                    aria-label="Remove server"
+                    aria-label={t("removeServerTooltip", "Remove server")}
                   >
                     <IconTrash size={18} stroke={1.8} />
                   </button>

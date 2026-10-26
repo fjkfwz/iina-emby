@@ -50,7 +50,7 @@ function ToggleSwitch({ id, checked, onChange, disabled }: ToggleSwitchProps) {
 
 export default function SettingsRoute() {
   const navigate = useNavigate();
-  const { language, setLanguage, t } = useTranslation();
+  const { setting, language, setLanguage, t } = useTranslation();
   const { config: modulesConfig, toggleModule } = useHomeModulesConfig();
   const { preferences, setPreference, servers, activeServer } = useIINABridge();
 
@@ -86,16 +86,18 @@ export default function SettingsRoute() {
 
             <div className={styles.languageGrid}>
               {SUPPORTED_LANGUAGES.map((lang) => {
-                const isActive = language === lang.code;
+                const isActive = setting === lang.code;
                 return (
                   <button
                     key={lang.code}
                     type="button"
                     className={`${styles.langCard} ${isActive ? styles.langCardActive : ""}`}
-                    onClick={() => setLanguage(lang.code as LanguageCode)}
+                    onClick={() => setLanguage(lang.code)}
                   >
                     <span className={styles.langNative}>{lang.nativeLabel}</span>
-                    <span className={styles.langCode}>{lang.code}</span>
+                    <span className={styles.langCode}>
+                      {lang.code === "auto" ? t("followSystem", "System") : lang.code}
+                    </span>
                   </button>
                 );
               })}

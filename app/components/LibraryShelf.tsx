@@ -2,6 +2,7 @@ import type { EmbyItemMetadata, EmbyServer, EmbyUserData, EmbyView } from "@shar
 import { IconChevronRight } from "@tabler/icons-react";
 import { memo } from "react";
 import { useNavigate } from "react-router";
+import { useTranslation } from "../lib/i18n";
 import styles from "./LibraryShelf.module.css";
 import { MediaPoster, MediaPosterSkeleton } from "./MediaPoster";
 import { MediaShelf } from "./MediaShelf";
@@ -51,26 +52,30 @@ export const LibraryShelf = memo(function LibraryShelf({
   onUserDataChange,
 }: LibraryShelfProps) {
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   const handleOpenSection = () => {
     navigate(`/section/${view.Id}`, { state: { name: view.Name } });
   };
+
+  const moreLabel = t("more", "More");
+  const viewAllLabel = `${t("viewAll", "View all")} ${view.Name}`;
 
   const moreButton = (
     <button
       type="button"
       className={styles.moreBtn}
       onClick={handleOpenSection}
-      title={`View all in ${view.Name}`}
-      aria-label={`View all in ${view.Name}`}
+      title={viewAllLabel}
+      aria-label={viewAllLabel}
     >
-      <span>More</span>
+      <span>{moreLabel}</span>
       <IconChevronRight size={14} />
     </button>
   );
 
   const titleNode = (
-    <button type="button" className={styles.titleBtn} onClick={handleOpenSection} title={`View all in ${view.Name}`}>
+    <button type="button" className={styles.titleBtn} onClick={handleOpenSection} title={viewAllLabel}>
       <h3 className={shelfClasses.title}>{view.Name}</h3>
     </button>
   );

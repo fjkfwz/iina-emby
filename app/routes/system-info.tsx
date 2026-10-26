@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router";
 import { PageHeader } from "~/components/PageHeader";
 import { SystemInfo } from "~/components/SystemInfo";
+import { useTranslation } from "~/lib/i18n";
 import styles from "./system-info.module.css";
 
 export function meta() {
@@ -9,6 +10,7 @@ export function meta() {
 
 export default function SystemInfoRoute() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   const onBack = () => {
     navigate("/");
@@ -16,7 +18,7 @@ export default function SystemInfoRoute() {
 
   return (
     <>
-      <PageHeader onBack={onBack} backTitle="Back" className={styles.pageHeader} title="System Info" />
+      <PageHeader onBack={onBack} backTitle={t("back", "Back")} className={styles.pageHeader} title={t("systemInfoTitle", "System Information")} />
 
       <div className={styles.container}>
         <SystemInfo />

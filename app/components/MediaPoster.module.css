@@ -4,7 +4,9 @@
   flex-direction: column;
   width: 100%;
   user-select: none;
-  contain: none;
+  contain: layout style;
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
 }
 
 /* Participate in view transitions started by startViewTransitionSafe (app/lib/view-transitions.ts) */

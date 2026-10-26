@@ -4,7 +4,7 @@ import type { SafeHttp } from "./safe-http";
 
 export interface PlaybackTrackingDeps {
   core: typeof iina.core;
-  http: typeof iina.http | SafeHttp;
+  http: SafeHttp;
   preferences: typeof iina.preferences;
   buildEmbyHeaders: (apiKey?: string, extraHeaders?: Record<string, string>) => Record<string, string>;
   fetchPlaybackInfo: (serverBase: string, itemId: string, apiKey: string) => Promise<EmbyPlaybackInfo>;

@@ -5,6 +5,7 @@ import { MediaPoster, MediaPosterSkeleton } from "./MediaPoster";
 import { Alert } from "./ui";
 import { Select, type SelectOption } from "./ui/Select";
 import { embyFetch } from "../lib/emby-library-client";
+import { useTranslation } from "../lib/i18n";
 import styles from "./SearchResultsView.module.css";
 
 export type MediaTypeFilter = "all" | "movies" | "series";
@@ -20,6 +21,7 @@ export function SearchResultsView({
   query,
   onIdentifySuccess,
 }: SearchResultsViewProps) {
+  const { t } = useTranslation();
   const [mediaType, setMediaType] = useState<MediaTypeFilter>("all");
   const [genre, setGenre] = useState<string>("all");
   const [year, setYear] = useState<string>("all");
@@ -125,7 +127,7 @@ export function SearchResultsView({
 
     const sortedNames = Object.keys(counts).sort((a, b) => a.localeCompare(b, "zh-CN"));
     const options: SelectOption[] = [
-      { value: "all", label: results.length > 0 ? `All Genres (${results.length})` : "All Genres" },
+      { value: "all", label: results.length > 0 ? `${t("allGenres", "All Genres")} (${results.length})` : t("allGenres", "All Genres") },
       ...sortedNames.map((name) => ({
         value: name,
         label: `${name} (${counts[name]})`,
@@ -133,7 +135,7 @@ export function SearchResultsView({
     ];
 
     return options;
-  }, [results]);
+  }, [results, t]);
 
   // Extract available years from current results with counts
   const yearOptions = useMemo(() => {
@@ -150,7 +152,7 @@ export function SearchResultsView({
       .sort((a, b) => b - a);
 
     const options: SelectOption[] = [
-      { value: "all", label: results.length > 0 ? `All Years (${results.length})` : "All Years" },
+      { value: "all", label: results.length > 0 ? `${t("allYears", "All Years")} (${results.length})` : t("allYears", "All Years") },
       ...sortedYears.map((y) => ({
         value: String(y),
         label: `${y} (${counts[y]})`,
@@ -158,7 +160,7 @@ export function SearchResultsView({
     ];
 
     return options;
-  }, [results]);
+  }, [results, t]);
 
   // Apply composite filter (Genre + Year) in-memory across the search results
   const filteredResults = useMemo(() => {
@@ -209,21 +211,21 @@ export function SearchResultsView({
               className={`${styles.filterTab} ${mediaType === "all" ? styles.filterTabActive : ""}`}
               onClick={() => setMediaType("all")}
             >
-              All
+              {t("all", "All")}
             </button>
             <button
               type="button"
               className={`${styles.filterTab} ${mediaType === "movies" ? styles.filterTabActive : ""}`}
               onClick={() => setMediaType("movies")}
             >
-              Movies
+              {t("movies", "Movies")}
             </button>
             <button
               type="button"
               className={`${styles.filterTab} ${mediaType === "series" ? styles.filterTabActive : ""}`}
               onClick={() => setMediaType("series")}
             >
-              Series
+              {t("series", "Series")}
             </button>
           </div>
 
@@ -258,10 +260,10 @@ export function SearchResultsView({
                 type="button"
                 className={styles.resetBtn}
                 onClick={handleResetFilters}
-                title="Reset all filters"
+                title={t("resetFilters", "Reset all filters")}
               >
                 <IconRotateClockwise size={12} style={{ marginRight: "4px" }} />
-                <span>Reset</span>
+                <span>{t("reset", "Reset")}</span>
               </button>
             )}
           </div>
@@ -272,19 +274,19 @@ export function SearchResultsView({
           <div className={styles.activeChipsRow}>
             {mediaType !== "all" && (
               <span className={styles.filterChip} onClick={() => setMediaType("all")}>
-                <span>Type: {mediaType === "movies" ? "Movies" : "Series"}</span>
+                <span>{t("type", "Type")}: {mediaType === "movies" ? t("movies", "Movies") : t("series", "Series")}</span>
                 <IconX size={12} className={styles.filterChipClose} />
               </span>
             )}
             {genre !== "all" && (
               <span className={styles.filterChip} onClick={() => setGenre("all")}>
-                <span>Genre: {genre}</span>
+                <span>{t("genre", "Genre")}: {genre}</span>
                 <IconX size={12} className={styles.filterChipClose} />
               </span>
             )}
             {year !== "all" && (
               <span className={styles.filterChip} onClick={() => setYear("all")}>
-                <span>Year: {year}</span>
+                <span>{t("year", "Year")}: {year}</span>
                 <IconX size={12} className={styles.filterChipClose} />
               </span>
             )}
@@ -293,7 +295,7 @@ export function SearchResultsView({
       </div>
 
       {error && (
-        <Alert icon={<IconAlertCircle size={18} />} title="Search Error" mb="md" mx="1.5rem">
+        <Alert icon={<IconAlertCircle size={18} />} title={t("errorLoadingItems", "Search Error")} mb="md" mx="1.5rem">
           {error}
         </Alert>
       )}
@@ -308,18 +310,18 @@ export function SearchResultsView({
         <div className={styles.emptyState}>
           <IconSearch size={48} className={styles.emptyIcon} stroke={1.5} />
           <div className={styles.emptyTitle}>
-            {cleanQuery ? `No results found for "${cleanQuery}"` : "No items found"}
+            {cleanQuery ? `${t("noItems", "No items found")}: "${cleanQuery}"` : t("noItems", "No items found")}
           </div>
           <div className={styles.emptyDesc}>
-            Try checking your spelling or searching for another title.
+            {t("searchEmptyDesc", "Try checking your spelling or searching for another title.")}
           </div>
         </div>
       ) : filteredResults.length === 0 ? (
         <div className={styles.emptyState}>
           <IconSearch size={48} className={styles.emptyIcon} stroke={1.5} />
-          <div className={styles.emptyTitle}>No results match your active filters</div>
+          <div className={styles.emptyTitle}>{t("noResultsMatchFilters", "No results match your active filters")}</div>
           <div className={styles.emptyDesc} style={{ marginBottom: "1rem" }}>
-            {results.length} item(s) matched "{cleanQuery}", but none passed the selected genre or year filter.
+            {results.length} {t("filteredFrom", "filtered from")} "{cleanQuery}"
           </div>
           <button
             type="button"
@@ -328,16 +330,16 @@ export function SearchResultsView({
             style={{ fontSize: "0.8125rem", padding: "6px 12px" }}
           >
             <IconRotateClockwise size={14} style={{ marginRight: "6px" }} />
-            <span>Reset Filters</span>
+            <span>{t("resetFilters", "Reset Filters")}</span>
           </button>
         </div>
       ) : (
         <>
           <div className={styles.resultsSummary}>
             <span>
-              Found <strong>{filteredResults.length}</strong>
-              {filteredResults.length !== results.length && ` (filtered from ${results.length})`} result
-              {filteredResults.length > 1 ? "s" : ""} for "<strong>{cleanQuery}</strong>"
+              {t("search", "Search")}: <strong>{filteredResults.length}</strong>
+              {filteredResults.length !== results.length && ` (${t("filteredFrom", "filtered from")} ${results.length})`}
+              {` `}for "<strong>{cleanQuery}</strong>"
             </span>
           </div>
 

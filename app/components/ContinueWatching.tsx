@@ -3,6 +3,7 @@ import { IconAlertCircle, IconChevronRight } from "@tabler/icons-react";
 import { forwardRef, useImperativeHandle } from "react";
 import { useNavigate } from "react-router";
 import { useContinueWatching } from "../hooks/useContinueWatching";
+import { useTranslation } from "../lib/i18n";
 import shelfStyles from "./LibraryShelf.module.css";
 import { MediaShelf } from "./MediaShelf";
 import shelfClasses from "./MediaShelf.module.css";
@@ -20,6 +21,7 @@ export interface ContinueWatchingHandle {
 
 export const ContinueWatching = forwardRef<ContinueWatchingHandle, ContinueWatchingProps>(({ server, onPlayMedia }, ref) => {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const { items: resumeItems, loading, error, refresh } = useContinueWatching(server, 24);
 
   useImperativeHandle(
@@ -34,29 +36,33 @@ export const ContinueWatching = forwardRef<ContinueWatchingHandle, ContinueWatch
     navigate("/continue-watching");
   };
 
+  const titleText = t("continueWatching", "Continue Watching");
+  const moreText = t("more", "More");
+  const viewAllText = `${t("viewAll", "View all")} ${titleText}`;
+
   const moreButton = (
     <button
       type="button"
       className={shelfStyles.moreBtn}
       onClick={handleOpenContinueWatching}
-      title="View all in Continue Watching"
-      aria-label="View all in Continue Watching"
+      title={viewAllText}
+      aria-label={viewAllText}
     >
-      <span>More</span>
+      <span>{moreText}</span>
       <IconChevronRight size={14} />
     </button>
   );
 
   const titleNode = (
-    <button type="button" className={shelfStyles.titleBtn} onClick={handleOpenContinueWatching} title="View all in Continue Watching">
-      <h3 className={shelfClasses.title}>Continue Watching</h3>
+    <button type="button" className={shelfStyles.titleBtn} onClick={handleOpenContinueWatching} title={viewAllText}>
+      <h3 className={shelfClasses.title}>{titleText}</h3>
     </button>
   );
 
   return (
     <div>
       {error && (
-        <Alert icon={<IconAlertCircle size={16} />} title="Error loading items" mb="md" mx="1.5rem">
+        <Alert icon={<IconAlertCircle size={16} />} title={t("errorLoadingItems", "Error loading items")} mb="md" mx="1.5rem">
           {error}
         </Alert>
       )}
@@ -65,7 +71,7 @@ export const ContinueWatching = forwardRef<ContinueWatchingHandle, ContinueWatch
         title={titleNode}
         rightSection={resumeItems.length > 0 || loading ? moreButton : undefined}
         itemWidth={260}
-        emptyText={!loading ? "No in-progress movies or episodes right now." : undefined}
+        emptyText={!loading ? t("noInProgress", "No in-progress movies or episodes right now.") : undefined}
       >
         {loading && resumeItems.length === 0
           ? [1, 2, 3, 4].map((id) => <MediaThumbSkeleton key={id} />)

@@ -136,7 +136,7 @@ export function ItemHero({
   if (isSeries && nextUpEpisode) {
     const sNum = nextUpEpisode.ParentIndexNumber ?? 1;
     const eNum = nextUpEpisode.IndexNumber ?? 1;
-    overviewPrefix = `${item?.Name || "Series"} • Season ${sNum} • Episode ${eNum}`;
+    overviewPrefix = `${item?.Name || t("series", "Series")} • ${t("season", "Season")} ${sNum} • ${t("episode", "Episode")} ${eNum}`;
   } else if (item?.Name) {
     overviewPrefix = `${item.Name}`;
   }
@@ -148,7 +148,15 @@ export function ItemHero({
       {/* Top Crisp Backdrop with smooth downward fade into window background */}
       {backdropUrl ? (
         <div className={styles.backdropContainer}>
-          <img src={backdropUrl} alt={item?.Name || "Backdrop"} className={styles.backdropImage} decoding="async" />
+          <img
+            src={backdropUrl}
+            alt={item?.Name || "Backdrop"}
+            className={styles.backdropImage}
+            decoding="async"
+            onError={(e) => {
+              (e.currentTarget as HTMLElement).style.display = "none";
+            }}
+          />
           <div className={styles.backdropOverlay} />
         </div>
       ) : null}
@@ -156,7 +164,7 @@ export function ItemHero({
       {/* Top Floating Navigation Bar with Back & Refresh */}
       <PageHeader
         onBack={onBack}
-        backTitle="Back"
+        backTitle={t("back", "Back")}
         onRefresh={onRefresh}
         isRefreshing={isRefreshing}
         className={styles.pageHeader}
@@ -168,8 +176,8 @@ export function ItemHero({
               size="sm"
               isIconOnly
               onClick={() => setIsIdentifyOpen(true)}
-              title="Identify"
-              aria-label="Identify metadata"
+              title={t("identify", "Identify")}
+              aria-label={t("identify", "Identify")}
             >
               <IconFingerprint size={16} />
             </GlassElement>
@@ -209,9 +217,9 @@ export function ItemHero({
           {genresText ? <span className={styles.genres}>{genresText}</span> : null}
 
           {isSyncing && (
-            <span className={styles.syncingBadge} title="Metadata is syncing with server...">
+            <span className={styles.syncingBadge} title={t("syncingWithServer", "Metadata is syncing with server...")}>
               <span className={styles.syncDot} />
-              <span>Syncing with server</span>
+              <span>{t("syncingWithServer", "Syncing with server")}</span>
             </span>
           )}
         </div>
@@ -224,16 +232,16 @@ export function ItemHero({
             shape="rounded"
             onClick={onPlay}
             disabled={isPlaying || (isSeries && !nextUpEpisode)}
-            aria-label="Play"
+            aria-label={t("play", "Play")}
             className={styles.playButton}
             leftSection={<IconPlayerPlayFilled size={18} />}
           >
             <span>
               {isSeries && nextUpEpisode
-                ? `${t("play", "播放")} S${nextUpEpisode.ParentIndexNumber ?? 1}:E${nextUpEpisode.IndexNumber ?? 1}${resumeTimeClock ? ` (${resumeTimeClock} · ${Math.round(progressPercent)}%)` : ""}`
+                ? `${t("play", "Play")} S${nextUpEpisode.ParentIndexNumber ?? 1}:E${nextUpEpisode.IndexNumber ?? 1}${resumeTimeClock ? ` (${resumeTimeClock} · ${Math.round(progressPercent)}%)` : ""}`
                 : hasProgress
-                  ? `${t("resume", "继续播放")} (${resumeTimeClock} · ${Math.round(progressPercent)}%)`
-                  : t("play", "播放")}
+                  ? `${t("resume", "Resume")} (${resumeTimeClock} · ${Math.round(progressPercent)}%)`
+                  : t("play", "Play")}
             </span>
             {hasProgress && (
               <div className={styles.playButtonProgressBarTrack}>
@@ -248,14 +256,14 @@ export function ItemHero({
             size="lg"
             onClick={toggleFavorite}
             disabled={favUpdating}
-            title={isFavorite ? "Remove from Favorites" : "Add to Favorites"}
-            aria-label={isFavorite ? "Remove from Favorites" : "Add to Favorites"}
+            title={isFavorite ? t("removeFromFavorites", "Remove from Favorites") : t("addToFavorites", "Add to Favorites")}
+            aria-label={isFavorite ? t("removeFromFavorites", "Remove from Favorites") : t("addToFavorites", "Add to Favorites")}
           >
             <div style={{ display: "flex", alignItems: "center", padding: "0 8px" }}>
               <span style={{ display: "inline-flex", alignItems: "center", marginRight: "8px" }}>
                 {isFavorite ? <IconHeartFilled size={18} color="#ff4757" /> : <IconHeart size={18} />}
               </span>
-              <span style={{ fontSize: "0.875rem", fontWeight: 500 }}>{isFavorite ? "Favorited" : "Favorite"}</span>
+              <span style={{ fontSize: "0.875rem", fontWeight: 500 }}>{isFavorite ? t("favorited", "Favorited") : t("favorite", "Favorite")}</span>
             </div>
           </GlassElement>
         </div>
@@ -280,7 +288,7 @@ export function ItemHero({
                 }}
               >
                 <span style={{ marginRight: "4px" }}>🔊</span>
-                <span>{t("audio", "音轨")}: {selectedAudioLabel}</span>
+                <span>{t("audio", "Audio")}: {selectedAudioLabel}</span>
               </span>
             )}
             {selectedSubtitleLabel && (
@@ -300,7 +308,7 @@ export function ItemHero({
                 }}
               >
                 <span style={{ marginRight: "4px" }}>💬</span>
-                <span>{t("subtitle", "字幕")}: {selectedSubtitleLabel}</span>
+                <span>{t("subtitle", "Subtitle")}: {selectedSubtitleLabel}</span>
               </span>
             )}
           </div>
@@ -356,14 +364,47 @@ interface CastSectionProps {
   server: EmbyServer;
 }
 
+function CastAvatar({ name, avatarUrl }: { name?: string; avatarUrl: string | null }) {
+  const [hasError, setHasError] = useState(false);
+  const [isLoaded, setIsLoaded] = useState(false);
+
+  if (!avatarUrl || hasError) {
+    return (
+      <div className={styles.castAvatarPlaceholder}>
+        <span>{name ? name.charAt(0).toUpperCase() : "?"}</span>
+      </div>
+    );
+  }
+
+  return (
+    <img
+      src={avatarUrl}
+      alt={name || ""}
+      className={styles.castAvatar}
+      loading="eager"
+      decoding="async"
+      style={{ opacity: isLoaded ? 1 : 0, transition: "opacity 0.2s ease" }}
+      onLoad={() => setIsLoaded(true)}
+      onError={() => setHasError(true)}
+      ref={(el) => {
+        if (el && el.complete) {
+          if (el.naturalWidth > 0) setIsLoaded(true);
+          else setHasError(true);
+        }
+      }}
+    />
+  );
+}
+
 function CastSection({ people, server }: CastSectionProps) {
+  const { t } = useTranslation();
   if (!people || people.length === 0) return null;
   const list = people.slice(0, 10);
 
   return (
     <section className={styles.castSection}>
       <div className={styles.castHeader}>
-        <h3 className={styles.castTitle}>演职人员</h3>
+        <h3 className={styles.castTitle}>{t("cast", "Cast & Crew")}</h3>
       </div>
       <div className={styles.castScroller}>
         {list.map((p, idx) => {
@@ -382,23 +423,17 @@ function CastSection({ people, server }: CastSectionProps) {
             (p.Role && p.Role !== "None"
               ? p.Role
               : p.Type === "Director"
-                ? "导演"
+                ? t("director", "Director")
                 : p.Type === "Actor"
-                  ? "演员"
+                  ? t("actor", "Actor")
                   : p.Type === "Writer"
-                    ? "编剧"
+                    ? t("writer", "Writer")
                     : p.Type) || "";
 
           return (
             <div key={p.Id || `person-${idx}`} className={styles.castCard}>
               <div className={styles.castAvatarWrapper}>
-                {avatarUrl ? (
-                  <img src={avatarUrl} alt={p.Name || ""} className={styles.castAvatar} loading="lazy" decoding="async" />
-                ) : (
-                  <div className={styles.castAvatarPlaceholder}>
-                    <span>{p.Name ? p.Name.charAt(0).toUpperCase() : "?"}</span>
-                  </div>
-                )}
+                <CastAvatar name={p.Name} avatarUrl={avatarUrl} />
               </div>
               <span className={styles.castName} title={p.Name}>
                 {p.Name}

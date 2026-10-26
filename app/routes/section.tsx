@@ -10,6 +10,7 @@ import { Alert } from "../components/ui";
 import { useIINABridge, useOnWindowReopen } from "../hooks/useIINABridge";
 import { useProgressiveScroll } from "../hooks/useProgressiveScroll";
 import { fetchAllSectionData, fetchUserViews, type SectionAllData } from "../lib/emby-library-client";
+import { useTranslation } from "../lib/i18n";
 import { queryClient } from "../lib/query-client";
 import { embyKeys } from "../lib/query-keys";
 import { filterAndSortSectionItems, type SectionFilter, type SectionSortBy, type SectionSortOrder } from "../lib/section-items";
@@ -26,6 +27,7 @@ export default function SectionRoute() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const location = useLocation();
+  const { t } = useTranslation();
   const { activeServer, servers, isLoading: isBridgeLoading } = useIINABridge();
 
   const stateName = location.state?.name as string | undefined;
@@ -237,21 +239,16 @@ export default function SectionRoute() {
   );
 
   const getEmptyMessage = () => {
-    const activeFilters = [];
-    if (searchQuery.trim()) activeFilters.push(`"${searchQuery.trim()}"`);
-    if (genre !== "all") activeFilters.push(`genre "${genre}"`);
-    if (year !== "all") activeFilters.push(`year "${year}"`);
-    if (filter !== "all") activeFilters.push(`status "${filter}"`);
-
-    if (activeFilters.length > 0) {
-      return `No media found matching ${activeFilters.join(", ")}.`;
+    const hasActiveFilters = searchQuery.trim() || genre !== "all" || year !== "all" || filter !== "all";
+    if (hasActiveFilters) {
+      return t("noResultsMatchFilters", "No results match your active filters");
     }
-    return "No media found in this collection.";
+    return t("noItems", "No items available");
   };
 
   return (
     <div className={styles.container}>
-      <PageHeader onBack={handleBack} backTitle="Home" title={titleNode} onRefresh={handleRefresh} isRefreshing={isRefreshing} />
+      <PageHeader onBack={handleBack} backTitle={t("home", "Home")} title={titleNode} onRefresh={handleRefresh} isRefreshing={isRefreshing} />
 
       <main className={styles.content}>
         <SectionToolbar

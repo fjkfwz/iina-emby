@@ -1,5 +1,6 @@
 import { type EmbyItemMetadata, formatEpisodeCode } from "@shared";
 import { IconPlayerPlayFilled } from "@tabler/icons-react";
+import { useTranslation } from "../lib/i18n";
 import styles from "./EpisodeDetailModal.module.css";
 import { GlassElement } from "./ui/GlassElement";
 import { Modal } from "./ui/Modal";
@@ -11,6 +12,8 @@ export interface EpisodeDetailModalProps {
 }
 
 export function EpisodeDetailModal({ episode, onClose, onPlay }: EpisodeDetailModalProps) {
+  const { t } = useTranslation();
+
   return (
     <Modal
       opened={Boolean(episode)}
@@ -26,7 +29,7 @@ export function EpisodeDetailModal({ episode, onClose, onPlay }: EpisodeDetailMo
           <div className={styles.modalHeader}>
             <div className={styles.modalHeaderInfo}>
               <div className={styles.modalEpisodeCode}>{formatEpisodeCode(episode.ParentIndexNumber, episode.IndexNumber)}</div>
-              <h3 className={styles.modalEpisodeTitle}>{episode.Name || "Episode"}</h3>
+              <h3 className={styles.modalEpisodeTitle}>{episode.Name || t("episode", "Episode")}</h3>
             </div>
             {onPlay && (
               <GlassElement
@@ -39,13 +42,13 @@ export function EpisodeDetailModal({ episode, onClose, onPlay }: EpisodeDetailMo
                 }}
                 leftSection={<IconPlayerPlayFilled size={14} />}
               >
-                <span>播放</span>
+                <span>{t("play", "Play")}</span>
               </GlassElement>
             )}
           </div>
 
           <div className={styles.modalOverviewScroll}>
-            <p className={styles.modalOverviewText}>{episode.Overview || "No overview available for this episode."}</p>
+            <p className={styles.modalOverviewText}>{episode.Overview || t("noOverviewAvailable", "No overview available for this episode.")}</p>
           </div>
         </div>
       )}

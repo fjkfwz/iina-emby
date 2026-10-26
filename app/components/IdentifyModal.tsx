@@ -3,6 +3,7 @@ import { IconAlertCircle, IconCheck, IconLoader2, IconMovie, IconSearch } from "
 import type React from "react";
 import { useEffect, useState } from "react";
 import { applyRemoteSearchResult, searchRemoteItem } from "../lib/emby-library-client";
+import { useTranslation } from "../lib/i18n";
 import styles from "./IdentifyModal.module.css";
 import { Alert, Button, Input, Modal } from "./ui";
 
@@ -15,6 +16,7 @@ export interface IdentifyModalProps {
 }
 
 export function IdentifyModal({ opened, onClose, item, server, onSuccess }: IdentifyModalProps) {
+  const { t } = useTranslation();
   const [title, setTitle] = useState("");
   const [year, setYear] = useState("");
   const [imdbId, setImdbId] = useState("");
@@ -123,7 +125,7 @@ export function IdentifyModal({ opened, onClose, item, server, onSuccess }: Iden
         {/* Header */}
         <div className={styles.modalHeader}>
           <div className={styles.headerTitleGroup}>
-            <h3 className={styles.modalTitle}>Identify</h3>
+            <h3 className={styles.modalTitle}>{t("identify", "Identify")}</h3>
             <span className={styles.typeBadge}>{itemType}</span>
           </div>
         </div>
@@ -152,7 +154,7 @@ export function IdentifyModal({ opened, onClose, item, server, onSuccess }: Iden
           <div className={styles.inputRow}>
             <div className={styles.fieldGroup}>
               <label className={styles.fieldLabel} htmlFor="identify-title">
-                Title
+                {t("titleField", "Title")}
               </label>
               <Input
                 id="identify-title"
@@ -165,7 +167,7 @@ export function IdentifyModal({ opened, onClose, item, server, onSuccess }: Iden
 
             <div className={styles.fieldGroupSmall}>
               <label className={styles.fieldLabel} htmlFor="identify-year">
-                Year
+                {t("yearField", "Year")}
               </label>
               <Input id="identify-year" type="number" value={year} onChange={(e) => setYear(e.target.value)} placeholder="YYYY" />
             </div>
@@ -197,7 +199,7 @@ export function IdentifyModal({ opened, onClose, item, server, onSuccess }: Iden
           <div className={styles.searchActions}>
             <Button type="submit" size="sm" disabled={isSearching || isApplying}>
               {isSearching ? <IconLoader2 size={14} className={styles.spinning} /> : <IconSearch size={14} />}
-              <span>{isSearching ? "Searching..." : "Search"}</span>
+              <span>{isSearching ? t("searching", "Searching...") : t("search", "Search")}</span>
             </Button>
           </div>
         </form>
@@ -207,17 +209,17 @@ export function IdentifyModal({ opened, onClose, item, server, onSuccess }: Iden
           {isSearching ? (
             <div className={styles.stateBox}>
               <IconLoader2 size={28} className={styles.spinning} />
-              <span>Searching metadata...</span>
+              <span>{t("searchingMetadata", "Searching metadata...")}</span>
             </div>
           ) : results === null ? (
             <div className={styles.stateBox}>
               <IconSearch size={32} stroke={1.5} />
-              <span>Search above to find and match metadata for this item</span>
+              <span>{t("searchMetadataHint", "Search above to find and match metadata for this item")}</span>
             </div>
           ) : results.length === 0 ? (
             <div className={styles.stateBox}>
               <IconMovie size={32} stroke={1.5} />
-              <span>No results found. Try adjusting title, year, or provider IDs.</span>
+              <span>{t("noIdentifyResults", "No results found. Try adjusting title, year, or provider IDs.")}</span>
             </div>
           ) : (
             results.map((res, index) => {
@@ -233,7 +235,14 @@ export function IdentifyModal({ opened, onClose, item, server, onSuccess }: Iden
                 >
                   <div className={styles.resultThumb}>
                     {res.ImageUrl ? (
-                      <img src={res.ImageUrl} alt={res.Name || "Poster"} className={styles.resultThumbImg} />
+                      <img
+                        src={res.ImageUrl}
+                        alt={res.Name || "Poster"}
+                        className={styles.resultThumbImg}
+                        onError={(e) => {
+                          (e.currentTarget as HTMLElement).style.display = "none";
+                        }}
+                      />
                     ) : (
                       <IconMovie size={24} stroke={1.5} />
                     )}
@@ -273,23 +282,23 @@ export function IdentifyModal({ opened, onClose, item, server, onSuccess }: Iden
               onChange={(e) => setReplaceAllImages(e.target.checked)}
               disabled={isApplying}
             />
-            <span>Replace existing images</span>
+            <span>{t("replaceAllImages", "Replace existing images")}</span>
           </label>
 
           <div className={styles.footerActions}>
             <Button type="button" size="sm" onClick={onClose} disabled={isApplying}>
-              Cancel
+              {t("cancel", "Cancel")}
             </Button>
             <Button type="button" variant="primary" size="sm" onClick={handleApply} disabled={!selectedResult || isApplying || isSearching}>
               {isApplying ? (
                 <>
                   <IconLoader2 size={14} className={styles.spinning} />
-                  <span>Applying...</span>
+                  <span>{t("searching", "Applying...")}</span>
                 </>
               ) : (
                 <>
                   <IconCheck size={14} stroke={2.5} />
-                  <span>Apply</span>
+                  <span>{t("apply", "Apply")}</span>
                 </>
               )}
             </Button>

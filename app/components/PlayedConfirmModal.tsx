@@ -1,5 +1,6 @@
 import type { EmbyItemMetadata } from "@shared";
 import { IconCheck, IconEyeOff } from "@tabler/icons-react";
+import { useTranslation } from "../lib/i18n";
 import { ConfirmModal } from "./ui/ConfirmModal";
 import { DropdownMenu } from "./ui/DropdownMenu";
 
@@ -15,26 +16,27 @@ export interface PlayedConfirmModalProps {
 
 export function PlayedConfirmModal({ opened, onClose, onConfirm, item, action, isPlayed, isLoading = false }: PlayedConfirmModalProps) {
   if (!opened) return null;
+  const { t } = useTranslation();
 
   const targetAction: "played" | "unplayed" = action ?? (isPlayed ? "unplayed" : "played");
   const isMarkingPlayed = targetAction === "played";
 
   const isSeries = item.Type === "Series";
   const name = item.Name || (isSeries ? "this series" : "this item");
-  const actionText = isMarkingPlayed ? "played" : "unplayed";
+  const actionLabel = isMarkingPlayed ? t("markPlayed", "Mark as played") : t("markUnplayed", "Mark as unplayed");
 
   return (
     <ConfirmModal
       opened={opened}
       onClose={onClose}
       onConfirm={onConfirm}
-      title={isMarkingPlayed ? "Mark as played" : "Mark as unplayed"}
+      title={actionLabel}
       message={
         isSeries
-          ? `Are you sure you want to mark "${name}" and all its episodes as ${actionText}?`
-          : `Are you sure you want to mark "${name}" as ${actionText}?`
+          ? `Are you sure you want to mark "${name}" and all its episodes as ${isMarkingPlayed ? "played" : "unplayed"}?`
+          : `Are you sure you want to mark "${name}" as ${isMarkingPlayed ? "played" : "unplayed"}?`
       }
-      confirmLabel={isMarkingPlayed ? "Mark as played" : "Mark as unplayed"}
+      confirmLabel={actionLabel}
       confirmVariant={isMarkingPlayed ? "primary" : "danger"}
       isLoading={isLoading}
     />
@@ -48,9 +50,10 @@ export interface TogglePlayedMenuItemProps {
 }
 
 export function TogglePlayedMenuItem({ isPlayed, isUpdating = false, onSelect }: TogglePlayedMenuItemProps) {
+  const { t } = useTranslation();
   return (
     <DropdownMenu.Item icon={isPlayed ? <IconEyeOff size={16} /> : <IconCheck size={16} />} disabled={isUpdating} onSelect={onSelect}>
-      {isPlayed ? "Mark as unplayed" : "Mark as played"}
+      {isPlayed ? t("markUnplayed", "Mark as unplayed") : t("markPlayed", "Mark as played")}
     </DropdownMenu.Item>
   );
 }
@@ -61,17 +64,19 @@ export interface MarkPlayedMenuItemProps {
 }
 
 export function MarkPlayedMenuItem({ isUpdating = false, onSelect }: MarkPlayedMenuItemProps) {
+  const { t } = useTranslation();
   return (
     <DropdownMenu.Item icon={<IconCheck size={16} />} disabled={isUpdating} onSelect={onSelect}>
-      Mark as played
+      {t("markPlayed", "Mark as played")}
     </DropdownMenu.Item>
   );
 }
 
 export function MarkUnplayedMenuItem({ isUpdating = false, onSelect }: MarkPlayedMenuItemProps) {
+  const { t } = useTranslation();
   return (
     <DropdownMenu.Item icon={<IconEyeOff size={16} />} disabled={isUpdating} onSelect={onSelect}>
-      Mark as unplayed
+      {t("markUnplayed", "Mark as unplayed")}
     </DropdownMenu.Item>
   );
 }

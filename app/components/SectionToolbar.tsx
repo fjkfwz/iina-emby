@@ -1,5 +1,6 @@
 import { IconSearch, IconSortAscending, IconSortDescending, IconX } from "@tabler/icons-react";
 import { useMemo } from "react";
+import { useTranslation } from "../lib/i18n";
 import type { SectionFilter, SectionSortBy, SectionSortOrder } from "../lib/section-items";
 import styles from "./SectionToolbar.module.css";
 import { Button } from "./ui/Button";
@@ -75,21 +76,43 @@ export function SectionToolbar({
   onSortOrderChange,
   className,
 }: SectionToolbarProps) {
+  const { t } = useTranslation();
+
+  const watchStatusOptions = useMemo<SelectOption[]>(
+    () => [
+      { value: "all", label: t("all", "All") },
+      { value: "unplayed", label: t("unplayed", "Unplayed") },
+      { value: "inprogress", label: t("inProgress", "In Progress") },
+      { value: "played", label: t("played", "Played") },
+    ],
+    [t],
+  );
+
+  const sortCriteriaOptions = useMemo<SelectOption[]>(
+    () => [
+      { value: "name", label: t("sortName", "Name") },
+      { value: "date", label: t("sortDateAdded", "Date Added") },
+      { value: "year", label: t("sortReleaseYear", "Release Year") },
+      { value: "rating", label: t("sortRating", "Rating") },
+    ],
+    [t],
+  );
+
   const genreOptions = useMemo<SelectOption[]>(() => {
-    const list: SelectOption[] = [{ value: "all", label: "All Genres" }];
+    const list: SelectOption[] = [{ value: "all", label: t("allGenres", "All Genres") }];
     for (const g of availableGenres) {
       list.push({ value: g, label: g });
     }
     return list;
-  }, [availableGenres]);
+  }, [availableGenres, t]);
 
   const yearOptions = useMemo<SelectOption[]>(() => {
-    const list: SelectOption[] = [{ value: "all", label: "All Years" }];
+    const list: SelectOption[] = [{ value: "all", label: t("allYears", "All Years") }];
     for (const y of availableYears) {
       list.push({ value: String(y), label: String(y) });
     }
     return list;
-  }, [availableYears]);
+  }, [availableYears, t]);
 
   return (
     <div className={`${styles.toolbar} ${className || ""}`}>
@@ -97,7 +120,7 @@ export function SectionToolbar({
       <div className={styles.leftGroup}>
         {onFilterChange && (
           <Select
-            data={WATCH_STATUS_OPTIONS}
+            data={watchStatusOptions}
             value={filter}
             onChange={(val) => {
               if (val) {
@@ -150,8 +173,8 @@ export function SectionToolbar({
                 onSearchQueryChange("");
               }
             }}
-            placeholder="Search by title..."
-            aria-label="Filter media by title"
+            placeholder={t("searchByTitle", "Search by title...")}
+            aria-label={t("searchByTitle", "Filter media by title")}
             leftSection={<IconSearch size={14} className={styles.searchIcon} aria-hidden="true" />}
             rightSection={
               searchQuery ? (
@@ -159,8 +182,8 @@ export function SectionToolbar({
                   type="button"
                   className={styles.clearBtn}
                   onClick={() => onSearchQueryChange("")}
-                  aria-label="Clear search"
-                  title="Clear"
+                  aria-label={t("reset", "Clear")}
+                  title={t("reset", "Clear")}
                 >
                   <IconX size={12} />
                 </button>
@@ -174,7 +197,7 @@ export function SectionToolbar({
       {onSortByChange && (
         <div className={styles.rightGroup}>
           <Select
-            data={SORT_CRITERIA_OPTIONS}
+            data={sortCriteriaOptions}
             value={sortBy}
             onChange={(val) => {
               if (val) {
@@ -190,8 +213,8 @@ export function SectionToolbar({
               iconOnly
               size="sm"
               onClick={() => onSortOrderChange(sortOrder === "asc" ? "desc" : "asc")}
-              title={sortOrder === "asc" ? "Sort ascending (click to invert)" : "Sort descending (click to invert)"}
-              aria-label={sortOrder === "asc" ? "Sort ascending, click to sort descending" : "Sort descending, click to sort ascending"}
+              title={sortOrder === "asc" ? t("sortAscending", "Sort Ascending") : t("sortDescending", "Sort Descending")}
+              aria-label={sortOrder === "asc" ? t("sortAscending", "Sort Ascending") : t("sortDescending", "Sort Descending")}
             >
               {sortOrder === "asc" ? <IconSortAscending size={14} /> : <IconSortDescending size={14} />}
             </Button>

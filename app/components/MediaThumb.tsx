@@ -15,6 +15,7 @@ import { memo, useCallback, useState } from "react";
 import { useNavigate } from "react-router";
 import { useItemPlayedStatus } from "../hooks/useItemPlayedStatus";
 import { buildStreamUrl } from "../lib/emby-library-client";
+import { useTranslation } from "../lib/i18n";
 import classes from "./MediaThumb.module.css";
 import { PlayedConfirmModal, PlayStatusMenuItems } from "./PlayedConfirmModal";
 import { DropdownMenu } from "./ui";
@@ -73,21 +74,12 @@ export const MediaThumb = memo(function MediaThumb({
   subtitleLines,
 }: MediaThumbProps) {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [imageError, setImageError] = useState(false);
-  const [retryCount, setRetryCount] = useState(0);
 
   const handleImgError = useCallback(() => {
-    if (retryCount < 2) {
-      setTimeout(
-        () => {
-          setRetryCount((prev) => prev + 1);
-        },
-        1500 * (retryCount + 1),
-      );
-    } else {
-      setImageError(true);
-    }
-  }, [retryCount]);
+    setImageError(true);
+  }, []);
   const {
     isPlayed,
     unplayedCount,
@@ -138,12 +130,17 @@ export const MediaThumb = memo(function MediaThumb({
 
   const handleRef = useCallback(
     (el: HTMLImageElement | null) => {
-      if (el && el.complete && el.naturalWidth > 0 && !isLoaded) {
-        if (imageUrl) loadedThumbUrls.add(imageUrl);
-        setIsLoaded(true);
+      if (!el) return;
+      if (el.complete) {
+        if (el.naturalWidth > 0) {
+          if (imageUrl) loadedThumbUrls.add(imageUrl);
+          setIsLoaded(true);
+        } else {
+          setImageError(true);
+        }
       }
     },
-    [imageUrl, isLoaded],
+    [imageUrl],
   );
 
   const currentSec = ticksToSeconds(playbackPositionTicks);
@@ -193,16 +190,15 @@ export const MediaThumb = memo(function MediaThumb({
           onClick={handlePlayClick}
           aria-label={`Play ${fullPlayTitle}`}
         ></button>
-        {imageUrl ? (
+        {imageUrl && !imageError ? (
           <img
             ref={handleRef}
-            key={retryCount}
             src={imageUrl}
             alt=""
             className={classes.image}
-            loading="eager"
+            loading="lazy"
             decoding="async"
-            style={{ opacity: 1 }}
+            style={{ opacity: isLoaded ? 1 : 0, transition: isCached ? "none" : "opacity 0.2s ease" }}
             onLoad={handleImgLoad}
             onError={handleImgError}
           />
@@ -252,13 +248,13 @@ export const MediaThumb = memo(function MediaThumb({
 
         <DropdownMenu
           trigger={(props) => (
-            <button type="button" className={classes.menuBtn} aria-label="More actions" {...props}>
+            <button type="button" className={classes.menuBtn} aria-label={t("moreActions", "More actions")} {...props}>
               <IconDots size={14} stroke={2.5} />
             </button>
           )}
         >
           <DropdownMenu.Item icon={<IconInfoCircle size={16} />} onSelect={() => navigate(`/item/${item.Id}`, { state: { item } })}>
-            Details
+            {t("details", "Details")}
           </DropdownMenu.Item>
           {(canMarkPlayed || canMarkUnplayed) && <DropdownMenu.Divider />}
           <PlayStatusMenuItems

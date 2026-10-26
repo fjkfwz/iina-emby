@@ -1,5 +1,6 @@
 import { type EmbyItemMetadata, type EmbyServer, formatEpisodeSubtitle } from "@shared";
 import { memo } from "react";
+import { useTranslation } from "../lib/i18n";
 import { MediaShelf } from "./MediaShelf";
 import { MediaThumb, MediaThumbSkeleton } from "./MediaThumb";
 import styles from "./SeriesEpisodesShelf.module.css";
@@ -26,9 +27,11 @@ export const SeriesEpisodesShelf = memo(function SeriesEpisodesShelf({
   onPlayEpisode,
   onEpisodeClick,
 }: SeriesEpisodesShelfProps) {
+  const { t } = useTranslation();
+
   const seasonOptions = seasons.map((s) => ({
     value: s.Id,
-    label: s.Name || `Season ${s.IndexNumber ?? 1}`,
+    label: s.Name || `${t("season", "Season")} ${s.IndexNumber ?? 1}`,
   }));
 
   return (
@@ -37,7 +40,7 @@ export const SeriesEpisodesShelf = memo(function SeriesEpisodesShelf({
         key={selectedSeasonId || "default"}
         title={
           <div className={styles.shelfHeader}>
-            <h3 className={styles.shelfTitle}>Episodes</h3>
+            <h3 className={styles.shelfTitle}>{t("episodes", "Episodes")}</h3>
             {seasons.length > 0 && (
               <Select
                 data={seasonOptions}
@@ -53,12 +56,12 @@ export const SeriesEpisodesShelf = memo(function SeriesEpisodesShelf({
         }
         itemWidth={300}
         gap={16}
-        emptyText={!isLoading ? "No episodes available for this season." : undefined}
+        emptyText={!isLoading ? t("noEpisodesAvailable", "No episodes available for this season.") : undefined}
       >
         {isLoading && episodes.length === 0
           ? [1, 2, 3, 4, 5].map((id) => <MediaThumbSkeleton key={id} />)
           : episodes.map((ep) => {
-              const cardTitle = formatEpisodeSubtitle(ep.ParentIndexNumber, ep.IndexNumber, ep.Name || "Episode");
+              const cardTitle = formatEpisodeSubtitle(ep.ParentIndexNumber, ep.IndexNumber, ep.Name || t("episode", "Episode"));
               return (
                 <MediaThumb
                   key={ep.Id}

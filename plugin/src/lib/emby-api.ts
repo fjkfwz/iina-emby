@@ -17,7 +17,7 @@ import type { SafeHttp } from "./safe-http";
 export type { ClientIdentity, EmbyItemMetadata, EmbyPlaybackInfo, ParsedEmbyUrl };
 
 export interface EmbyApiDeps {
-  http: typeof iina.http | SafeHttp;
+  http: SafeHttp;
   preferences: typeof iina.preferences;
   log: DebugLogger;
 }
@@ -148,15 +148,17 @@ export function createEmbyApi({ http, preferences, log }: EmbyApiDeps) {
         throw new Error("No data received from Emby API");
       }
 
-      if (typeof response.data === "object") {
+      if (typeof response.data === "object" && response.data !== null) {
+        const info = response.data as EmbyPlaybackInfo;
         log("Response data is already parsed object");
-        log(`MediaSources found: ${response.data.MediaSources ? response.data.MediaSources.length : "none"}`);
-        return response.data as EmbyPlaybackInfo;
+        log(`MediaSources found: ${info.MediaSources ? info.MediaSources.length : "none"}`);
+        return info;
       }
 
       log("Response data is string, parsing manually");
-      log(`Response.data preview: ${String(response.data).substring(0, 200)}`);
-      return JSON.parse(response.data) as EmbyPlaybackInfo;
+      const text = typeof response.data === "string" ? response.data : response.text;
+      log(`Response.data preview: ${text.substring(0, 200)}`);
+      return JSON.parse(text) as EmbyPlaybackInfo;
     } catch (error: unknown) {
       const errorMsg = error instanceof Error ? error.message : String(error);
       log(`Error fetching playback info: ${errorMsg}`);
@@ -183,16 +185,18 @@ export function createEmbyApi({ http, preferences, log }: EmbyApiDeps) {
         throw new Error("No metadata received from Emby API");
       }
 
-      if (typeof response.data === "object") {
+      if (typeof response.data === "object" && response.data !== null) {
+        const meta = response.data as EmbyItemMetadata;
         log("Metadata is already parsed object");
-        log(`Item name: ${response.data.Name}`);
-        log(`Item type: ${response.data.Type}`);
-        return response.data as EmbyItemMetadata;
+        log(`Item name: ${meta.Name}`);
+        log(`Item type: ${meta.Type}`);
+        return meta;
       }
 
       log("Metadata is string, parsing manually");
-      log(`Metadata preview: ${String(response.data).substring(0, 200)}`);
-      return JSON.parse(response.data) as EmbyItemMetadata;
+      const text = typeof response.data === "string" ? response.data : response.text;
+      log(`Metadata preview: ${text.substring(0, 200)}`);
+      return JSON.parse(text) as EmbyItemMetadata;
     } catch (error: unknown) {
       const errorMsg = error instanceof Error ? error.message : String(error);
       log(`Error fetching item metadata: ${errorMsg}`);

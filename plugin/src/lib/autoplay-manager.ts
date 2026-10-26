@@ -3,7 +3,7 @@ import type { DebugLogger } from "./debug-log";
 import type { SafeHttp } from "./safe-http";
 
 export interface AutoplayManagerDeps {
-  http: typeof iina.http | SafeHttp;
+  http: SafeHttp;
   mpv: typeof iina.mpv;
   core: typeof iina.core;
   preferences: typeof iina.preferences;

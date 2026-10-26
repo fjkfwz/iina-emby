@@ -2,6 +2,7 @@ import type { EmbyServer } from "@shared";
 import { IconAlertCircle, IconCheck } from "@tabler/icons-react";
 import type React from "react";
 import { useEffect, useState } from "react";
+import { useTranslation } from "../lib/i18n";
 import { authenticateByName } from "../lib/emby-auth-client";
 import styles from "./ServerConnectForm.module.css";
 import { Alert, Button, Input } from "./ui";
@@ -14,6 +15,7 @@ export interface ServerConnectFormProps {
 }
 
 export function ServerConnectForm({ isFirstServer = false, initialServer, onSuccess, onCancel }: ServerConnectFormProps) {
+  const { t } = useTranslation();
   const [serverUrl, setServerUrl] = useState(initialServer?.serverUrl ?? "");
   const [username, setUsername] = useState(initialServer?.username ?? "");
   const [password, setPassword] = useState("");
@@ -37,7 +39,7 @@ export function ServerConnectForm({ isFirstServer = false, initialServer, onSucc
   const handleConnect = async (e: React.SubmitEvent) => {
     e.preventDefault();
     if (!serverUrl || !username) {
-      setError("Server URL and username are required");
+      setError(t("serverUrlAndUsernameRequired", "Server URL and username are required"));
       return;
     }
 
@@ -60,13 +62,23 @@ export function ServerConnectForm({ isFirstServer = false, initialServer, onSucc
         : result.server;
       onSuccess(serverToSave);
     } else {
-      setError(result.error || "Connection failed");
+      setError(result.error || t("connectionError", "Connection failed"));
     }
   };
 
-  const formTitle = initialServer ? "Edit Emby Server" : isFirstServer ? "Connect to Emby" : "Add Emby Server";
+  const formTitle = initialServer
+    ? t("editServer", "Edit Emby Server")
+    : isFirstServer
+      ? t("connectToEmby", "Connect to Emby")
+      : t("addServer", "Add Emby Server");
 
-  const submitLabel = isLoading ? (initialServer ? "Saving..." : "Connecting...") : initialServer ? "Save Changes" : "Connect";
+  const submitLabel = isLoading
+    ? initialServer
+      ? t("saving", "Saving...")
+      : t("connecting", "Connecting...")
+    : initialServer
+      ? t("saveChanges", "Save Changes")
+      : t("connect", "Connect");
 
   return (
     <div className={styles.formPanel}>
@@ -77,7 +89,7 @@ export function ServerConnectForm({ isFirstServer = false, initialServer, onSucc
           {error && (
             <Alert
               icon={<IconAlertCircle size={15} />}
-              title="Connection Error"
+              title={t("connectionError", "Connection Error")}
               styles={{
                 root: {
                   backgroundColor: "var(--danger-bg)",
@@ -95,7 +107,7 @@ export function ServerConnectForm({ isFirstServer = false, initialServer, onSucc
 
           <div className={styles.fieldGroup}>
             <label className={styles.fieldLabel} htmlFor="serverUrl">
-              Server Address
+              {t("serverAddress", "Server Address")}
             </label>
             <Input
               id="serverUrl"
@@ -110,12 +122,12 @@ export function ServerConnectForm({ isFirstServer = false, initialServer, onSucc
 
           <div className={styles.fieldGroup}>
             <label className={styles.fieldLabel} htmlFor="serverUsername">
-              Username
+              {t("username", "Username")}
             </label>
             <Input
               id="serverUsername"
               type="text"
-              placeholder="Username"
+              placeholder={t("username", "Username")}
               required
               value={username}
               onChange={(e) => setUsername(e.target.value)}
@@ -125,12 +137,12 @@ export function ServerConnectForm({ isFirstServer = false, initialServer, onSucc
 
           <div className={styles.fieldGroup}>
             <label className={styles.fieldLabel} htmlFor="serverPassword">
-              Password
+              {t("password", "Password")}
             </label>
             <Input
               id="serverPassword"
               type="password"
-              placeholder="Password"
+              placeholder={t("password", "Password")}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               disabled={isLoading}
@@ -140,7 +152,7 @@ export function ServerConnectForm({ isFirstServer = false, initialServer, onSucc
           <div className={styles.formActions}>
             {onCancel && (
               <Button type="button" size="sm" onClick={onCancel} disabled={isLoading}>
-                Cancel
+                {t("cancel", "Cancel")}
               </Button>
             )}
             <Button type="submit" variant="primary" size="sm" disabled={isLoading}>

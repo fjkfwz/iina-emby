@@ -60,6 +60,8 @@ global.onMessage("get-pending-media", (_data?: unknown, player?: string | number
       debugLog("Replying with pending play data to player:", target);
       global.postMessage(target, "apply-pending-media", latestPendingPlayData);
     }
+    // Also broadcast to null to ensure delivery across player core boundaries
+    global.postMessage(null, "apply-pending-media", latestPendingPlayData);
   }
 });
 
@@ -116,9 +118,9 @@ function spawnNewPlayerInstance(playData: PlayMediaMessage): void {
     if (typeof playerId === "number") {
       activePlayerTarget = playerId;
       global.postMessage(playerId, "apply-pending-media", playData);
-    } else {
-      global.postMessage(null, "apply-pending-media", playData);
     }
+    // Always broadcast as well to ensure the player core receives track selections
+    global.postMessage(null, "apply-pending-media", playData);
   } catch (err: unknown) {
     const errorMsg = err instanceof Error ? err.message : String(err);
     debugLog.error("Failed to create player instance: " + errorMsg);
@@ -152,6 +154,7 @@ function handleGlobalPlayMedia(data?: PlayMediaMessage): void {
   if (activePlayerTarget !== null && !openInNewWindow) {
     debugLog("Forwarding play-media to active player instance:", activePlayerTarget);
     global.postMessage(activePlayerTarget, "play-media-command", playData);
+    global.postMessage(activePlayerTarget, "apply-pending-media", playData);
   } else {
     spawnNewPlayerInstance(playData);
   }
@@ -203,7 +206,7 @@ menu.addItem(
 
 // Backward compatibility: create-player requests from player entries
 global.onMessage("create-player", (data: PlayMediaMessage, player?: string | number) => {
-  const streamUrl = data?.streamUrl || data?.url;
+  const streamUrl = String(data?.streamUrl || data?.url || "");
   const title = data?.title;
   debugLog("Global entry received create-player message", {
     hasData: Boolean(data),

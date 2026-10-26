@@ -290,7 +290,6 @@
   flex-shrink: 0;
   text-align: center;
   cursor: default;
-  contain: layout paint;
 }
 
 .castAvatarWrapper {

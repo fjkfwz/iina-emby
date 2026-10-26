@@ -6,6 +6,7 @@ import { memo, useCallback, useState } from "react";
 import { useNavigate } from "react-router";
 import { useItemPlayedStatus } from "../hooks/useItemPlayedStatus";
 import { isIdentifySupported } from "../lib/emby-library-client";
+import { useTranslation } from "../lib/i18n";
 import { IdentifyModal } from "./IdentifyModal";
 import classes from "./MediaPoster.module.css";
 import { PlayedConfirmModal, PlayStatusMenuItems } from "./PlayedConfirmModal";
@@ -54,23 +55,14 @@ export const MediaPoster = memo(function MediaPoster({
   className,
 }: MediaPosterProps) {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [imgError, setImgError] = useState(false);
-  const [retryCount, setRetryCount] = useState(0);
   const [isIdentifyOpen, setIsIdentifyOpen] = useState(false);
   const canIdentify = Boolean(server.user?.Policy?.IsAdministrator) && isIdentifySupported(item.Type);
 
   const handleImgError = useCallback(() => {
-    if (retryCount < 2) {
-      setTimeout(
-        () => {
-          setRetryCount((prev) => prev + 1);
-        },
-        1500 * (retryCount + 1),
-      );
-    } else {
-      setImgError(true);
-    }
-  }, [retryCount]);
+    setImgError(true);
+  }, []);
 
   const {
     isPlayed,
@@ -114,12 +106,17 @@ export const MediaPoster = memo(function MediaPoster({
 
   const handleRef = useCallback(
     (el: HTMLImageElement | null) => {
-      if (el && el.complete && el.naturalWidth > 0 && !isLoaded) {
-        if (imageUrl) loadedPosterUrls.add(imageUrl);
-        setIsLoaded(true);
+      if (!el) return;
+      if (el.complete) {
+        if (el.naturalWidth > 0) {
+          if (imageUrl) loadedPosterUrls.add(imageUrl);
+          setIsLoaded(true);
+        } else {
+          setImgError(true);
+        }
       }
     },
-    [imageUrl, isLoaded],
+    [imageUrl],
   );
 
   const rating = typeof item.CommunityRating === "number" && item.CommunityRating > 0 ? item.CommunityRating.toFixed(1) : null;
@@ -137,17 +134,16 @@ export const MediaPoster = memo(function MediaPoster({
   return (
     <div className={`${classes.card} ${className || ""}`}>
       <button type="button" className={classes.cardButton} onClick={handleClick} aria-label={`View ${item.Name || "Media"}`}></button>
-      <div className={classes.posterWrapper}>
-        {imageUrl ? (
+      <div className={classes.posterWrapper} onClick={handleClick} style={{ cursor: "pointer" }}>
+        {imageUrl && !imgError ? (
           <img
             ref={handleRef}
-            key={retryCount}
             src={imageUrl}
             alt=""
             className={classes.image}
             loading="lazy"
             decoding="async"
-            style={{ opacity: 1 }}
+            style={{ opacity: isLoaded ? 1 : 0, transition: isCached ? "none" : "opacity 0.2s ease" }}
             onLoad={handleImgLoad}
             onError={handleImgError}
           />
@@ -159,9 +155,9 @@ export const MediaPoster = memo(function MediaPoster({
 
         {/* Top-Left: Syncing badge when background metadata identification is pending */}
         {isSyncing && (
-          <div className={classes.syncingBadge} title="Metadata is syncing with server...">
+          <div className={classes.syncingBadge} title={t("syncingWithServer", "Metadata is syncing with server...")}>
             <span className={classes.syncDot} />
-            <span>Syncing</span>
+            <span>{t("syncing", "Syncing")}</span>
           </div>
         )}
 
@@ -185,17 +181,17 @@ export const MediaPoster = memo(function MediaPoster({
 
         <DropdownMenu
           trigger={(props) => (
-            <button type="button" className={classes.menuBtn} aria-label="More actions" {...props}>
+            <button type="button" className={classes.menuBtn} aria-label={t("moreActions", "More actions")} {...props}>
               <IconDots size={14} stroke={2.5} />
             </button>
           )}
         >
           <DropdownMenu.Item icon={<IconInfoCircle size={16} />} onSelect={() => navigate(`/item/${item.Id}`, { state: { item } })}>
-            Details
+            {t("details", "Details")}
           </DropdownMenu.Item>
           {canIdentify && (
             <DropdownMenu.Item icon={<IconFingerprint size={16} />} onSelect={() => setIsIdentifyOpen(true)}>
-              Identify
+              {t("identify", "Identify")}
             </DropdownMenu.Item>
           )}
           {(canMarkPlayed || canMarkUnplayed) && <DropdownMenu.Divider />}
@@ -209,7 +205,7 @@ export const MediaPoster = memo(function MediaPoster({
         </DropdownMenu>
       </div>
 
-      <div className={classes.meta}>
+      <div className={classes.meta} onClick={handleClick} style={{ cursor: "pointer" }}>
         <span className={classes.title} title={item.Name}>
           {item.Name || "Untitled"}
         </span>

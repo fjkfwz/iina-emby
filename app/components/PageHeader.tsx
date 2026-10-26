@@ -116,8 +116,8 @@ export const PageHeader = forwardRef<HTMLElement, PageHeaderProps>(function Page
             shape="rounded"
             size="sm"
             isIconOnly
-            title="Settings"
-            aria-label="Open settings"
+            title={t("settings", "Settings")}
+            aria-label={t("settings", "Settings")}
             onClick={() => {
               navigate("/settings");
             }}

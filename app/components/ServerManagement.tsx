@@ -1,6 +1,7 @@
 import type { EmbyServer } from "@shared";
 import { IconPlus } from "@tabler/icons-react";
 import { useState } from "react";
+import { useTranslation } from "../lib/i18n";
 import { useIINABridge } from "../hooks/useIINABridge";
 import { IINAEmbyLogo } from "./IINAEmbyLogo";
 import { ServerConnectForm } from "./ServerConnectForm";
@@ -13,6 +14,7 @@ interface ServerManagementProps {
 }
 
 export function ServerManagement({ onServerSelected }: ServerManagementProps) {
+  const { t } = useTranslation();
   const { servers, activeServerId, selectServer, removeServer, saveServer } = useIINABridge();
 
   const [serverToDelete, setServerToDelete] = useState<EmbyServer | null>(null);
@@ -82,7 +84,7 @@ export function ServerManagement({ onServerSelected }: ServerManagementProps) {
           >
             <div className={styles.actionLeft}>
               <IconPlus size={15} stroke={2.2} />
-              <span>Add Another Server...</span>
+              <span>{t("addAnotherServer", "Add Another Server...")}</span>
             </div>
             <span className={styles.shortcutGlyph}>⌘N</span>
           </button>
@@ -108,15 +110,12 @@ export function ServerManagement({ onServerSelected }: ServerManagementProps) {
             setServerToDelete(null);
           }
         }}
-        title="Remove Server"
-        message={
-          <>
-            Are you sure you want to remove{" "}
-            <span style={{ fontWeight: 600, color: "var(--text-primary)" }}>{serverToDelete?.serverName || "this server"}</span>? You will
-            need to sign in again to reconnect.
-          </>
-        }
-        confirmLabel="Remove"
+        title={t("removeServer", "Remove Server")}
+        message={t("removeServerConfirm", "Are you sure you want to remove '{name}'? You will need to sign in again to reconnect.").replace(
+          "{name}",
+          serverToDelete?.serverName || "Emby Server",
+        )}
+        confirmLabel={t("remove", "Remove")}
       />
     </div>
   );
