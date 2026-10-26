@@ -259,13 +259,15 @@ export function ItemHero({
             disabled={favUpdating}
             title={isFavorite ? t("removeFromFavorites", "Remove from Favorites") : t("addToFavorites", "Add to Favorites")}
             aria-label={isFavorite ? t("removeFromFavorites", "Remove from Favorites") : t("addToFavorites", "Add to Favorites")}
+            leftSection={
+              isFavorite ? (
+                <IconHeartFilled size={18} color="#ff4757" />
+              ) : (
+                <IconHeart size={18} />
+              )
+            }
           >
-            <div style={{ display: "flex", alignItems: "center", padding: "0 8px" }}>
-              <span style={{ display: "inline-flex", alignItems: "center", marginRight: "8px" }}>
-                {isFavorite ? <IconHeartFilled size={18} color="#ff4757" /> : <IconHeart size={18} />}
-              </span>
-              <span style={{ fontSize: "0.875rem", fontWeight: 500 }}>{isFavorite ? t("favorited", "Favorited") : t("favorite", "Favorite")}</span>
-            </div>
+            <span>{isFavorite ? t("favorited", "Favorited") : t("favorite", "Favorite")}</span>
           </GlassElement>
         </div>
 

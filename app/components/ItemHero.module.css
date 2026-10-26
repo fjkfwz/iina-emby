@@ -200,7 +200,11 @@
   background: #ffffff;
   border-radius: 2px;
   box-shadow: 0 0 8px rgba(255, 255, 255, 0.85);
-  transition: width 0.25s ease;
+  transition: width 0.25s ease, box-shadow 0.2s ease;
+}
+
+.playButton:hover .playButtonProgressBarFill {
+  box-shadow: 0 0 12px rgba(255, 255, 255, 1);
 }
 
 /* Selected Audio & Subtitle Track Badges */

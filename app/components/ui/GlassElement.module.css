@@ -1,22 +1,4 @@
-/* Aqua Refined Glass Component — based on Jared White's implementation */
-
-@property --bg-color {
-  syntax: "<color>";
-  inherits: true;
-  initial-value: rebeccapurple;
-}
-
-@property --mix-color {
-  syntax: "<color>";
-  inherits: true;
-  initial-value: white;
-}
-
-@property --dark-color-mix {
-  syntax: "<percentage>";
-  inherits: true;
-  initial-value: 10%;
-}
+/* Aqua Refined Glass Component — Compatible with Safari 13+ and modern browsers */
 
 .button {
   appearance: none;
@@ -29,39 +11,30 @@
   font: inherit;
   font-weight: 700;
   text-decoration: none;
-  color: white;
+  color: #ffffff;
   border: none;
   border-radius: 2rem;
   -webkit-tap-highlight-color: transparent;
   box-sizing: border-box;
   user-select: none;
+  -webkit-user-select: none;
   outline: none;
   cursor: default;
 
-  /* Aqua Glass Foundation */
-  --mix-color: white;
-  --dark-color-mix: 10%;
-  --bg-color: color-mix(in oklab, transparent, var(--mix-color) var(--dark-color-mix));
-
+  /* Original transparent Aqua glass base */
   background: rgba(255, 255, 255, 0.1);
-  background: linear-gradient(
-    to bottom,
-    color-mix(in oklab, var(--bg-color), white 5%),
-    var(--bg-color) 20%,
-    var(--bg-color) 50%,
-    color-mix(in oklab, var(--bg-color), white 6%)
-  );
   backdrop-filter: saturate(150%) blur(0.375rem);
   -webkit-backdrop-filter: saturate(150%) blur(0.375rem);
-
-  /* Exact Aqua specular rim highlights & subtle borders */
   box-shadow: var(--shadow-glass);
 
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+
   transition:
-    --bg-color 0.2s ease-out,
-    --dark-color-mix 0.2s ease-out,
+    background 0.18s ease-out,
+    box-shadow 0.18s ease-out,
     transform 0.15s ease-out,
-    opacity 0.2s ease;
+    opacity 0.18s ease;
 }
 
 /* Interactive States */
@@ -69,13 +42,16 @@
   cursor: pointer;
 }
 
+.interactive * {
+  cursor: inherit;
+}
+
 .interactive:hover {
-  --dark-color-mix: 20%;
+  transform: translateY(-1.5px) scale(1.02);
 }
 
 .interactive:active {
-  --dark-color-mix: 30%;
-  transform: scale(0.98);
+  transform: translateY(0) scale(0.97);
 }
 
 .nonInteractive {
@@ -107,30 +83,67 @@
 
 /* 1. Primary: Luminous glass button */
 .variantPrimary {
-  --mix-color: white;
-  --dark-color-mix: 14%;
+  background: rgba(255, 255, 255, 0.1);
+  box-shadow: var(--shadow-glass);
 }
 
 .variantPrimary.interactive:hover {
-  --dark-color-mix: 24%;
+  background: rgba(255, 255, 255, 0.24);
+  box-shadow:
+    -1px 0 0 rgba(0, 0, 0, 0.15),
+    1px 0 0 rgba(0, 0, 0, 0.15),
+    0 -1px 0 rgba(0, 0, 0, 0.065),
+    0 1px 0 rgba(0, 0, 0, 0.065),
+    inset 0 2px 3px -1px rgba(255, 255, 255, 0.75),
+    inset 0 -2px 3px -1px rgba(255, 255, 255, 0.90),
+    0 4px 16px rgba(0, 0, 0, 0.30),
+    0 0 12px rgba(255, 255, 255, 0.15);
+  transform: translateY(-1.5px) scale(1.02);
 }
 
 .variantPrimary.interactive:active {
-  --dark-color-mix: 36%;
+  background: rgba(255, 255, 255, 0.32);
+  box-shadow:
+    -1px 0 0 rgba(0, 0, 0, 0.2),
+    1px 0 0 rgba(0, 0, 0, 0.2),
+    0 -1px 0 rgba(0, 0, 0, 0.1),
+    0 1px 0 rgba(0, 0, 0, 0.1),
+    inset 0 1px 2px -1px rgba(255, 255, 255, 0.60),
+    inset 0 -1px 2px -1px rgba(255, 255, 255, 0.70),
+    0 2px 6px rgba(0, 0, 0, 0.25);
+  transform: translateY(0) scale(0.97);
 }
 
 /* 2. Glass: Subtle smoky glass */
 .variantGlass {
-  --mix-color: white;
-  --dark-color-mix: 8%;
+  background: rgba(255, 255, 255, 0.1);
+  box-shadow: var(--shadow-glass);
 }
 
 .variantGlass.interactive:hover {
-  --dark-color-mix: 16%;
+  background: rgba(255, 255, 255, 0.18);
+  box-shadow:
+    -1px 0 0 rgba(0, 0, 0, 0.15),
+    1px 0 0 rgba(0, 0, 0, 0.15),
+    0 -1px 0 rgba(0, 0, 0, 0.065),
+    0 1px 0 rgba(0, 0, 0, 0.065),
+    inset 0 2px 2px -1px rgba(255, 255, 255, 0.65),
+    inset 0 -2px 2px -1px rgba(255, 255, 255, 0.80),
+    0 4px 12px rgba(0, 0, 0, 0.25);
+  transform: translateY(-1.5px) scale(1.02);
 }
 
 .variantGlass.interactive:active {
-  --dark-color-mix: 25%;
+  background: rgba(255, 255, 255, 0.24);
+  box-shadow:
+    -1px 0 0 rgba(0, 0, 0, 0.2),
+    1px 0 0 rgba(0, 0, 0, 0.2),
+    0 -1px 0 rgba(0, 0, 0, 0.1),
+    0 1px 0 rgba(0, 0, 0, 0.1),
+    inset 0 1px 2px -1px rgba(255, 255, 255, 0.50),
+    inset 0 -1px 2px -1px rgba(255, 255, 255, 0.60),
+    0 2px 6px rgba(0, 0, 0, 0.22);
+  transform: translateY(0) scale(0.97);
 }
 
 /* 3. Ghost: Transparent, reveals glass on hover */
@@ -142,19 +155,29 @@
 }
 
 .variantGhost.interactive:hover {
-  --mix-color: white;
-  --dark-color-mix: 10%;
-  background: rgba(255, 255, 255, 0.1);
-  background: linear-gradient(
-    to bottom,
-    color-mix(in oklab, var(--bg-color), white 5%),
-    var(--bg-color) 20%,
-    var(--bg-color) 50%,
-    color-mix(in oklab, var(--bg-color), white 6%)
-  );
+  background: rgba(255, 255, 255, 0.12);
+  box-shadow: var(--shadow-glass);
   backdrop-filter: saturate(150%) blur(0.375rem);
   -webkit-backdrop-filter: saturate(150%) blur(0.375rem);
-  box-shadow: var(--shadow-glass);
+  transform: translateY(-1.5px);
+}
+
+.variantGhost.interactive:active {
+  background: rgba(255, 255, 255, 0.18);
+  transform: translateY(0) scale(0.97);
+}
+
+/* Icon Buttons Hover Refinement (keeps vertical baseline aligned in toolbars) */
+.iconSm.interactive:hover,
+.iconMd.interactive:hover,
+.iconLg.interactive:hover {
+  transform: scale(1.06);
+}
+
+.iconSm.interactive:active,
+.iconMd.interactive:active,
+.iconLg.interactive:active {
+  transform: scale(0.94);
 }
 
 /* ==============================================================
