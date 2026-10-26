@@ -44,7 +44,7 @@
 
 ```text
 请帮我将 iina-emby 插件安装到本机的 IINA 播放器中：
-直接从 https://github.com/fjkfwz/iina-emby/releases/latest 下载最新的 .iinaplgz 插件包，解压安装到本地 IINA 插件目录（~/Library/Application Support/com.colliderli.iina/plugins/com.ghotriw.iina-emby.iinaplugin/），并重启 IINA 播放器生效。
+直接从 https://github.com/fjkfwz/iina-emby/releases/latest 下载最新的 .iinaplgz 插件包，安装部署到本机的 IINA 插件中，并重启 IINA 激活插件。
 ```
 
 Agent 会自动从 Release 下载已编译好的安装包并一键解压部署，无需安装 Node.js、pnpm 或配置任何前端构建环境。
@@ -104,9 +104,9 @@ pnpm run install:plugin
 | :---: |
 | <img src="docs/detail.webp" width="100%" alt="媒体详情页" /> |
 
-| 媒体库瀑布流与继续播放 |
+| 媒体库海报瀑布流与剧集/电影横轴 |
 | :---: |
-| <img src="docs/screenshot.webp" width="100%" alt="媒体库海报横轴" /> |
+| <img src="docs/shelf.webp" width="100%" alt="媒体库海报瀑布流" /> |
 
 ---
 

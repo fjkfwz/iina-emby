@@ -44,7 +44,7 @@ If you are using an AI coding assistant (such as **Antigravity**, **Claude Code*
 
 ```text
 Please install the latest iina-emby plugin into my local IINA player:
-Directly download the latest `.iinaplgz` package from https://github.com/fjkfwz/iina-emby/releases/latest, extract it into my local IINA plugins directory (~/Library/Application Support/com.colliderli.iina/plugins/com.ghotriw.iina-emby.iinaplugin/), and restart IINA to activate it.
+Directly download the latest `.iinaplgz` package from https://github.com/fjkfwz/iina-emby/releases/latest, install it into my local IINA player, and restart IINA to activate it.
 ```
 
 The agent will download the pre-built release package, extract it directly into your IINA plugins folder with zero build dependencies, and restart IINA.
@@ -104,9 +104,9 @@ pnpm run install:plugin
 | :---: |
 | <img src="docs/detail.webp" width="100%" alt="Media Detail View" /> |
 
-| Media Shelf Browser (Posters & Continue Watching) |
+| Media Shelf Browser (Posters Waterfall & Library Shelves) |
 | :---: |
-| <img src="docs/screenshot.webp" width="100%" alt="Shelf Browser" /> |
+| <img src="docs/shelf.webp" width="100%" alt="Media Shelf Browser" /> |
 
 ---
 
