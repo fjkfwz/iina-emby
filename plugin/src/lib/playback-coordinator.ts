@@ -70,6 +70,8 @@ export function createPlaybackCoordinator({
   let currentPlaybackIsExternalSubtitle: boolean | null = null;
   let currentPlaybackSubtitlePath: string | null = null;
   let currentPlaybackSubtitleCodec: string | null = null;
+  let currentPlaybackMediaSourceId: string | null = null;
+  let currentPlaybackSubtitleDeliveryUrl: string | null = null;
 
   function setPendingPlaybackData(message?: PlayMediaMessage): void {
     if (!message) return;
@@ -117,6 +119,12 @@ export function createPlaybackCoordinator({
     }
     if (typeof message.subtitleCodec === "string") {
       currentPlaybackSubtitleCodec = message.subtitleCodec;
+    }
+    if (typeof message.mediaSourceId === "string") {
+      currentPlaybackMediaSourceId = message.mediaSourceId;
+    }
+    if (typeof message.subtitleDeliveryUrl === "string") {
+      currentPlaybackSubtitleDeliveryUrl = message.subtitleDeliveryUrl;
     }
   }
 
@@ -193,6 +201,18 @@ export function createPlaybackCoordinator({
     return currentPlaybackSubtitleCodec;
   }
 
+  function getPendingMediaSourceId(itemId?: string): string | null {
+    if (!currentPlaybackMediaSourceId) return null;
+    if (!isItemMatching(itemId)) return null;
+    return currentPlaybackMediaSourceId;
+  }
+
+  function getPendingSubtitleDeliveryUrl(itemId?: string): string | null {
+    if (!currentPlaybackSubtitleDeliveryUrl) return null;
+    if (!isItemMatching(itemId)) return null;
+    return currentPlaybackSubtitleDeliveryUrl;
+  }
+
   function clearPendingSubtitle(itemId?: string): void {
     if (!isItemMatching(itemId)) return;
     currentPlaybackSubtitleIndex = null;
@@ -201,6 +221,8 @@ export function createPlaybackCoordinator({
     currentPlaybackIsExternalSubtitle = null;
     currentPlaybackSubtitlePath = null;
     currentPlaybackSubtitleCodec = null;
+    currentPlaybackMediaSourceId = null;
+    currentPlaybackSubtitleDeliveryUrl = null;
   }
 
   function clearPendingAudio(itemId?: string): void {
@@ -531,6 +553,8 @@ export function createPlaybackCoordinator({
     getPendingIsExternalSubtitle,
     getPendingSubtitlePath,
     getPendingSubtitleCodec,
+    getPendingMediaSourceId,
+    getPendingSubtitleDeliveryUrl,
     clearPendingSubtitle,
     clearPendingAudio,
     clearPendingTracks,

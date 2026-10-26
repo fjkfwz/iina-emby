@@ -12,7 +12,7 @@ import type { StoredSessionData } from "./server-session-store";
 
 export interface MediaActionsDeps {
   core: typeof iina.core;
-  http: typeof iina.http | SafeHttp;
+  http: SafeHttp;
   utils: typeof iina.utils;
   preferences: typeof iina.preferences;
   mpv: typeof iina.mpv;
@@ -139,11 +139,36 @@ export function createMediaActionsManager({
     apiKey: string,
     language: string,
     codec?: string,
+    deliveryUrl?: string | null,
   ): Promise<boolean> {
     try {
       const extension = subtitleExtensionForCodec(codec);
+      let subtitleUrl: string;
 
-      const subtitleUrl = `${serverBase}/Videos/${itemId}/${mediaSourceId || itemId}/Subtitles/${streamIndex}/stream.${extension}?api_key=${apiKey}`;
+      if (deliveryUrl && typeof deliveryUrl === "string") {
+        if (deliveryUrl.startsWith("http://") || deliveryUrl.startsWith("https://")) {
+          subtitleUrl = deliveryUrl;
+        } else {
+          const cleanBase = serverBase.replace(/\/+$/, "");
+          const cleanPath = deliveryUrl.startsWith("/") ? deliveryUrl : `/${deliveryUrl}`;
+          subtitleUrl = `${cleanBase}${cleanPath}`;
+        }
+        if (apiKey && !subtitleUrl.includes("api_key=") && !subtitleUrl.includes("X-Emby-Token=")) {
+          subtitleUrl += (subtitleUrl.includes("?") ? "&" : "?") + `api_key=${encodeURIComponent(apiKey)}`;
+        }
+      } else {
+        let effectiveMediaSourceId = mediaSourceId;
+        if (!effectiveMediaSourceId) {
+          try {
+            const pb = await fetchPlaybackInfo(serverBase, itemId, apiKey);
+            effectiveMediaSourceId = pb.MediaSources?.[0]?.Id;
+          } catch {
+            // Ignore fetch error
+          }
+        }
+        const cleanBase = serverBase.replace(/\/+$/, "");
+        subtitleUrl = `${cleanBase}/Videos/${encodeURIComponent(itemId)}/${encodeURIComponent(effectiveMediaSourceId || itemId)}/Subtitles/${streamIndex}/Stream.${extension}?api_key=${encodeURIComponent(apiKey)}`;
+      }
 
       const sanitizedItemId = String(itemId).replace(/[^a-zA-Z0-9_-]/g, "_");
       let suffix: string;
@@ -160,32 +185,71 @@ export function createMediaActionsManager({
 
       const localPath = `@tmp/${fileName}`;
 
-      log(`Loading external subtitle via MPV: ${subtitleUrl}`);
+      log(`Downloading external subtitle: ${subtitleUrl} to ${localPath}`);
       log(`External subtitle path: ${subtitlePath}`);
       log(`Stream index: ${streamIndex}`);
       log(`Language: ${language}`);
       log(`Codec: ${codec} -> Extension: ${extension}`);
 
-      // Use MPV's native sub-add command with direct stream URL to avoid blocking utils.exec / curl crashes
+      await http.download(subtitleUrl, localPath);
+
+      const resolvedPath = typeof utils.resolvePath === "function" ? utils.resolvePath(localPath) : localPath;
+      log(`External subtitle downloaded to: ${resolvedPath}`);
+
+      // Check if file was downloaded and is non-empty
       try {
-        mpv.command("sub-add", subtitleUrl, "select");
-        log(`External subtitle loaded successfully via mpv sub-add: ${subtitleUrl}`);
-      } catch (subErr) {
-        log(`mpv.command sub-add error, trying core.subtitle.loadTrack:`, subErr);
-        try {
-          core.subtitle.loadTrack(subtitleUrl);
-          log(`External subtitle loaded successfully via core.subtitle.loadTrack`);
-        } catch (coreErr) {
-          log(`core.subtitle.loadTrack also failed:`, coreErr);
+        const statRes = await utils.exec("/usr/bin/test", ["-s", resolvedPath]);
+        if (statRes.status !== 0) {
+          log.error(`Downloaded subtitle file is empty or does not exist: ${resolvedPath}`);
           return false;
         }
+      } catch {
+        // Ignore test error
+      }
+
+      let loaded = false;
+      try {
+        core.subtitle.loadTrack(resolvedPath);
+        loaded = true;
+        log(`External subtitle loaded successfully via core.subtitle.loadTrack: ${resolvedPath}`);
+      } catch (coreErr) {
+        log(`core.subtitle.loadTrack error, trying mpv sub-add:`, coreErr);
+        try {
+          mpv.command("sub-add", [resolvedPath, "select"]);
+          loaded = true;
+          log(`External subtitle loaded successfully via mpv sub-add: ${resolvedPath}`);
+        } catch (mpvErr) {
+          log.error(`mpv sub-add also failed:`, mpvErr);
+          return false;
+        }
+      }
+
+      // Verify and ensure active subtitle track is selected
+      try {
+        const currentSid = mpv.getString("sid");
+        if (currentSid === "no" || currentSid === "0") {
+          const trackList = mpv.getNative<Array<{ id: number; type: string; external?: boolean }>>("track-list");
+          if (Array.isArray(trackList)) {
+            const subTracks = trackList.filter((t) => t.type === "sub");
+            if (subTracks.length > 0) {
+              const lastTrack = subTracks[subTracks.length - 1];
+              log(`Activating newly loaded subtitle track: id=${lastTrack.id}`);
+              mpv.set("sid", lastTrack.id);
+              if (core.subtitle) {
+                core.subtitle.id = lastTrack.id;
+              }
+            }
+          }
+        }
+      } catch {
+        // Ignore selection verification errors
       }
 
       if (preferences.get("show_notifications")) {
         core.osd(`Loaded external ${language} subtitle`);
       }
 
-      return true;
+      return loaded;
     } catch (error: unknown) {
       const errorMsg = error instanceof Error ? error.message : String(error);
       log(`Error downloading external subtitle: ${errorMsg}`);
@@ -244,6 +308,7 @@ export function createMediaActionsManager({
             apiKey,
             language,
             codec,
+            stream.DeliveryUrl,
           );
           if (downloaded) {
             downloadedCount++;

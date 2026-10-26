@@ -105,7 +105,7 @@ export default function ItemDetailRoute() {
 
   const selectedSubtitleLabel =
     effectiveSubtitleIndex === -1
-      ? t("subtitlesOff", "关闭字幕")
+      ? t("subtitlesOff", "Subtitles Off")
       : selectedSubtitleStream
         ? `${selectedSubtitleStream.DisplayLanguage || selectedSubtitleStream.Language || "Sub"} (${selectedSubtitleStream.Codec?.toUpperCase() || "SRT"})`
         : undefined;
@@ -128,6 +128,8 @@ export default function ItemDetailRoute() {
         playTitle = formatFullEpisodeTitle(item.Name, playTarget.ParentIndexNumber ?? 1, playTarget.IndexNumber, playTarget.Name);
       }
 
+      const mediaSourceId = (playTarget || item)?.MediaSources?.[0]?.Id;
+
       playMedia({
         title: playTitle,
         streamUrl: buildStreamUrl(activeServer, playTarget.Id),
@@ -141,6 +143,8 @@ export default function ItemDetailRoute() {
         isExternalSubtitle: selectedSubtitleStream?.IsExternal,
         subtitlePath: selectedSubtitleStream?.Path,
         subtitleCodec: selectedSubtitleStream?.Codec,
+        mediaSourceId,
+        subtitleDeliveryUrl: selectedSubtitleStream?.DeliveryUrl,
       });
     } finally {
       setIsPlaying(false);
@@ -159,31 +163,53 @@ export default function ItemDetailRoute() {
     let epSubExt = selectedSubtitleStream?.IsExternal;
     let epSubPath = selectedSubtitleStream?.Path;
     let epSubCodec = selectedSubtitleStream?.Codec;
+    let epSubDeliveryUrl = selectedSubtitleStream?.DeliveryUrl;
+    const epMediaSourceId = ep.MediaSources?.[0]?.Id || (playTarget || item)?.MediaSources?.[0]?.Id;
 
-    if (Array.isArray(epStreams) && epStreams.length > 0) {
+    const isCurrentPlayTarget = Boolean(playTarget?.Id && String(ep.Id) === String(playTarget.Id));
+
+    if (!isCurrentPlayTarget && Array.isArray(epStreams) && epStreams.length > 0) {
       const epAudioStreams = epStreams.filter((s) => s.Type === "Audio");
       const epSubStreams = epStreams.filter((s) => s.Type === "Subtitle");
 
-      if (selectedAudioStream?.Language) {
-        const langMatch = epAudioStreams.find(
-          (s) => s.Language?.toLowerCase() === selectedAudioStream.Language?.toLowerCase(),
-        );
-        if (langMatch) {
-          epAudioIndex = langMatch.Index;
-          epAudioTrackNum = epAudioStreams.indexOf(langMatch) + 1;
+      if (selectedAudioStream) {
+        const match =
+          epAudioStreams.find(
+            (s) =>
+              s.Language?.toLowerCase() === selectedAudioStream.Language?.toLowerCase() &&
+              s.Codec?.toLowerCase() === selectedAudioStream.Codec?.toLowerCase(),
+          ) ||
+          (typeof audioTrackNumber === "number" && epAudioStreams[audioTrackNumber - 1]) ||
+          epAudioStreams.find((s) => s.Language?.toLowerCase() === selectedAudioStream.Language?.toLowerCase());
+
+        if (match) {
+          epAudioIndex = match.Index;
+          epAudioTrackNum = epAudioStreams.indexOf(match) + 1;
         }
       }
 
-      if (effectiveSubtitleIndex !== -1 && selectedSubtitleStream?.Language) {
-        const langMatch = epSubStreams.find(
-          (s) => s.Language?.toLowerCase() === selectedSubtitleStream.Language?.toLowerCase(),
-        );
-        if (langMatch) {
-          epSubIndex = langMatch.Index;
-          epSubTrackNum = epSubStreams.indexOf(langMatch) + 1;
-          epSubExt = langMatch.IsExternal;
-          epSubPath = langMatch.Path;
-          epSubCodec = langMatch.Codec;
+      if (effectiveSubtitleIndex === -1) {
+        epSubIndex = -1;
+        epSubTrackNum = undefined;
+        epSubExt = false;
+        epSubDeliveryUrl = undefined;
+      } else if (selectedSubtitleStream) {
+        const match =
+          epSubStreams.find(
+            (s) =>
+              s.Language?.toLowerCase() === selectedSubtitleStream.Language?.toLowerCase() &&
+              s.Codec?.toLowerCase() === selectedSubtitleStream.Codec?.toLowerCase(),
+          ) ||
+          (typeof subtitleTrackNumber === "number" && epSubStreams[subtitleTrackNumber - 1]) ||
+          epSubStreams.find((s) => s.Language?.toLowerCase() === selectedSubtitleStream.Language?.toLowerCase());
+
+        if (match) {
+          epSubIndex = match.Index;
+          epSubTrackNum = epSubStreams.indexOf(match) + 1;
+          epSubExt = match.IsExternal;
+          epSubPath = match.Path;
+          epSubCodec = match.Codec;
+          epSubDeliveryUrl = match.DeliveryUrl;
         }
       }
     }
@@ -201,6 +227,8 @@ export default function ItemDetailRoute() {
       isExternalSubtitle: epSubExt,
       subtitlePath: epSubPath,
       subtitleCodec: epSubCodec,
+      mediaSourceId: epMediaSourceId,
+      subtitleDeliveryUrl: epSubDeliveryUrl,
     });
   };
 

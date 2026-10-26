@@ -28,6 +28,8 @@ export interface PlayMediaPayload {
   isExternalSubtitle?: boolean;
   subtitlePath?: string;
   subtitleCodec?: string;
+  mediaSourceId?: string;
+  subtitleDeliveryUrl?: string;
   [key: string]: unknown;
 }
 

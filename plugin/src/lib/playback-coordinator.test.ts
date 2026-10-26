@@ -87,12 +87,16 @@ describe("playback-coordinator", () => {
       subtitlePath: "/path/to/sub.zh.srt",
       subtitleCodec: "srt",
       subtitleLanguage: "zh",
+      mediaSourceId: "ms-source-123",
+      subtitleDeliveryUrl: "/play/subtitle/sub-token-xyz",
     });
 
     expect(coordinator.getPendingIsExternalSubtitle("item-789")).toBe(true);
     expect(coordinator.getPendingSubtitlePath("item-789")).toBe("/path/to/sub.zh.srt");
     expect(coordinator.getPendingSubtitleCodec("item-789")).toBe("srt");
     expect(coordinator.getPendingSubtitleLanguage("item-789")).toBe("zh");
+    expect(coordinator.getPendingMediaSourceId("item-789")).toBe("ms-source-123");
+    expect(coordinator.getPendingSubtitleDeliveryUrl("item-789")).toBe("/play/subtitle/sub-token-xyz");
   });
 
   it("handles playMedia storing track metadata before opening", () => {

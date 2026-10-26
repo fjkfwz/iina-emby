@@ -574,14 +574,16 @@ function createEmbyApi({ http: http2, preferences: preferences2, log }) {
       if (!response.data) {
         throw new Error("No data received from Emby API");
       }
-      if (typeof response.data === "object") {
+      if (typeof response.data === "object" && response.data !== null) {
+        const info = response.data;
         log("Response data is already parsed object");
-        log(`MediaSources found: ${response.data.MediaSources ? response.data.MediaSources.length : "none"}`);
-        return response.data;
+        log(`MediaSources found: ${info.MediaSources ? info.MediaSources.length : "none"}`);
+        return info;
       }
       log("Response data is string, parsing manually");
-      log(`Response.data preview: ${String(response.data).substring(0, 200)}`);
-      return JSON.parse(response.data);
+      const text = typeof response.data === "string" ? response.data : response.text;
+      log(`Response.data preview: ${text.substring(0, 200)}`);
+      return JSON.parse(text);
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);
       log(`Error fetching playback info: ${errorMsg}`);
@@ -601,15 +603,17 @@ function createEmbyApi({ http: http2, preferences: preferences2, log }) {
       if (!response.data) {
         throw new Error("No metadata received from Emby API");
       }
-      if (typeof response.data === "object") {
+      if (typeof response.data === "object" && response.data !== null) {
+        const meta = response.data;
         log("Metadata is already parsed object");
-        log(`Item name: ${response.data.Name}`);
-        log(`Item type: ${response.data.Type}`);
-        return response.data;
+        log(`Item name: ${meta.Name}`);
+        log(`Item type: ${meta.Type}`);
+        return meta;
       }
       log("Metadata is string, parsing manually");
-      log(`Metadata preview: ${String(response.data).substring(0, 200)}`);
-      return JSON.parse(response.data);
+      const text = typeof response.data === "string" ? response.data : response.text;
+      log(`Metadata preview: ${text.substring(0, 200)}`);
+      return JSON.parse(text);
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);
       log(`Error fetching item metadata: ${errorMsg}`);
@@ -690,6 +694,7 @@ function createSafeHttp(utils2, log) {
     }
     return {
       status: statusCode,
+      statusCode,
       data,
       text: body
     };
@@ -699,9 +704,17 @@ function createSafeHttp(utils2, log) {
     if (log) {
       log(`[safeHttp] Download ${url} -> ${resolved}`);
     }
+    if (resolved && resolved.includes("/")) {
+      const dir = resolved.substring(0, resolved.lastIndexOf("/"));
+      try {
+        await utils2.exec("/bin/mkdir", ["-p", dir]);
+      } catch {
+      }
+    }
     const args = [
       "-s",
       "-S",
+      "-f",
       "-L",
       "--max-time",
       String(timeoutSeconds),
@@ -972,6 +985,7 @@ global.onMessage("get-pending-media", (_data, player) => {
       debugLog("Replying with pending play data to player:", target);
       global.postMessage(target, "apply-pending-media", latestPendingPlayData);
     }
+    global.postMessage(null, "apply-pending-media", latestPendingPlayData);
   }
 });
 global.onMessage("player-inactive", (data, player) => {
@@ -1022,9 +1036,8 @@ function spawnNewPlayerInstance(playData) {
     if (typeof playerId === "number") {
       activePlayerTarget = playerId;
       global.postMessage(playerId, "apply-pending-media", playData);
-    } else {
-      global.postMessage(null, "apply-pending-media", playData);
     }
+    global.postMessage(null, "apply-pending-media", playData);
   } catch (err) {
     const errorMsg = err instanceof Error ? err.message : String(err);
     debugLog.error("Failed to create player instance: " + errorMsg);
@@ -1051,6 +1064,7 @@ function handleGlobalPlayMedia(data) {
   if (activePlayerTarget !== null && !openInNewWindow) {
     debugLog("Forwarding play-media to active player instance:", activePlayerTarget);
     global.postMessage(activePlayerTarget, "play-media-command", playData);
+    global.postMessage(activePlayerTarget, "apply-pending-media", playData);
   } else {
     spawnNewPlayerInstance(playData);
   }
@@ -1093,7 +1107,7 @@ menu.addItem(
   })
 );
 global.onMessage("create-player", (data, player) => {
-  const streamUrl = data?.streamUrl || data?.url;
+  const streamUrl = String(data?.streamUrl || data?.url || "");
   const title = data?.title;
   debugLog("Global entry received create-player message", {
     hasData: Boolean(data),

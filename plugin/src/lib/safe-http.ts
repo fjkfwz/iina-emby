@@ -7,6 +7,7 @@ import type { DebugLogger } from "./debug-log";
 
 export interface SafeHttpResponse<T = unknown> {
   status: number;
+  statusCode: number;
   data: T;
   text: string;
 }
@@ -109,6 +110,7 @@ export function createSafeHttp(
 
     return {
       status: statusCode,
+      statusCode,
       data: data as T,
       text: body,
     };
@@ -120,9 +122,19 @@ export function createSafeHttp(
       log(`[safeHttp] Download ${url} -> ${resolved}`);
     }
 
+    if (resolved && resolved.includes("/")) {
+      const dir = resolved.substring(0, resolved.lastIndexOf("/"));
+      try {
+        await utils.exec("/bin/mkdir", ["-p", dir]);
+      } catch {
+        // Ignore mkdir errors
+      }
+    }
+
     const args = [
       "-s",
       "-S",
+      "-f",
       "-L",
       "--max-time",
       String(timeoutSeconds),
