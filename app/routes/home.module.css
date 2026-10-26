@@ -63,7 +63,12 @@
 }
 
 .serverBadge {
-  gap: 0.375rem;
+  padding-left: 0.75rem;
+  padding-right: 0.875rem;
+}
+
+.serverBadge > * + * {
+  margin-left: 0.625rem;
 }
 
 .activeDot {

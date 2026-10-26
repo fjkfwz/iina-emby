@@ -271,44 +271,16 @@ export function ItemHero({
 
         {/* Selected Tracks Status Pills */}
         {(selectedAudioLabel || selectedSubtitleLabel) && (
-          <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", marginTop: "-6px", marginBottom: "2px" }}>
+          <div className={styles.trackPillsRow}>
             {selectedAudioLabel && (
-              <span
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  background: "rgba(56, 189, 248, 0.12)",
-                  color: "#38bdf8",
-                  border: "1px solid rgba(56, 189, 248, 0.3)",
-                  borderRadius: "6px",
-                  padding: "2px 8px",
-                  fontSize: "0.75rem",
-                  fontWeight: 500,
-                  marginRight: "8px",
-                  marginBottom: "4px",
-                }}
-              >
-                <span style={{ marginRight: "4px" }}>🔊</span>
+              <span className={`${styles.trackPill} ${styles.audioPill}`}>
+                <span className={styles.trackPillIcon}>🔊</span>
                 <span>{t("audio", "Audio")}: {selectedAudioLabel}</span>
               </span>
             )}
             {selectedSubtitleLabel && (
-              <span
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  background: "rgba(192, 132, 252, 0.12)",
-                  color: "#c084fc",
-                  border: "1px solid rgba(192, 132, 252, 0.3)",
-                  borderRadius: "6px",
-                  padding: "2px 8px",
-                  fontSize: "0.75rem",
-                  fontWeight: 500,
-                  marginRight: "8px",
-                  marginBottom: "4px",
-                }}
-              >
-                <span style={{ marginRight: "4px" }}>💬</span>
+              <span className={`${styles.trackPill} ${styles.subtitlePill}`}>
+                <span className={styles.trackPillIcon}>💬</span>
                 <span>{t("subtitle", "Subtitle")}: {selectedSubtitleLabel}</span>
               </span>
             )}

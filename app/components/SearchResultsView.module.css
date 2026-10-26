@@ -32,8 +32,11 @@
   align-items: center;
   justify-content: center;
   flex-wrap: wrap;
-  gap: 0.75rem;
   width: 100%;
+}
+
+.filterRow > * {
+  margin: 0.375rem;
 }
 
 .filterTabs {

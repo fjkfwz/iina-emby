@@ -26,7 +26,6 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0.5rem;
   font: inherit;
   font-weight: 700;
   text-decoration: none;
@@ -95,6 +94,11 @@
 .interactive:focus-visible {
   outline: 2px solid rgba(255, 255, 255, 0.85);
   outline-offset: 0.125rem;
+}
+
+/* Child spacing (works across all browsers including Safari < 14.1) */
+.button > * + * {
+  margin-left: 0.5rem;
 }
 
 /* ==============================================================

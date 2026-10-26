@@ -129,12 +129,22 @@
   border-radius: 6px;
   border: 1px solid rgba(255, 255, 255, 0.06);
   margin-bottom: 0.5rem;
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .streamItemSelectable {
   cursor: pointer;
   transition: all 0.18s ease;
   user-select: none;
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.streamItemSelectable:focus,
+.streamItemSelectable:active,
+.streamItem:focus {
+  outline: none;
 }
 
 .streamItemSelectable:hover {
