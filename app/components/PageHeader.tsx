@@ -66,22 +66,24 @@ export const PageHeader = forwardRef<HTMLElement, PageHeaderProps>(function Page
 
     const rootEl = document.getElementById("root");
     let rafId: number | null = null;
-    let lastState: "top" | "scrolled" | null = null;
+    let lastProgress: number | null = null;
 
     const updateHeader = (top: number) => {
       if (!internalRef.current) return;
       if (forceShadow) {
-        if (lastState !== "scrolled") {
+        if (lastProgress !== 1) {
           internalRef.current.style.setProperty("--header-shadow-opacity", "1");
-          lastState = "scrolled";
+          lastProgress = 1;
         }
         return;
       }
-      const isScrolled = top > 25;
-      const nextState = isScrolled ? "scrolled" : "top";
-      if (nextState !== lastState) {
-        lastState = nextState;
-        internalRef.current.style.setProperty("--header-shadow-opacity", isScrolled ? "1" : "0");
+      // Smooth gradient fade: 0 at top, smoothly scaling to 1.0 as the page scrolls down (over 100px)
+      // When scrolling back up, it gradually fades out smoothly.
+      const progress = Math.min(1, Math.max(0, top / 100));
+      const rounded = Math.round(progress * 100) / 100;
+      if (lastProgress !== rounded) {
+        lastProgress = rounded;
+        internalRef.current.style.setProperty("--header-shadow-opacity", rounded.toString());
       }
     };
 

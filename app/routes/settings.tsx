@@ -54,10 +54,18 @@ export default function SettingsRoute() {
   const { config: modulesConfig, toggleModule } = useHomeModulesConfig();
   const { preferences, setPreference, servers, activeServer } = useIINABridge();
 
+  const handleBack = () => {
+    if (window.history.length > 1) {
+      navigate(-1);
+    } else {
+      navigate("/", { replace: true });
+    }
+  };
+
   return (
     <>
       <PageHeader
-        onBack={() => navigate("/")}
+        onBack={handleBack}
         backTitle={t("back", "Back")}
         className={styles.pageHeader}
         title={t("settingsTitle", "Settings")}

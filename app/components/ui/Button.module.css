@@ -2,7 +2,6 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0.375rem;
   padding: 0 0.75rem;
   height: var(--height-action);
   border-radius: var(--radius-m);
@@ -25,6 +24,10 @@
 
 .button:hover:not(:disabled) {
   background: var(--bg-control-hover);
+}
+
+.button > * + * {
+  margin-left: 0.375rem;
 }
 
 .button:active:not(:disabled) {

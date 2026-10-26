@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 export interface UseInViewOptions {
   rootMargin?: string;
@@ -7,12 +7,47 @@ export interface UseInViewOptions {
   root?: Element | null;
 }
 
+type ObserverCallback = (isIntersecting: boolean) => void;
+
+interface SharedObserverInstance {
+  observer: IntersectionObserver;
+  elements: Map<Element, ObserverCallback>;
+}
+
+const observerRegistry = new Map<string, SharedObserverInstance>();
+
+function getSharedObserver(rootMargin: string, root: Element | null): SharedObserverInstance | null {
+  if (typeof IntersectionObserver === "undefined") return null;
+  const key = `${rootMargin}|${root ? "custom" : "window"}`;
+  let instance = observerRegistry.get(key);
+  if (!instance) {
+    const elements = new Map<Element, ObserverCallback>();
+    try {
+      const observer = new IntersectionObserver(
+        (entries) => {
+          for (const entry of entries) {
+            const cb = elements.get(entry.target);
+            if (cb) {
+              cb(entry.isIntersecting);
+            }
+          }
+        },
+        { rootMargin, root },
+      );
+      instance = { observer, elements };
+      observerRegistry.set(key, instance);
+    } catch {
+      return null;
+    }
+  }
+  return instance;
+}
+
 /**
- * Hook to detect when an element enters or is near the viewport using IntersectionObserver.
- * Especially useful as a polyfill for lazy-loading images on browsers that do not support
- * native image lazy loading (such as Safari < 15.4 / macOS Catalina).
+ * High-performance hook to detect when an element enters or is near the viewport
+ * using a single shared IntersectionObserver instance per rootMargin configuration.
  *
- * When enabled is false, isInView defaults to true immediately without setting up an observer.
+ * Designed to prevent CPU/memory spikes on older WebKit environments (such as Safari < 15.4 / macOS Catalina).
  */
 export function useInView<T extends HTMLElement = HTMLElement>(
   options?: UseInViewOptions,
@@ -22,53 +57,61 @@ export function useInView<T extends HTMLElement = HTMLElement>(
   const enabled = options?.enabled ?? true;
   const root = options?.root ?? null;
 
-  const [node, setNode] = useState<T | null>(null);
   const [isInView, setIsInView] = useState(!enabled);
+  const elementRef = useRef<T | null>(null);
+  const observerInstanceRef = useRef<SharedObserverInstance | null>(null);
 
-  const ref = useCallback((element: T | null) => {
-    setNode(element);
-  }, []);
+  const ref = useCallback(
+    (element: T | null) => {
+      if (!enabled) {
+        setIsInView(true);
+        return;
+      }
+      if (elementRef.current === element) return;
+
+      // Clean up previous observation if element changed
+      if (elementRef.current && observerInstanceRef.current) {
+        observerInstanceRef.current.elements.delete(elementRef.current);
+        observerInstanceRef.current.observer.unobserve(elementRef.current);
+      }
+
+      elementRef.current = element;
+
+      if (!element) return;
+
+      const instance = getSharedObserver(rootMargin, root);
+      if (!instance) {
+        setIsInView(true);
+        return;
+      }
+
+      observerInstanceRef.current = instance;
+
+      instance.elements.set(element, (isIntersecting) => {
+        if (isIntersecting) {
+          setIsInView(true);
+          if (triggerOnce) {
+            instance.elements.delete(element);
+            instance.observer.unobserve(element);
+          }
+        } else if (!triggerOnce) {
+          setIsInView(false);
+        }
+      });
+
+      instance.observer.observe(element);
+    },
+    [enabled, triggerOnce, rootMargin, root],
+  );
 
   useEffect(() => {
-    if (!enabled) {
-      setIsInView(true);
-      return;
-    }
-    if (!node || (triggerOnce && isInView)) return;
-
-    if (typeof IntersectionObserver === "undefined") {
-      setIsInView(true);
-      return;
-    }
-
-    let observer: IntersectionObserver | null = null;
-    try {
-      observer = new IntersectionObserver(
-        (entries) => {
-          for (const entry of entries) {
-            if (entry.isIntersecting) {
-              setIsInView(true);
-              if (triggerOnce && observer) {
-                observer.disconnect();
-              }
-              break;
-            } else if (!triggerOnce) {
-              setIsInView(false);
-            }
-          }
-        },
-        { rootMargin, root },
-      );
-
-      observer.observe(node);
-    } catch {
-      setIsInView(true);
-    }
-
     return () => {
-      observer?.disconnect();
+      if (elementRef.current && observerInstanceRef.current) {
+        observerInstanceRef.current.elements.delete(elementRef.current);
+        observerInstanceRef.current.observer.unobserve(elementRef.current);
+      }
     };
-  }, [node, rootMargin, triggerOnce, enabled, root, isInView]);
+  }, []);
 
-  return [ref, isInView];
+  return [ref, enabled ? isInView : true];
 }

@@ -43,7 +43,10 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.375rem;
+}
+
+.sidebarContent > * + * {
+  margin-top: 0.375rem;
 }
 
 .sidebarTitle {
@@ -74,13 +77,27 @@
 .content {
   flex: 1;
   min-width: 0;
-  padding: 1.25rem 1.5rem 1.5rem;
+  padding: 2.25rem 2.5rem 3rem;
   box-sizing: border-box;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
   position: relative;
+}
+
+.content > * + * {
+  margin-top: 1.5rem;
+}
+
+.contentInner {
+  max-width: 42rem;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.contentInner > * + * {
+  margin-top: 1.5rem;
 }
 
 .contentDragRegion {
@@ -97,7 +114,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 0.75rem;
+  padding: 0 0.875rem;
   height: var(--height-action);
   border-radius: var(--radius-m);
   background: var(--bg-control);
@@ -121,7 +138,10 @@
 .actionLeft {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+}
+
+.actionLeft > * + * {
+  margin-left: 0.5rem;
 }
 
 .shortcutGlyph {

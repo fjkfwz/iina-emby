@@ -76,8 +76,11 @@
 .dropdownGroup {
   display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
   flex-wrap: wrap;
+}
+
+.dropdownGroup > * + * {
+  margin-left: 0.5rem;
 }
 
 .dropdownWrapper {
@@ -108,10 +111,13 @@
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 0.5rem;
   margin-top: 0.75rem;
   width: 100%;
   justify-content: center;
+}
+
+.activeChipsRow > * {
+  margin: 0.25rem;
 }
 
 .filterChip {

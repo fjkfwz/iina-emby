@@ -98,7 +98,7 @@ export function SystemInfo() {
   const introSkip = userInfo?.Configuration?.IntroSkipMode;
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+    <div className={styles.container}>
       {error && (
         <Alert icon={<IconAlertCircle size={16} />} title={t("failedToLoadServerInfo", "Failed to load server info")} mb="md">
           {error}

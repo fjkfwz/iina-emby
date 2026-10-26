@@ -74,19 +74,10 @@ export function ScrollProgress() {
       ro.observe(root);
     }
 
-    let mo: MutationObserver | null = null;
-    if (typeof MutationObserver !== "undefined") {
-      mo = new MutationObserver(() => {
-        updateProgress();
-      });
-      mo.observe(root, { childList: true, subtree: true });
-    }
-
     return () => {
       root.removeEventListener("scroll", handleScroll);
       window.removeEventListener("resize", updateProgress);
       ro?.disconnect();
-      mo?.disconnect();
       if (fadeTimeoutRef.current !== null) {
         window.clearTimeout(fadeTimeoutRef.current);
       }

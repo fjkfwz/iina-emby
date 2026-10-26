@@ -8,9 +8,10 @@ import styles from "./HomeHero.module.css";
 
 export interface HomeHeroProps {
   server: EmbyServer;
+  isVisible?: boolean;
 }
 
-export const HomeHero = memo(function HomeHero({ server }: HomeHeroProps) {
+export const HomeHero = memo(function HomeHero({ server, isVisible = true }: HomeHeroProps) {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const { items, loading } = useHeroItems(server, 10);
@@ -30,7 +31,7 @@ export const HomeHero = memo(function HomeHero({ server }: HomeHeroProps) {
 
   // Auto-play timer
   useEffect(() => {
-    if (count <= 1 || isHovered) {
+    if (count <= 1 || isHovered || !isVisible) {
       if (timerRef.current !== null) {
         clearInterval(timerRef.current);
         timerRef.current = null;
@@ -48,7 +49,7 @@ export const HomeHero = memo(function HomeHero({ server }: HomeHeroProps) {
         timerRef.current = null;
       }
     };
-  }, [count, isHovered, goToNext]);
+  }, [count, isHovered, isVisible, goToNext]);
 
   if (loading && count === 0) {
     return <div className={styles.skeleton} />;

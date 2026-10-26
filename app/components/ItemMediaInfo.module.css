@@ -35,23 +35,27 @@
 }
 
 .card {
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(255, 255, 255, 0.045);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: var(--radius-l, 12px);
   padding: 1.25rem;
-  -webkit-backdrop-filter: blur(16px);
-  backdrop-filter: blur(16px);
   display: flex;
   flex-direction: column;
-  gap: 0.875rem;
+}
+
+.card > * + * {
+  margin-top: 0.875rem;
 }
 
 .cardHeader {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
   padding-bottom: 0.75rem;
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.cardHeader > * + * {
+  margin-left: 0.5rem;
 }
 
 .cardTitle {
@@ -79,7 +83,10 @@
 .specList {
   display: flex;
   flex-direction: column;
-  gap: 0.625rem;
+}
+
+.specList > * + * {
+  margin-top: 0.625rem;
 }
 
 .specItem {
@@ -112,25 +119,54 @@
 }
 
 .streamList {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
+  display: block;
   max-height: 240px;
   overflow-y: auto;
+  overflow-x: hidden;
   padding-right: 4px;
+  box-sizing: border-box;
+  -webkit-overflow-scrolling: touch;
+}
+
+.streamList::-webkit-scrollbar {
+  width: 5px;
+}
+
+.streamList::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.streamList::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+}
+
+.streamList::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.4);
 }
 
 .streamItem {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  flex-shrink: 0;
+  min-height: -webkit-min-content;
+  min-height: min-content;
   padding: 0.5rem 0.625rem;
   background: rgba(255, 255, 255, 0.03);
   border-radius: 6px;
   border: 1px solid rgba(255, 255, 255, 0.06);
   margin-bottom: 0.5rem;
+  box-sizing: border-box;
   outline: none;
   -webkit-tap-highlight-color: transparent;
+}
+
+.streamItem:last-child {
+  margin-bottom: 0;
+}
+
+.streamItem > * + * {
+  margin-top: 0.25rem;
 }
 
 .streamItemSelectable {
@@ -174,6 +210,8 @@
   font-weight: 700;
   line-height: 1.4;
   margin-left: auto;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .badgeSelectedSubtitle {
@@ -185,6 +223,8 @@
   font-weight: 700;
   line-height: 1.4;
   margin-left: auto;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .cardHeaderRight {
@@ -192,13 +232,18 @@
   font-size: 0.6875rem;
   color: rgba(255, 255, 255, 0.45);
   font-weight: 500;
+  white-space: nowrap;
 }
 
 .streamMain {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 0.375rem;
+  min-height: 1.25rem;
+}
+
+.streamMain > * + * {
+  margin-left: 0.375rem;
 }
 
 .streamLanguage {
@@ -222,7 +267,10 @@
   color: rgba(255, 255, 255, 0.6);
   display: flex;
   align-items: center;
-  gap: 0.375rem;
+}
+
+.streamMeta > * + * {
+  margin-left: 0.375rem;
 }
 
 .badgeDefault {
@@ -234,6 +282,8 @@
   font-size: 0.6875rem;
   font-weight: 600;
   line-height: 1.4;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .badgeExternal {
@@ -245,6 +295,8 @@
   font-size: 0.6875rem;
   font-weight: 600;
   line-height: 1.4;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .badgeInternal {
@@ -256,6 +308,8 @@
   font-size: 0.6875rem;
   font-weight: 500;
   line-height: 1.4;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .badgeAss {
@@ -267,4 +321,6 @@
   font-size: 0.6875rem;
   font-weight: 600;
   line-height: 1.4;
+  white-space: nowrap;
+  flex-shrink: 0;
 }

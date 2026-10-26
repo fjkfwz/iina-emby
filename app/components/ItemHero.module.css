@@ -9,8 +9,8 @@
   overflow: hidden;
   z-index: 1;
   pointer-events: none;
-  -webkit-mask-image: linear-gradient(180deg, #000 0%, #000 45%, rgba(0, 0, 0, 0.7) 70%, rgba(0, 0, 0, 0.2) 88%, transparent 100%);
-  mask-image: linear-gradient(180deg, #000 0%, #000 45%, rgba(0, 0, 0, 0.7) 70%, rgba(0, 0, 0, 0.2) 88%, transparent 100%);
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
 }
 
 .backdropImage {
@@ -28,13 +28,13 @@
   bottom: 0;
   left: 0;
   inset: 0;
-  background: linear-gradient(180deg, rgba(22, 22, 26, 0.1) 0%, rgba(22, 22, 26, 0.45) 55%, rgba(22, 22, 26, 0.98) 100%),
+  background: linear-gradient(180deg, rgba(22, 22, 26, 0.1) 0%, rgba(22, 22, 26, 0.45) 55%, rgba(22, 22, 26, 1) 100%),
               linear-gradient(90deg, rgba(22, 22, 26, 0.8) 0%, rgba(22, 22, 26, 0.3) 50%, transparent 100%);
   pointer-events: none;
 }
 
 .pageHeader {
-  position: sticky;
+  position: fixed;
   top: 0;
   left: 0;
   right: 0;
@@ -47,7 +47,7 @@
   position: relative;
   z-index: 2;
   padding: 0 40px 1.5rem 40px;
-  margin-top: min(10vw, 80px);
+  margin-top: calc(76px + min(4vw, 24px));
   display: flex;
   flex-direction: column;
   align-items: flex-start;
@@ -116,9 +116,12 @@
 .starRating {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
   font-weight: 700;
   color: var(--text-primary);
+}
+
+.starRating > * + * {
+  margin-left: 4px;
 }
 
 .starIcon {
@@ -266,7 +269,6 @@
 .syncingBadge {
   display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
   background: rgba(255, 255, 255, 0.08);
   border: 1px solid rgba(255, 255, 255, 0.16);
   color: var(--text-primary);
@@ -276,6 +278,10 @@
   border-radius: var(--radius-m);
   backdrop-filter: blur(8px);
   letter-spacing: 0.0125rem;
+}
+
+.syncingBadge > * + * {
+  margin-left: 0.35rem;
 }
 
 .syncDot {
@@ -306,7 +312,10 @@
   border-top: 1px solid rgba(255, 255, 255, 0.08);
   display: flex;
   flex-direction: column;
-  gap: 0.875rem;
+}
+
+.castSection > * + * {
+  margin-top: 0.875rem;
 }
 
 .castHeader {
@@ -324,13 +333,9 @@
 
 .castScroller {
   display: flex;
-  gap: 1.25rem;
-  overflow-x: auto;
-  overflow-y: hidden;
+  flex-wrap: wrap;
   padding-bottom: 0.5rem;
   padding-top: 0.25rem;
-  -webkit-overflow-scrolling: touch;
-  scroll-behavior: smooth;
 }
 
 .castCard {
@@ -343,6 +348,7 @@
   text-align: center;
   cursor: default;
   margin-right: 1.25rem;
+  margin-bottom: 0.5rem;
 }
 
 .castCard:last-child {

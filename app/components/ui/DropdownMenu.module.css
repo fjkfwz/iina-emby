@@ -40,7 +40,6 @@
 .item {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
   width: 100%;
   padding: 0.375rem 0.625rem;
   border: none;
@@ -55,6 +54,10 @@
   transition:
     background-color 0.1s ease,
     color 0.1s ease;
+}
+
+.item > * + * {
+  margin-left: 0.5rem;
 }
 
 .item:hover,

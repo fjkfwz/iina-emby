@@ -20,20 +20,19 @@
   position: absolute;
   top: 0;
   right: 0;
-  bottom: 0;
+  bottom: -36px;
   left: 0;
-  inset: 0;
   z-index: -1;
   pointer-events: none;
   opacity: var(--header-shadow-opacity, 0.9);
   background: linear-gradient(
     180deg,
-    rgba(24, 24, 28, 0.98) 0%,
-    rgba(24, 24, 28, 0.92) 50%,
-    rgba(24, 24, 28, 0.70) 80%,
+    rgba(22, 22, 26, 0.98) 0%,
+    rgba(22, 22, 26, 0.92) 40%,
+    rgba(22, 22, 26, 0.65) 70%,
+    rgba(22, 22, 26, 0.20) 88%,
     transparent 100%
   );
-  transition: opacity 0.22s ease;
   transform: translateZ(0);
   -webkit-transform: translateZ(0);
 }
@@ -45,6 +44,10 @@
 .transparent,
 .shadowOnScroll {
   --header-shadow-opacity: 0;
+}
+
+.shadowOnScroll::before {
+  transition: none;
 }
 
 .headerLeft,

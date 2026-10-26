@@ -159,7 +159,10 @@
   margin-top: 0.4375rem;
   display: flex;
   flex-direction: column;
-  gap: 0.125rem;
+}
+
+.meta > * + * {
+  margin-top: 0.125rem;
 }
 
 .title {
@@ -221,12 +224,15 @@
   font-weight: 600;
   display: flex;
   align-items: center;
-  gap: 0.25rem;
   padding: 0.125rem 0.375rem;
   border-radius: var(--radius-m);
   box-shadow: var(--shadow-badge);
   pointer-events: none;
   letter-spacing: 0.0125rem;
+}
+
+.syncingBadge > * + * {
+  margin-left: 0.25rem;
 }
 
 .syncDot {

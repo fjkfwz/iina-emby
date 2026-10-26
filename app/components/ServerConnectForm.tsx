@@ -83,7 +83,7 @@ export function ServerConnectForm({ isFirstServer = false, initialServer, onSucc
   return (
     <div className={styles.formPanel}>
       <form onSubmit={handleConnect}>
-        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        <div className={styles.formContent}>
           <h3 className={styles.formTitle}>{formTitle}</h3>
 
           {error && (

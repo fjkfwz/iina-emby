@@ -21,7 +21,11 @@ export function meta() {
   return [{ title: "Home - IINA Emby" }, { name: "description", content: "Emby Media Browser" }];
 }
 
-export default function HomeRoute() {
+export interface HomeRouteProps {
+  isVisible?: boolean;
+}
+
+export default function HomeRoute({ isVisible = true }: HomeRouteProps) {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -83,6 +87,7 @@ export default function HomeRoute() {
 
   // Global keyboard shortcut: Cmd+F or '/' to focus search input
   useEffect(() => {
+    if (!isVisible) return;
     const handleKey = (e: KeyboardEvent) => {
       const target = document.activeElement as HTMLElement | null;
       const isInput = target?.tagName === "INPUT" || target?.tagName === "TEXTAREA";
@@ -94,7 +99,7 @@ export default function HomeRoute() {
     };
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
-  }, []);
+  }, [isVisible]);
 
   const handleRefresh = useCallback(async () => {
     if (!activeServer || isRefreshing) return;
@@ -220,7 +225,7 @@ export default function HomeRoute() {
         ) : (
           <>
             {/* Top Featured Hero Banner */}
-            {modulesConfig.hero && <HomeHero server={activeServer} />}
+            {modulesConfig.hero && <HomeHero server={activeServer} isVisible={isVisible} />}
 
             {/* Categories / Libraries shelf */}
             {modulesConfig.categories && <CategoriesShelf server={activeServer} />}

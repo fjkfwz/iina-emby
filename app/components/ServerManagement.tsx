@@ -60,45 +60,47 @@ export function ServerManagement({ onServerSelected }: ServerManagementProps) {
       <main className={styles.content}>
         <div className={styles.contentDragRegion} />
 
-        {/* Saved servers section */}
-        <ServerList
-          servers={servers}
-          activeServerId={activeServerId}
-          onSelectServer={handleSelect}
-          onRequestDelete={setServerToDelete}
-          onRequestEdit={(server) => {
-            setIsAdding(false);
-            setEditingServer(server);
-          }}
-        />
-
-        {/* Add server button (placed below saved servers) */}
-        {!showForm && servers.length > 0 && (
-          <button
-            className={styles.actionRow}
-            type="button"
-            onClick={() => {
-              setEditingServer(null);
-              setIsAdding(true);
+        <div className={styles.contentInner}>
+          {/* Saved servers section */}
+          <ServerList
+            servers={servers}
+            activeServerId={activeServerId}
+            onSelectServer={handleSelect}
+            onRequestDelete={setServerToDelete}
+            onRequestEdit={(server) => {
+              setIsAdding(false);
+              setEditingServer(server);
             }}
-          >
-            <div className={styles.actionLeft}>
-              <IconPlus size={15} stroke={2.2} />
-              <span>{t("addAnotherServer", "Add Another Server...")}</span>
-            </div>
-            <span className={styles.shortcutGlyph}>⌘N</span>
-          </button>
-        )}
-
-        {/* Connect / Edit Server Form */}
-        {showForm && (
-          <ServerConnectForm
-            isFirstServer={servers.length === 0}
-            initialServer={editingServer}
-            onSuccess={handleServerSaved}
-            onCancel={servers.length > 0 ? handleCancelForm : undefined}
           />
-        )}
+
+          {/* Add server button (placed below saved servers) */}
+          {!showForm && servers.length > 0 && (
+            <button
+              className={styles.actionRow}
+              type="button"
+              onClick={() => {
+                setEditingServer(null);
+                setIsAdding(true);
+              }}
+            >
+              <div className={styles.actionLeft}>
+                <IconPlus size={15} stroke={2.2} />
+                <span>{t("addAnotherServer", "Add Another Server...")}</span>
+              </div>
+              <span className={styles.shortcutGlyph}>⌘N</span>
+            </button>
+          )}
+
+          {/* Connect / Edit Server Form */}
+          {showForm && (
+            <ServerConnectForm
+              isFirstServer={servers.length === 0}
+              initialServer={editingServer}
+              onSuccess={handleServerSaved}
+              onCancel={servers.length > 0 ? handleCancelForm : undefined}
+            />
+          )}
+        </div>
       </main>
 
       <ConfirmModal

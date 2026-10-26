@@ -88,12 +88,15 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 0.5rem;
   background: linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(0, 0, 0, 0.4) 100%), #1f1f27;
   color: var(--text-secondary);
   padding: 1rem;
   box-sizing: border-box;
   text-align: center;
+}
+
+.placeholder > * + * {
+  margin-top: 0.5rem;
 }
 
 .placeholderTitle {
