@@ -3,7 +3,7 @@
 // shared/constants.ts
 var CLIENT_NAME = "IINA Emby Plugin";
 var DEVICE_NAME = "IINA";
-var CLIENT_VERSION = true ? "0.7.0" : "0.1.0";
+var CLIENT_VERSION = true ? "0.7.1" : "0.1.0";
 var WINDOW_DIMENSIONS = {
   DEFAULT_WIDTH: 960,
   DEFAULT_HEIGHT: 680,
