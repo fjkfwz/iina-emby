@@ -27,7 +27,7 @@
 - **Smooth Scroll-Driven Header**: Dynamic top navigation bar with continuous frosted-glass and gradient shadow interpolation that smoothly fades in on scroll.
 - **Featured Hero Carousel & Shelves**: Automatically cycles top featured media banners and quick-access 16:9 category shelves.
 - **Native Hardware-Accelerated Playback**: Launches IINA player windows using MPV with direct stream playback and hardware decoding.
-- **Resume Progress & Interactive Glass Feedback**: Item details page displays visual progress track and readable timestamp directly on the play button (e.g. `继续播放 (00:50:20 · 40%)`) with responsive hover and active states.
+- **Resume Progress & Interactive Glass Feedback**: Item details page displays visual progress track and readable timestamp directly on the play button (e.g. `Resume (00:50:20 · 40%)`) with responsive hover and active states.
 - **Crash-Free Playback Architecture**: Progress reporting (`Playing`, `Progress`, `Stopped`) is bridged safely through WebKit networking, completely avoiding JavaScriptCore thread blocking.
 - **Subtitle & Audio Stream Selector**: Intuitive track switching with stream index mapping, language code matching, and local download of external subtitles.
 - **Real-Time WebSocket Sync**: Instant updates for continue watching and library item changes via Emby WebSocket connection.
