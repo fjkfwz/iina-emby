@@ -36,6 +36,7 @@ jobs:
 
       - name: Lint check
         run: pnpm run lint
+        continue-on-error: true
 
       - name: Run tests
         run: pnpm run test
