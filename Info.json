@@ -1,5 +1,5 @@
 {
-  "name": "Emby",
+  "name": "Emby Browser",
   "identifier": "com.ghotriw.iina-emby",
   "version": "0.8.0",
   "description": "Emby plugin for IINA.",
