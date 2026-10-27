@@ -80,6 +80,8 @@ export interface PlaybackProgressUpdatedPayload {
   isPaused: boolean;
   event?: "start" | "progress" | "stop";
   playSessionId?: string | null;
+  audioStreamIndex?: number | null;
+  subtitleStreamIndex?: number | null;
 }
 
 export interface ServerSwitchedPayload {
@@ -96,6 +98,11 @@ export interface PluginPreferencesPayload {
   autoplay_next_episode?: boolean;
   auto_download_enabled?: boolean;
   debug_logging?: boolean;
+  remember_track_selections?: boolean;
+  preferred_audio_language?: string;
+  preferred_audio_channel?: "auto" | "stereo" | "surround" | string;
+  preferred_subtitle_language?: string;
+  auto_select_subtitles?: boolean;
   [key: string]: unknown;
 }
 

@@ -255,3 +255,11 @@
   color: var(--text-primary);
   font-weight: 500;
 }
+
+.rowControl {
+  margin-left: 1.5rem;
+  min-width: 180px;
+  max-width: 260px;
+  flex-shrink: 0;
+}
+

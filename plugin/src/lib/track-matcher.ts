@@ -32,6 +32,10 @@ const LANGUAGE_CANONICAL_MAP: Record<string, string> = {
   chi: "zh",
   zho: "zh",
   zh: "zh",
+  chs: "zh",
+  cht: "zh",
+  sc: "zh",
+  tc: "zh",
   cmn: "zh",
   chinese: "zh",
   中文: "zh",
@@ -208,12 +212,14 @@ export function findMatchingSubtitleTrack(
 
     // 4. Title match
     if (title && track.title) {
-      const cleanTargetTitle = title.trim().toLowerCase();
-      const cleanTrackTitle = track.title.trim().toLowerCase();
-      if (cleanTrackTitle === cleanTargetTitle) {
-        score += 40;
-      } else if (cleanTargetTitle.includes(cleanTrackTitle) || cleanTrackTitle.includes(cleanTargetTitle)) {
-        score += 25;
+      const cleanTargetTitle = title.replace(/^\[外挂\]\s*/, "").trim().toLowerCase();
+      const cleanTrackTitle = track.title.replace(/^\[外挂\]\s*/, "").trim().toLowerCase();
+      if (!cleanTrackTitle.includes("no title") && !cleanTargetTitle.includes("no title")) {
+        if (cleanTrackTitle === cleanTargetTitle) {
+          score += 40;
+        } else if (cleanTargetTitle.includes(cleanTrackTitle) || cleanTrackTitle.includes(cleanTargetTitle)) {
+          score += 25;
+        }
       }
     }
 
@@ -320,3 +326,228 @@ export function findMatchingAudioTrack(
 
   return undefined;
 }
+
+export function parsePreferredList(pref?: string | string[] | null): string[] {
+  if (!pref) return [];
+  if (Array.isArray(pref)) return pref.map((s) => s.trim().toLowerCase()).filter(Boolean);
+  return pref
+    .split(",")
+    .map((s) => s.trim().toLowerCase())
+    .filter(Boolean);
+}
+
+/**
+ * Finds the best matching audio track using user's global language and channel preferences.
+ */
+export function findBestAudioTrackByPreference(
+  audioTracks: MpvTrack[],
+  preferredLanguages?: string | string[] | null,
+  preferredChannel?: string | null,
+): MpvTrack | undefined {
+  if (!Array.isArray(audioTracks) || audioTracks.length === 0) {
+    return undefined;
+  }
+
+  const prefLangs = parsePreferredList(preferredLanguages);
+  const channelPref = (preferredChannel || "auto").trim().toLowerCase();
+
+  let bestMatch: MpvTrack | undefined;
+  let highestScore = -1;
+
+  for (const track of audioTracks) {
+    let score = 0;
+    const trackCanon = canonicalizeLanguage(track.lang);
+    const trackTitle = (track.title || "").toLowerCase();
+
+    // Channel detection
+    const channelCount =
+      typeof track["channel-count"] === "number"
+        ? track["channel-count"]
+        : typeof track.channels === "number"
+          ? track.channels
+          : typeof track["audio-channels"] === "number"
+            ? track["audio-channels"]
+            : trackTitle.includes("7.1")
+              ? 8
+              : trackTitle.includes("5.1")
+                ? 6
+                : trackTitle.includes("stereo") || trackTitle.includes("2.0")
+                  ? 2
+                  : 0;
+
+    // 1. Language matching in priority order
+    if (prefLangs.length > 0) {
+      for (let i = 0; i < prefLangs.length; i++) {
+        const pref = prefLangs[i];
+        const prefCanon = canonicalizeLanguage(pref);
+        if (prefCanon && trackCanon && prefCanon === trackCanon) {
+          score += 1000 - i * 50; // Priority according to position in list
+          break;
+        }
+      }
+    } else {
+      score += 100;
+    }
+
+    // 2. Channel preference
+    if (channelPref === "surround") {
+      if (channelCount >= 6 || trackTitle.includes("5.1") || trackTitle.includes("7.1") || trackTitle.includes("atmos")) {
+        score += 60;
+      }
+    } else if (channelPref === "stereo") {
+      if (channelCount === 2 || trackTitle.includes("stereo") || trackTitle.includes("2.0")) {
+        score += 60;
+      }
+    } else {
+      // Auto: prefer higher channels slightly
+      if (channelCount > 0) {
+        score += Math.min(channelCount * 5, 40);
+      }
+    }
+
+    // 3. Default track flag bonus
+    if (track.default) {
+      score += 10;
+    }
+
+    if (score > highestScore) {
+      highestScore = score;
+      bestMatch = track;
+    }
+  }
+
+  return highestScore > 0 ? bestMatch : audioTracks[0];
+}
+
+/**
+ * Finds the best matching subtitle track using user's global language preferences.
+ */
+export function findBestSubtitleTrackByPreference(
+  subTracks: MpvTrack[],
+  preferredLanguages?: string | string[] | null,
+): MpvTrack | undefined {
+  if (!Array.isArray(subTracks) || subTracks.length === 0) {
+    return undefined;
+  }
+
+  const prefLangs = parsePreferredList(preferredLanguages);
+  if (prefLangs.length === 0) {
+    return undefined;
+  }
+
+  let bestMatch: MpvTrack | undefined;
+  let highestScore = -1;
+
+  for (const track of subTracks) {
+    let score = 0;
+    const trackCanon = canonicalizeLanguage(track.lang);
+    const trackVariant = detectChineseVariant((track.title || "") + " " + (track.lang || ""));
+
+    for (let i = 0; i < prefLangs.length; i++) {
+      const pref = prefLangs[i];
+      const prefCanon = canonicalizeLanguage(pref);
+      const prefVariant = detectChineseVariant(pref);
+
+      if (prefCanon && trackCanon && prefCanon === trackCanon) {
+        let matchScore = 1000 - i * 50;
+
+        if (prefCanon === "zh") {
+          if (prefVariant !== "unknown" && trackVariant !== "unknown") {
+            if (prefVariant === trackVariant) {
+              matchScore += 80;
+            } else {
+              matchScore -= 100; // Prefer matching variant
+            }
+          }
+        }
+
+        score = Math.max(score, matchScore);
+      }
+    }
+
+    if (score > 0) {
+      // Prefer full subtitle over forced commentary/signs unless requested
+      if (!track.forced) {
+        score += 20;
+      }
+      if (track.default) {
+        score += 10;
+      }
+
+      if (score > highestScore) {
+        highestScore = score;
+        bestMatch = track;
+      }
+    }
+  }
+
+  return highestScore > 0 ? bestMatch : undefined;
+}
+
+export interface LightEmbyStream {
+  Type?: string;
+  Index: number;
+  Language?: string;
+  Title?: string;
+  DisplayTitle?: string;
+  Codec?: string;
+  Channels?: number;
+  ChannelLayout?: string;
+  [key: string]: unknown;
+}
+
+/**
+ * Maps an active mpv track to its Emby container stream index (AudioStreamIndex / SubtitleStreamIndex).
+ */
+export function findEmbyStreamIndexForMpvTrack(
+  mpvTrack: MpvTrack | null | undefined,
+  embyStreams?: LightEmbyStream[] | null,
+  streamType?: "Audio" | "Subtitle",
+): number | null {
+  if (!mpvTrack) return null;
+
+  const ffIndex = typeof mpvTrack["ff-index"] === "number" ? mpvTrack["ff-index"] : null;
+  const srcId = typeof mpvTrack["src-id"] === "number" ? mpvTrack["src-id"] : null;
+
+  if (Array.isArray(embyStreams) && embyStreams.length > 0) {
+    const candidateStreams = streamType
+      ? embyStreams.filter((s) => s.Type?.toLowerCase() === streamType.toLowerCase())
+      : embyStreams;
+
+    // 1. Direct ff-index match
+    if (ffIndex !== null) {
+      const found = candidateStreams.find((s) => s.Index === ffIndex);
+      if (found) return found.Index;
+    }
+
+    // 2. Direct src-id match
+    if (srcId !== null) {
+      const found = candidateStreams.find((s) => s.Index === srcId);
+      if (found) return found.Index;
+    }
+
+    // 3. Metadata matching (language + title)
+    const trackCanon = canonicalizeLanguage(mpvTrack.lang);
+    const trackTitle = (mpvTrack.title || "").trim().toLowerCase();
+
+    for (const s of candidateStreams) {
+      const streamCanon = canonicalizeLanguage(s.Language);
+      const streamTitle = (s.DisplayTitle || s.Title || "").trim().toLowerCase();
+
+      if (trackCanon && streamCanon && trackCanon === streamCanon) {
+        if (trackTitle && streamTitle && (trackTitle.includes(streamTitle) || streamTitle.includes(trackTitle))) {
+          return s.Index;
+        }
+      }
+    }
+
+    // 4. First matching language
+    if (trackCanon) {
+      const foundLang = candidateStreams.find((s) => canonicalizeLanguage(s.Language) === trackCanon);
+      if (foundLang) return foundLang.Index;
+    }
+  }
+
+  return ffIndex !== null ? ffIndex : srcId !== null ? srcId : null;
+}
+

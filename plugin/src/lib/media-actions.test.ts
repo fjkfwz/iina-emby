@@ -25,7 +25,8 @@ describe("formatExternalSubtitleFileName", () => {
   it("falls back to language when title is empty", () => {
     expect(formatExternalSubtitleFileName(null, "chi", "srt")).toBe("[外挂] 简体中文.srt");
     expect(formatExternalSubtitleFileName("", "eng", "srt")).toBe("[外挂] 英语.srt");
-    expect(formatExternalSubtitleFileName(undefined, "fre", "srt")).toBe("[外挂] FRE.srt");
+    expect(formatExternalSubtitleFileName(undefined, "fre", "srt")).toBe("[外挂] 法语.srt");
+    expect(formatExternalSubtitleFileName(undefined, "xyz", "srt")).toBe("[外挂] XYZ.srt");
   });
 
   it("handles unknown or undefined language gracefully", () => {
@@ -42,5 +43,11 @@ describe("formatExternalSubtitleFileName", () => {
   it("replaces invalid path characters while keeping Chinese characters and spaces", () => {
     const fileName = formatExternalSubtitleFileName("中文 / English: 电影? *测试*", "chi", "srt");
     expect(fileName).toBe("[外挂] 中文 _ English_ 电影_ _测试_.srt");
+  });
+
+  it("formats generic 'No Title (subrip)' to language name instead of showing No Title", () => {
+    expect(formatExternalSubtitleFileName("No Title (subrip)", "chi", "srt")).toBe("[外挂] 简体中文.srt");
+    expect(formatExternalSubtitleFileName("no title", "eng", "srt")).toBe("[外挂] 英语.srt");
+    expect(formatExternalSubtitleFileName("subrip", "jpn", "srt")).toBe("[外挂] 日语.srt");
   });
 });

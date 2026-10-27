@@ -11,12 +11,15 @@ import {
   IconRotate,
   IconServer,
   IconSubtitles,
+  IconVolume,
   IconWorld,
 } from "@tabler/icons-react";
 import type React from "react";
 import { useNavigate } from "react-router";
 import { LibraryScan } from "~/components/LibraryScan";
 import { PageHeader } from "~/components/PageHeader";
+import { Input } from "~/components/ui/Input";
+import { Select } from "~/components/ui/Select";
 import { useHomeModulesConfig } from "~/hooks/useHomeModulesConfig";
 import { useIINABridge } from "~/hooks/useIINABridge";
 import { SUPPORTED_LANGUAGES, type LanguageCode, useTranslation } from "~/lib/i18n";
@@ -370,6 +373,132 @@ export default function SettingsRoute() {
                 id="pref-debug-logging"
                 checked={Boolean(preferences.debug_logging)}
                 onChange={(val) => setPreference("debug_logging", val)}
+              />
+            </div>
+          </div>
+        </section>
+
+        {/* Audio & Subtitle Preferences */}
+        <section className={styles.section}>
+          <h2 className={styles.sectionTitle}>{t("trackLanguageSection", "Audio & Subtitle Preferences")}</h2>
+          <div className={styles.card}>
+            {/* Remember Track Selections */}
+            <div className={styles.settingRow}>
+              <div className={styles.rowLeft}>
+                <span className={styles.rowIcon}>
+                  <IconVolume size={18} />
+                </span>
+                <div className={styles.textGroup}>
+                  <span className={styles.rowTitle}>{t("rememberTrackSelections", "Remember Audio & Subtitle Tracks")}</span>
+                  <span className={styles.rowSubtitle}>
+                    {t("rememberTrackSelectionsDesc", "Automatically restore your last chosen audio channel and subtitle track when resuming playback")}
+                  </span>
+                </div>
+              </div>
+              <ToggleSwitch
+                id="pref-remember-tracks"
+                checked={preferences.remember_track_selections !== false}
+                onChange={(val) => setPreference("remember_track_selections", val)}
+              />
+            </div>
+
+            <div className={styles.divider} />
+
+            {/* Preferred Audio Language */}
+            <div className={styles.settingRow}>
+              <div className={styles.rowLeft}>
+                <span className={styles.rowIcon}>
+                  <IconVolume size={18} />
+                </span>
+                <div className={styles.textGroup}>
+                  <span className={styles.rowTitle}>{t("preferredAudioLanguage", "Preferred Audio Languages")}</span>
+                  <span className={styles.rowSubtitle}>
+                    {t("preferredAudioLanguageDesc", "Comma-separated language codes for preferred audio tracks (e.g. zh,chi,ja,jpn,en,eng)")}
+                  </span>
+                </div>
+              </div>
+              <div className={styles.rowControl}>
+                <Input
+                  size="sm"
+                  value={(preferences.preferred_audio_language as string) ?? "zh,chi,ja,jpn,en,eng"}
+                  onChange={(e) => setPreference("preferred_audio_language", e.target.value)}
+                  placeholder="zh,chi,ja,jpn,en,eng"
+                />
+              </div>
+            </div>
+
+            <div className={styles.divider} />
+
+            {/* Preferred Audio Channel Layout */}
+            <div className={styles.settingRow}>
+              <div className={styles.rowLeft}>
+                <span className={styles.rowIcon}>
+                  <IconVolume size={18} />
+                </span>
+                <div className={styles.textGroup}>
+                  <span className={styles.rowTitle}>{t("preferredAudioChannel", "Preferred Audio Channel Layout")}</span>
+                  <span className={styles.rowSubtitle}>
+                    {t("preferredAudioChannelDesc", "Preferred channel layout when multiple tracks share the same language")}
+                  </span>
+                </div>
+              </div>
+              <div className={styles.rowControl}>
+                <Select
+                  value={(preferences.preferred_audio_channel as string) ?? "auto"}
+                  onChange={(val) => setPreference("preferred_audio_channel", val || "auto")}
+                  data={[
+                    { value: "auto", label: t("channelAuto", "Auto (Highest channels)") },
+                    { value: "surround", label: t("channelSurround", "Surround (5.1 / 7.1)") },
+                    { value: "stereo", label: t("channelStereo", "Stereo (2.0)") },
+                  ]}
+                />
+              </div>
+            </div>
+
+            <div className={styles.divider} />
+
+            {/* Preferred Subtitle Language */}
+            <div className={styles.settingRow}>
+              <div className={styles.rowLeft}>
+                <span className={styles.rowIcon}>
+                  <IconSubtitles size={18} />
+                </span>
+                <div className={styles.textGroup}>
+                  <span className={styles.rowTitle}>{t("preferredSubtitleLanguage", "Preferred Subtitle Languages")}</span>
+                  <span className={styles.rowSubtitle}>
+                    {t("preferredSubtitleLanguageDesc", "Comma-separated language codes and variants for subtitles (e.g. zh,chi,chs,sc,cht,tc,en)")}
+                  </span>
+                </div>
+              </div>
+              <div className={styles.rowControl}>
+                <Input
+                  size="sm"
+                  value={(preferences.preferred_subtitle_language as string) ?? "zh,chi,chs,sc,cht,tc,en"}
+                  onChange={(e) => setPreference("preferred_subtitle_language", e.target.value)}
+                  placeholder="zh,chi,chs,sc,cht,tc,en"
+                />
+              </div>
+            </div>
+
+            <div className={styles.divider} />
+
+            {/* Auto Select Subtitles */}
+            <div className={styles.settingRow}>
+              <div className={styles.rowLeft}>
+                <span className={styles.rowIcon}>
+                  <IconSubtitles size={18} />
+                </span>
+                <div className={styles.textGroup}>
+                  <span className={styles.rowTitle}>{t("autoSelectSubtitles", "Auto-select Matching Subtitles")}</span>
+                  <span className={styles.rowSubtitle}>
+                    {t("autoSelectSubtitlesDesc", "Automatically enable and select the best matching subtitle track on playback start")}
+                  </span>
+                </div>
+              </div>
+              <ToggleSwitch
+                id="pref-auto-select-sub"
+                checked={preferences.auto_select_subtitles !== false}
+                onChange={(val) => setPreference("auto_select_subtitles", val)}
               />
             </div>
           </div>

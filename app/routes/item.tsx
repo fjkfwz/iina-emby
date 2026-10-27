@@ -1,4 +1,4 @@
-import { type EmbyItemMetadata, formatFullEpisodeTitle } from "@shared";
+import { type EmbyItemMetadata, formatFullEpisodeTitle, formatSubtitleDisplayLabel } from "@shared";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router";
@@ -80,15 +80,23 @@ export default function ItemDetailRoute() {
   const audioStreams = Array.isArray(mediaStreams) ? mediaStreams.filter((s) => s.Type === "Audio") : [];
   const subtitleStreams = Array.isArray(mediaStreams) ? mediaStreams.filter((s) => s.Type === "Subtitle") : [];
 
+  const defaultAudioIdx = (playTarget || item)?.MediaSources?.[0]?.DefaultAudioStreamIndex;
+  const defaultSubIdx = (playTarget || item)?.MediaSources?.[0]?.DefaultSubtitleStreamIndex;
+
   const effectiveAudioIndex =
     selectedAudioIndex !== undefined
       ? selectedAudioIndex
-      : (audioStreams.find((s) => s.IsDefault) || audioStreams[0])?.Index;
+      : typeof defaultAudioIdx === "number" && audioStreams.some((s) => s.Index === defaultAudioIdx)
+        ? defaultAudioIdx
+        : (audioStreams.find((s) => s.IsDefault) || audioStreams[0])?.Index;
 
   const effectiveSubtitleIndex =
     selectedSubtitleIndex !== undefined
       ? selectedSubtitleIndex
-      : (subtitleStreams.find((s) => s.IsDefault) || subtitleStreams[0])?.Index;
+      : typeof defaultSubIdx === "number" &&
+          (defaultSubIdx === -1 || subtitleStreams.some((s) => s.Index === defaultSubIdx))
+        ? defaultSubIdx
+        : (subtitleStreams.find((s) => s.IsDefault) || subtitleStreams[0])?.Index;
 
   const selectedAudioStream = audioStreams.find((s) => s.Index === effectiveAudioIndex);
   const selectedSubtitleStream = subtitleStreams.find((s) => s.Index === effectiveSubtitleIndex);
@@ -107,7 +115,7 @@ export default function ItemDetailRoute() {
     effectiveSubtitleIndex === -1
       ? t("subtitlesOff", "Subtitles Off")
       : selectedSubtitleStream
-        ? `${selectedSubtitleStream.DisplayLanguage || selectedSubtitleStream.Language || "Sub"} (${selectedSubtitleStream.Codec?.toUpperCase() || "SRT"})`
+        ? formatSubtitleDisplayLabel(selectedSubtitleStream)
         : undefined;
 
   // Main hero playback execution

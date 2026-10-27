@@ -198,10 +198,14 @@ export const MediaThumb = memo(function MediaThumb({
   const handlePlayClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (onPlay) {
+      const defaultAudioIdx = item.MediaSources?.[0]?.DefaultAudioStreamIndex;
+      const defaultSubIdx = item.MediaSources?.[0]?.DefaultSubtitleStreamIndex;
       onPlay({
         streamUrl: buildStreamUrl(server, item.Id),
         title: fullPlayTitle,
         startPositionTicks: playbackPositionTicks,
+        selectedAudioIndex: typeof defaultAudioIdx === "number" ? defaultAudioIdx : undefined,
+        selectedSubtitleIndex: typeof defaultSubIdx === "number" ? defaultSubIdx : undefined,
       });
     }
   };

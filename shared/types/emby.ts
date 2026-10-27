@@ -156,6 +156,8 @@ export interface EmbyMediaSource {
   Size?: number;
   MediaStreams?: EmbyMediaStream[];
   RunTimeTicks?: number;
+  DefaultAudioStreamIndex?: number;
+  DefaultSubtitleStreamIndex?: number;
   [key: string]: unknown;
 }
 

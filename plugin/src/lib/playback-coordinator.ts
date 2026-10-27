@@ -1,4 +1,4 @@
-import { sanitizeStreamUrl, ticksToSeconds } from "@shared";
+import { isGenericOrEmptySubtitleTitle, sanitizeStreamUrl, ticksToSeconds } from "@shared";
 import type { DebugLogger } from "./debug-log";
 import type { PlayMediaListMessage, PlayMediaMessage } from "./webview-bridge";
 
@@ -131,7 +131,8 @@ export function createPlaybackCoordinator({
       currentPlaybackSubtitleDeliveryUrl = message.subtitleDeliveryUrl;
     }
     if (typeof message.subtitleTitle === "string") {
-      currentPlaybackSubtitleTitle = message.subtitleTitle;
+      const clean = message.subtitleTitle.trim();
+      currentPlaybackSubtitleTitle = isGenericOrEmptySubtitleTitle(clean) ? null : clean;
     }
   }
 

@@ -127,7 +127,12 @@ function registerBridgeHandlers(view, deps, options) {
       reopen_browser_on_playback_end: deps.preferences.get("reopen_browser_on_playback_end") !== false,
       autoplay_next_episode: deps.preferences.get("autoplay_next_episode") !== false,
       auto_download_enabled: deps.preferences.get("auto_download_enabled") !== false,
-      debug_logging: Boolean(deps.preferences.get("debug_logging"))
+      debug_logging: Boolean(deps.preferences.get("debug_logging")),
+      remember_track_selections: deps.preferences.get("remember_track_selections") !== false,
+      preferred_audio_language: deps.preferences.get("preferred_audio_language") || "zh,chi,ja,jpn,en,eng",
+      preferred_audio_channel: deps.preferences.get("preferred_audio_channel") || "auto",
+      preferred_subtitle_language: deps.preferences.get("preferred_subtitle_language") || "zh,chi,chs,sc,cht,tc,en",
+      auto_select_subtitles: deps.preferences.get("auto_select_subtitles") !== false
     };
   }
   view.onMessage("get-preferences", () => {
@@ -569,9 +574,10 @@ function createEmbyApi({ http: http2, preferences: preferences2, log }) {
     }
     return url.includes("/Items/") && /[?&](?:api_key|apikey|api-key|x-emby-token)=/i.test(url) || url.toLowerCase().includes("emby") || /[?&](?:x-emby-token)=/i.test(url) || url.includes("/Audio/") || url.includes("/Videos/");
   }
-  async function fetchPlaybackInfo(serverBase, itemId, apiKey) {
+  async function fetchPlaybackInfo(serverBase, itemId, apiKey, userId) {
     try {
-      const playbackUrl = `${serverBase}/Items/${itemId}/PlaybackInfo?api_key=${apiKey}`;
+      const userParam = userId ? `&UserId=${encodeURIComponent(userId)}` : "";
+      const playbackUrl = `${serverBase}/Items/${itemId}/PlaybackInfo?api_key=${apiKey}${userParam}`;
       log(`Fetching playback info from: ${playbackUrl}`);
       const response = await http2.get(playbackUrl, {
         headers: buildEmbyHeaders2(apiKey, {

@@ -205,21 +205,29 @@ export function IINABridgeProvider({ children }: { children: React.ReactNode }) 
               : "/Sessions/Playing/Progress";
 
         const url = `${currentServer.serverUrl}${endpoint}?api_key=${currentServer.accessToken}`;
+        const bodyData: Record<string, unknown> = {
+          ItemId: data.itemId,
+          MediaSourceId: data.itemId,
+          PlaySessionId: data.playSessionId || undefined,
+          PositionTicks: data.positionTicks,
+          IsPaused: data.isPaused,
+          CanSeek: true,
+          PlayMethod: "DirectPlay",
+        };
+        if (typeof data.audioStreamIndex === "number" && data.audioStreamIndex >= 0) {
+          bodyData.AudioStreamIndex = data.audioStreamIndex;
+        }
+        if (typeof data.subtitleStreamIndex === "number") {
+          bodyData.SubtitleStreamIndex = data.subtitleStreamIndex;
+        }
+
         embyFetch(currentServer, url, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
             Accept: "application/json",
           },
-          body: JSON.stringify({
-            ItemId: data.itemId,
-            MediaSourceId: data.itemId,
-            PlaySessionId: data.playSessionId || undefined,
-            PositionTicks: data.positionTicks,
-            IsPaused: data.isPaused,
-            CanSeek: true,
-            PlayMethod: "DirectPlay",
-          }),
+          body: JSON.stringify(bodyData),
         }).catch((err) => {
           console.debug("[PlaybackProgressSync] WebView embyFetch error:", err);
         });

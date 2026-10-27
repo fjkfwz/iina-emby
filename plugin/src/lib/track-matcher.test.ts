@@ -2,6 +2,9 @@ import { describe, expect, it } from "vitest";
 import {
   canonicalizeLanguage,
   detectChineseVariant,
+  findBestAudioTrackByPreference,
+  findBestSubtitleTrackByPreference,
+  findEmbyStreamIndexForMpvTrack,
   findMatchingAudioTrack,
   findMatchingSubtitleTrack,
   type MpvTrack,
@@ -199,6 +202,79 @@ describe("track-matcher", () => {
 
       expect(match).toBeDefined();
       expect(match?.id).toBe(2);
+    });
+  });
+
+  describe("findBestAudioTrackByPreference", () => {
+    const mockTracks: MpvTrack[] = [
+      { id: 1, type: "audio", lang: "eng", title: "English Stereo", channels: 2 },
+      { id: 2, type: "audio", lang: "eng", title: "English 5.1", channels: 6 },
+      { id: 3, type: "audio", lang: "ja", title: "Japanese 5.1", channels: 6 },
+      { id: 4, type: "audio", lang: "zh", title: "Chinese Mandarin", channels: 2 },
+    ];
+
+    it("prefers Chinese when preferred languages start with zh/chi", () => {
+      const match = findBestAudioTrackByPreference(mockTracks, "zh,chi,ja,en");
+      expect(match?.id).toBe(4);
+    });
+
+    it("prefers Japanese surround when ja is highest and surround requested", () => {
+      const match = findBestAudioTrackByPreference(mockTracks, "ja,eng", "surround");
+      expect(match?.id).toBe(3);
+    });
+
+    it("prefers stereo English track when stereo requested and eng preferred", () => {
+      const match = findBestAudioTrackByPreference(mockTracks, "eng", "stereo");
+      expect(match?.id).toBe(1);
+    });
+
+    it("prefers surround English track when surround requested and eng preferred", () => {
+      const match = findBestAudioTrackByPreference(mockTracks, "eng", "surround");
+      expect(match?.id).toBe(2);
+    });
+  });
+
+  describe("findBestSubtitleTrackByPreference", () => {
+    const mockSubTracks: MpvTrack[] = [
+      { id: 1, type: "sub", lang: "eng", title: "English" },
+      { id: 2, type: "sub", lang: "zh-Hans", title: "Simplified Chinese" },
+      { id: 3, type: "sub", lang: "zh-Hant", title: "Traditional Chinese" },
+      { id: 4, type: "sub", lang: "ja", title: "Japanese" },
+    ];
+
+    it("matches Simplified Chinese when chs/simplified preferred", () => {
+      const match = findBestSubtitleTrackByPreference(mockSubTracks, "chs,sc,zh,eng");
+      expect(match?.id).toBe(2);
+    });
+
+    it("matches Traditional Chinese when cht/traditional preferred", () => {
+      const match = findBestSubtitleTrackByPreference(mockSubTracks, "cht,tc,zh");
+      expect(match?.id).toBe(3);
+    });
+
+    it("falls back to Japanese if Chinese not in preference list", () => {
+      const match = findBestSubtitleTrackByPreference(mockSubTracks, "ja,eng");
+      expect(match?.id).toBe(4);
+    });
+  });
+
+  describe("findEmbyStreamIndexForMpvTrack", () => {
+    it("matches stream index via ff-index", () => {
+      const track: MpvTrack = { id: 2, type: "audio", "ff-index": 5, lang: "chi" };
+      const embyStreams = [
+        { Type: "Audio", Index: 1, Language: "eng" },
+        { Type: "Audio", Index: 5, Language: "chi" },
+      ];
+      expect(findEmbyStreamIndexForMpvTrack(track, embyStreams, "Audio")).toBe(5);
+    });
+
+    it("matches stream index via language fallback when ff-index is absent", () => {
+      const track: MpvTrack = { id: 2, type: "audio", lang: "chi", title: "Mandarin" };
+      const embyStreams = [
+        { Type: "Audio", Index: 1, Language: "eng", Title: "English" },
+        { Type: "Audio", Index: 3, Language: "chi", Title: "Mandarin" },
+      ];
+      expect(findEmbyStreamIndexForMpvTrack(track, embyStreams, "Audio")).toBe(3);
     });
   });
 });

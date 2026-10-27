@@ -104,6 +104,11 @@ export function registerBridgeHandlers(view: WebviewTarget, deps: WebviewBridgeD
       autoplay_next_episode: deps.preferences.get("autoplay_next_episode") !== false,
       auto_download_enabled: deps.preferences.get("auto_download_enabled") !== false,
       debug_logging: Boolean(deps.preferences.get("debug_logging")),
+      remember_track_selections: deps.preferences.get("remember_track_selections") !== false,
+      preferred_audio_language: (deps.preferences.get("preferred_audio_language") as string) || "zh,chi,ja,jpn,en,eng",
+      preferred_audio_channel: (deps.preferences.get("preferred_audio_channel") as string) || "auto",
+      preferred_subtitle_language: (deps.preferences.get("preferred_subtitle_language") as string) || "zh,chi,chs,sc,cht,tc,en",
+      auto_select_subtitles: deps.preferences.get("auto_select_subtitles") !== false,
     };
   }
 

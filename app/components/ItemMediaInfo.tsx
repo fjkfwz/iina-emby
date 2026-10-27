@@ -1,4 +1,4 @@
-import type { EmbyItemMetadata, EmbyMediaStream } from "@shared";
+import { type EmbyItemMetadata, type EmbyMediaStream, isGenericOrEmptySubtitleTitle } from "@shared";
 import { IconDeviceTv, IconFileInfo, IconMovie, IconSubtitles, IconVolume } from "@tabler/icons-react";
 import { useTranslation } from "../lib/i18n";
 import styles from "./ItemMediaInfo.module.css";
@@ -272,7 +272,8 @@ export function ItemMediaInfo({
                 const lang = formatLanguage(sub.Language, typeof sub.DisplayLanguage === "string" ? sub.DisplayLanguage : undefined);
                 const format = sub.Codec?.toUpperCase() || "SRT";
                 const isExt = Boolean(sub.IsExternal);
-                const title = typeof sub.Title === "string" ? sub.Title : null;
+                const rawTitle = typeof sub.Title === "string" ? sub.Title.trim() : null;
+                const title = rawTitle && !isGenericOrEmptySubtitleTitle(rawTitle) ? rawTitle : null;
                 const isSelected = selectedSubtitleIndex === sub.Index;
 
                 return (

@@ -27,6 +27,11 @@
     "sync_playback_progress": true,
     "reopen_browser_on_playback_end": true,
     "use_connected_account": false,
-    "auto_open_on_launch": true
+    "auto_open_on_launch": true,
+    "remember_track_selections": true,
+    "preferred_audio_language": "zh,chi,ja,jpn,en,eng",
+    "preferred_audio_channel": "auto",
+    "preferred_subtitle_language": "zh,chi,chs,sc,cht,tc,en",
+    "auto_select_subtitles": true
   }
 }

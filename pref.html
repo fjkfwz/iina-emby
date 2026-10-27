@@ -170,7 +170,71 @@
       </p>
     </div>
 
-    <div class="section-header">Subtitle Settings</div>
+    <div class="section-header">Audio & Subtitle Preferences</div>
+
+    <div class="pref-section">
+      <label>
+        <input type="checkbox" data-type="bool" data-pref-key="remember_track_selections" />
+        Remember audio and subtitle track selections
+      </label>
+      <p class="small secondary pref-help">
+        Remember the last chosen audio track (channel) and subtitle track for each movie or episode and across TV series when resuming playback.
+      </p>
+    </div>
+
+    <div class="pref-section">
+      <label>
+        Preferred audio languages:
+        <input
+          type="text"
+          data-pref-key="preferred_audio_language"
+          style="width: 100%; margin-top: 2px"
+        />
+      </label>
+      <p class="small secondary pref-help">
+        Comma-separated list of preferred audio language codes (e.g., <code>zh,chi,ja,jpn,en,eng</code>).
+      </p>
+    </div>
+
+    <div class="pref-section">
+      <label>
+        Preferred audio channel layout:
+        <select data-pref-key="preferred_audio_channel" style="width: 100%; margin-top: 2px">
+          <option value="auto">Auto (Best available / Highest channel count)</option>
+          <option value="surround">Surround (5.1 / 7.1)</option>
+          <option value="stereo">Stereo (2.0)</option>
+        </select>
+      </label>
+      <p class="small secondary pref-help">
+        Preferred channel layout when multiple audio tracks with the same language are available.
+      </p>
+    </div>
+
+    <div class="pref-section">
+      <label>
+        Preferred subtitle languages:
+        <input
+          type="text"
+          data-pref-key="preferred_subtitle_language"
+          style="width: 100%; margin-top: 2px"
+        />
+      </label>
+      <p class="small secondary pref-help">
+        Comma-separated list of preferred subtitle language codes and variants (e.g., <code>zh,chi,chs,sc,cht,tc,en</code>).
+      </p>
+    </div>
+
+    <div class="pref-section">
+      <label>
+        <input type="checkbox" data-type="bool" data-pref-key="auto_select_subtitles" />
+        Automatically select matching subtitle track
+      </label>
+      <p class="small secondary pref-help">
+        Automatically activate the best matching subtitle track based on your preferred languages when playing media.
+      </p>
+    </div>
+
+    <div class="section-header">Subtitle Downloads</div>
 
     <div class="pref-section">
       <label>

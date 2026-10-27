@@ -131,9 +131,15 @@ export function createEmbyApi({ http, preferences, log }: EmbyApiDeps) {
     );
   }
 
-  async function fetchPlaybackInfo(serverBase: string, itemId: string, apiKey: string): Promise<EmbyPlaybackInfo> {
+  async function fetchPlaybackInfo(
+    serverBase: string,
+    itemId: string,
+    apiKey: string,
+    userId?: string,
+  ): Promise<EmbyPlaybackInfo> {
     try {
-      const playbackUrl = `${serverBase}/Items/${itemId}/PlaybackInfo?api_key=${apiKey}`;
+      const userParam = userId ? `&UserId=${encodeURIComponent(userId)}` : "";
+      const playbackUrl = `${serverBase}/Items/${itemId}/PlaybackInfo?api_key=${apiKey}${userParam}`;
       log(`Fetching playback info from: ${playbackUrl}`);
 
       const response = await http.get(playbackUrl, {

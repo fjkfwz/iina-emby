@@ -2,7 +2,10 @@ import {
   type EmbyItemMetadata,
   type EmbyMediaStream,
   type EmbyPlaybackInfo,
+  formatExternalSubtitleFileName,
   formatFullEpisodeTitle,
+  formatSubtitleTrackInfo,
+  isGenericOrEmptySubtitleTitle,
   isSameEmbyHost,
   type ParsedEmbyUrl,
 } from "@shared";
@@ -18,7 +21,7 @@ export interface MediaActionsDeps {
   mpv: typeof iina.mpv;
   parseEmbyUrl: (url: string | null | undefined) => ParsedEmbyUrl | null;
   isEmbyUrl: (url: string | null | undefined) => boolean;
-  fetchPlaybackInfo: (serverBase: string, itemId: string, apiKey: string) => Promise<EmbyPlaybackInfo>;
+  fetchPlaybackInfo: (serverBase: string, itemId: string, apiKey: string, userId?: string) => Promise<EmbyPlaybackInfo>;
   fetchItemMetadata: (serverBase: string, itemId: string, apiKey: string, userId?: string) => Promise<EmbyItemMetadata>;
   getActiveSession?: () => StoredSessionData | null;
   log: DebugLogger;
@@ -34,47 +37,11 @@ export function subtitleExtensionForCodec(codec?: string): string {
   return "srt";
 }
 
-export function formatExternalSubtitleFileName(
-  subtitleTitle?: string | null,
-  language?: string,
-  extension = "srt",
-): string {
-  // Build a clean, human-readable track name for IINA's subtitle menu
-  let trackLabel = (subtitleTitle || "").trim();
-  if (!trackLabel) {
-    if (language && language !== "und" && language !== "unknown") {
-      trackLabel = language.toUpperCase();
-    } else {
-      trackLabel = "字幕";
-    }
-  }
-
-  // Map raw ISO language codes to readable names if title is just the code
-  const lower = trackLabel.toLowerCase();
-  if (lower === "chi" || lower === "zho" || lower === "zh" || lower === "zh-cn") {
-    trackLabel = "简体中文";
-  } else if (lower === "zh-tw" || lower === "zh-hk") {
-    trackLabel = "繁体中文";
-  } else if (lower === "eng" || lower === "en") {
-    trackLabel = "英语";
-  } else if (lower === "jpn" || lower === "ja") {
-    trackLabel = "日语";
-  } else if (lower === "kor" || lower === "ko") {
-    trackLabel = "韩语";
-  }
-
-  // Strip redundant extension from the label if present
-  trackLabel = trackLabel.replace(new RegExp(`\\.${extension}$`, "i"), "").trim();
-
-  // Ensure clear [外挂] prefix so it's distinguishable in IINA subtitle menu
-  if (!trackLabel.startsWith("[外挂]")) {
-    trackLabel = `[外挂] ${trackLabel}`;
-  }
-
-  // Sanitize forbidden filesystem characters without stripping Chinese/Unicode characters
-  const safeTitle = trackLabel.replace(/[/\\:*?"<>|\x00-\x1f]/g, "_").trim() || "[外挂] 字幕";
-  return `${safeTitle}.${extension}`;
-}
+export {
+  formatExternalSubtitleFileName,
+  formatSubtitleTrackInfo,
+  isGenericOrEmptySubtitleTitle,
+};
 
 export function createMediaActionsManager({
   core,
@@ -183,6 +150,7 @@ export function createMediaActionsManager({
     codec?: string,
     deliveryUrl?: string | null,
     subtitleTitle?: string | null,
+    selectTrack = true,
   ): Promise<boolean> {
     try {
       const extension = subtitleExtensionForCodec(codec);
@@ -213,7 +181,11 @@ export function createMediaActionsManager({
         subtitleUrl = `${cleanBase}/Videos/${encodeURIComponent(itemId)}/${encodeURIComponent(effectiveMediaSourceId || itemId)}/Subtitles/${streamIndex}/Stream.${extension}?api_key=${encodeURIComponent(apiKey)}`;
       }
 
-      const fileName = formatExternalSubtitleFileName(subtitleTitle, language, extension);
+      const { title: trackTitle, lang: trackLang, fileName } = formatSubtitleTrackInfo(
+        subtitleTitle,
+        language,
+        extension,
+      );
       const sanitizedItemId = String(itemId).replace(/[^a-zA-Z0-9_-]/g, "_");
       const safeStreamIndex = typeof streamIndex === "number" ? streamIndex : 0;
       const localPath = `@tmp/emby_${sanitizedItemId}_${safeStreamIndex}/${fileName}`;
@@ -222,7 +194,8 @@ export function createMediaActionsManager({
       log(`Downloading external subtitle: ${subtitleUrl} to ${localPath}`);
       log(`External subtitle path: ${subtitlePath}`);
       log(`Stream index: ${streamIndex}`);
-      log(`Language: ${language}`);
+      log(`Language: ${language} (normalized: ${trackLang})`);
+      log(`Track title: "${trackTitle}"`);
       log(`Codec: ${codec} -> Extension: ${extension}`);
 
       await http.download(subtitleUrl, localPath);
@@ -241,46 +214,83 @@ export function createMediaActionsManager({
         // Ignore test error
       }
 
+      // Check if this subtitle is already present in mpv track-list
+      const flag = selectTrack ? "select" : "auto";
+      try {
+        const trackList = mpv.getNative<Array<{ id: number; type: string; "external-filename"?: string; title?: string }>>("track-list");
+        if (Array.isArray(trackList)) {
+          const existing = trackList.find(
+            (t) => t.type === "sub" && (t["external-filename"] === resolvedPath || (t.title && t.title === trackTitle)),
+          );
+          if (existing && typeof existing.id === "number") {
+            log(`Subtitle track already loaded in mpv (id=${existing.id}): ${resolvedPath}`);
+            if (selectTrack) {
+              mpv.set("sid", existing.id);
+              mpv.set("sub-visibility", true);
+              if (core.subtitle) {
+                core.subtitle.id = existing.id;
+              }
+            }
+            return true;
+          }
+        }
+      } catch (checkErr) {
+        log("Error checking existing track-list, proceeding to sub-add:", checkErr);
+      }
+
+      // Load via mpv sub-add command with explicit title and language
+      // mpv sub-add syntax: sub-add <url> [<flags> [<title> [<lang>]]]
       let loaded = false;
       try {
-        core.subtitle.loadTrack(resolvedPath);
+        log(`Loading external subtitle via mpv sub-add: ${resolvedPath}, flag: ${flag}, title: "${trackTitle}", lang: "${trackLang}"`);
+        mpv.command("sub-add", [resolvedPath, flag, trackTitle, trackLang]);
         loaded = true;
-        log(`External subtitle loaded successfully via core.subtitle.loadTrack: ${resolvedPath}`);
-      } catch (coreErr) {
-        log(`core.subtitle.loadTrack error, trying mpv sub-add:`, coreErr);
+        log(`External subtitle loaded successfully via mpv sub-add: ${resolvedPath}`);
+      } catch (mpvErr) {
+        log(`mpv sub-add with title/lang failed, trying basic sub-add:`, mpvErr);
         try {
-          mpv.command("sub-add", [resolvedPath, "select"]);
+          mpv.command("sub-add", [resolvedPath, flag]);
           loaded = true;
-          log(`External subtitle loaded successfully via mpv sub-add: ${resolvedPath}`);
-        } catch (mpvErr) {
-          log.error(`mpv sub-add also failed:`, mpvErr);
-          return false;
+          log(`External subtitle loaded via basic mpv sub-add: ${resolvedPath}`);
+        } catch (subErr) {
+          log(`mpv sub-add failed, falling back to core.subtitle.loadTrack:`, subErr);
+          try {
+            core.subtitle.loadTrack(resolvedPath);
+            loaded = true;
+            log(`External subtitle loaded via core.subtitle.loadTrack: ${resolvedPath}`);
+          } catch (coreErr) {
+            log.error(`All subtitle loading methods failed:`, coreErr);
+            return false;
+          }
         }
       }
 
-      // Verify and ensure active subtitle track is selected
-      try {
-        const currentSid = mpv.getString("sid");
-        if (currentSid === "no" || currentSid === "0") {
-          const trackList = mpv.getNative<Array<{ id: number; type: string; external?: boolean }>>("track-list");
+      // If requested, ensure this track is selected
+      if (selectTrack) {
+        try {
+          const trackList = mpv.getNative<Array<{ id: number; type: string; "external-filename"?: string; title?: string }>>("track-list");
           if (Array.isArray(trackList)) {
             const subTracks = trackList.filter((t) => t.type === "sub");
-            if (subTracks.length > 0) {
-              const lastTrack = subTracks[subTracks.length - 1];
-              log(`Activating newly loaded subtitle track: id=${lastTrack.id}`);
-              mpv.set("sid", lastTrack.id);
+            const matched = subTracks.find(
+              (t) => t["external-filename"] === resolvedPath || (t.title && t.title === trackTitle),
+            ) || subTracks[subTracks.length - 1];
+            if (matched && typeof matched.id === "number") {
+              log(`Activating subtitle track: id=${matched.id}, title="${matched.title || trackTitle}"`);
+              mpv.set("sid", matched.id);
+              mpv.set("sub-visibility", true);
               if (core.subtitle) {
-                core.subtitle.id = lastTrack.id;
+                core.subtitle.id = matched.id;
               }
             }
           }
+        } catch (selErr) {
+          log("Selection verification error:", selErr);
         }
-      } catch {
-        // Ignore selection verification errors
       }
 
       if (preferences.get("show_notifications")) {
-        core.osd(`Loaded external ${language} subtitle`);
+        const cleanName = trackTitle.replace(/^\[外挂\]\s*/, "");
+        core.osd(`已加载外挂字幕: ${cleanName}`);
       }
 
       return loaded;
@@ -291,7 +301,12 @@ export function createMediaActionsManager({
     }
   }
 
-  async function downloadAllSubtitles(serverBase: string, itemId: string, apiKey: string) {
+  async function downloadAllSubtitles(
+    serverBase: string,
+    itemId: string,
+    apiKey: string,
+    targetSubtitleIndex?: number | null,
+  ) {
     try {
       const playbackInfo = await fetchPlaybackInfo(serverBase, itemId, apiKey);
 
@@ -334,6 +349,7 @@ export function createMediaActionsManager({
 
         try {
           const streamTitle = stream.DisplayTitle || stream.Title || stream.DisplayLanguage || stream.Language;
+          const isTarget = typeof targetSubtitleIndex === "number" && targetSubtitleIndex === stream.Index;
           const downloaded = await downloadExternalSubtitle(
             serverBase,
             itemId,
@@ -345,6 +361,7 @@ export function createMediaActionsManager({
             codec,
             stream.DeliveryUrl,
             streamTitle || null,
+            isTarget,
           );
           if (downloaded) {
             downloadedCount++;

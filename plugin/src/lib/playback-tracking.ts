@@ -7,7 +7,7 @@ export interface PlaybackTrackingDeps {
   http: SafeHttp;
   preferences: typeof iina.preferences;
   buildEmbyHeaders: (apiKey?: string, extraHeaders?: Record<string, string>) => Record<string, string>;
-  fetchPlaybackInfo: (serverBase: string, itemId: string, apiKey: string) => Promise<EmbyPlaybackInfo>;
+  fetchPlaybackInfo: (serverBase: string, itemId: string, apiKey: string, userId?: string) => Promise<EmbyPlaybackInfo>;
   fetchItemMetadata: (serverBase: string, itemId: string, apiKey: string, userId?: string) => Promise<EmbyItemMetadata>;
   secondsToTicks: (seconds: number) => number;
   ticksToSeconds: (ticks: number) => number;
@@ -17,6 +17,8 @@ export interface PlaybackTrackingDeps {
     isPaused: boolean;
     event?: "start" | "progress" | "stop";
     playSessionId?: string | null;
+    audioStreamIndex?: number | null;
+    subtitleStreamIndex?: number | null;
   }) => void;
   log: DebugLogger;
 }
@@ -34,6 +36,8 @@ export interface PlaybackSession {
   duration: number | null;
   hasReportedWatched: boolean;
   isBrowserPlayback?: boolean;
+  currentAudioStreamIndex?: number | null;
+  currentSubtitleStreamIndex?: number | null;
 }
 
 export function createPlaybackTrackingManager({
@@ -145,9 +149,29 @@ export function createPlaybackTrackingManager({
             isPaused: false,
             event: "start",
             playSessionId,
+            audioStreamIndex: currentPlaybackSession?.currentAudioStreamIndex,
+            subtitleStreamIndex: currentPlaybackSession?.currentSubtitleStreamIndex,
           });
         }
         return true;
+      }
+
+      const postData: Record<string, unknown> = {
+        ItemId: itemId,
+        MediaSourceId: mediaSourceId || itemId,
+        PlaySessionId: playSessionId,
+        CanSeek: true,
+        PlayMethod: "DirectPlay",
+        PositionTicks: positionTicks,
+      };
+      if (
+        typeof currentPlaybackSession?.currentAudioStreamIndex === "number" &&
+        currentPlaybackSession.currentAudioStreamIndex >= 0
+      ) {
+        postData.AudioStreamIndex = currentPlaybackSession.currentAudioStreamIndex;
+      }
+      if (typeof currentPlaybackSession?.currentSubtitleStreamIndex === "number") {
+        postData.SubtitleStreamIndex = currentPlaybackSession.currentSubtitleStreamIndex;
       }
 
       const response = await http.post(url, {
@@ -155,14 +179,7 @@ export function createPlaybackTrackingManager({
           "Content-Type": "application/json",
           Accept: "application/json",
         }),
-        data: {
-          ItemId: itemId,
-          MediaSourceId: mediaSourceId || itemId,
-          PlaySessionId: playSessionId,
-          CanSeek: true,
-          PlayMethod: "DirectPlay",
-          PositionTicks: positionTicks,
-        },
+        data: postData,
       });
 
       if (response.statusCode >= 400) {
@@ -252,6 +269,8 @@ export function createPlaybackTrackingManager({
             isPaused,
             event: "progress",
             playSessionId,
+            audioStreamIndex: currentPlaybackSession?.currentAudioStreamIndex,
+            subtitleStreamIndex: currentPlaybackSession?.currentSubtitleStreamIndex,
           });
         }
         return true;
@@ -259,20 +278,31 @@ export function createPlaybackTrackingManager({
 
       const url = `${serverBase}/Sessions/Playing/Progress?api_key=${apiKey}`;
 
+      const postData: Record<string, unknown> = {
+        ItemId: itemId,
+        MediaSourceId: mediaSourceId || itemId,
+        PlaySessionId: playSessionId,
+        PositionTicks: positionTicks,
+        IsPaused: isPaused,
+        CanSeek: true,
+        PlayMethod: "DirectPlay",
+      };
+      if (
+        typeof currentPlaybackSession?.currentAudioStreamIndex === "number" &&
+        currentPlaybackSession.currentAudioStreamIndex >= 0
+      ) {
+        postData.AudioStreamIndex = currentPlaybackSession.currentAudioStreamIndex;
+      }
+      if (typeof currentPlaybackSession?.currentSubtitleStreamIndex === "number") {
+        postData.SubtitleStreamIndex = currentPlaybackSession.currentSubtitleStreamIndex;
+      }
+
       const response = await http.post(url, {
         headers: buildEmbyHeaders(apiKey, {
           "Content-Type": "application/json",
           Accept: "application/json",
         }),
-        data: {
-          ItemId: itemId,
-          MediaSourceId: mediaSourceId || itemId,
-          PlaySessionId: playSessionId,
-          PositionTicks: positionTicks,
-          IsPaused: isPaused,
-          CanSeek: true,
-          PlayMethod: "DirectPlay",
-        },
+        data: postData,
       });
 
       if (response.statusCode >= 400) {
@@ -281,7 +311,13 @@ export function createPlaybackTrackingManager({
       }
 
       if (typeof onProgressUpdated === "function") {
-        onProgressUpdated({ itemId, positionTicks, isPaused });
+        onProgressUpdated({
+          itemId,
+          positionTicks,
+          isPaused,
+          audioStreamIndex: currentPlaybackSession?.currentAudioStreamIndex,
+          subtitleStreamIndex: currentPlaybackSession?.currentSubtitleStreamIndex,
+        });
       }
 
       return response.statusCode === 204 || response.statusCode === 200;
@@ -317,6 +353,8 @@ export function createPlaybackTrackingManager({
             isPaused: false,
             event: "stop",
             playSessionId,
+            audioStreamIndex: currentPlaybackSession?.currentAudioStreamIndex,
+            subtitleStreamIndex: currentPlaybackSession?.currentSubtitleStreamIndex,
           });
         }
         return true;
@@ -326,17 +364,28 @@ export function createPlaybackTrackingManager({
 
       log(`Reporting playback stop: position=${positionSeconds}s (${positionTicks} ticks)`);
 
+      const postData: Record<string, unknown> = {
+        ItemId: itemId,
+        MediaSourceId: mediaSourceId || itemId,
+        PlaySessionId: playSessionId,
+        PositionTicks: positionTicks,
+      };
+      if (
+        typeof currentPlaybackSession?.currentAudioStreamIndex === "number" &&
+        currentPlaybackSession.currentAudioStreamIndex >= 0
+      ) {
+        postData.AudioStreamIndex = currentPlaybackSession.currentAudioStreamIndex;
+      }
+      if (typeof currentPlaybackSession?.currentSubtitleStreamIndex === "number") {
+        postData.SubtitleStreamIndex = currentPlaybackSession.currentSubtitleStreamIndex;
+      }
+
       const response = await http.post(url, {
         headers: buildEmbyHeaders(apiKey, {
           "Content-Type": "application/json",
           Accept: "application/json",
         }),
-        data: {
-          ItemId: itemId,
-          MediaSourceId: mediaSourceId || itemId,
-          PlaySessionId: playSessionId,
-          PositionTicks: positionTicks,
-        },
+        data: postData,
       });
 
       if (response.statusCode >= 400) {
@@ -396,6 +445,8 @@ export function createPlaybackTrackingManager({
     userId?: string,
     knownStartPositionSeconds?: number | null,
     isBrowserPlayback?: boolean,
+    initialAudioIndex?: number | null,
+    initialSubtitleIndex?: number | null,
   ) {
     stopPlaybackTracking();
 
@@ -413,7 +464,7 @@ export function createPlaybackTrackingManager({
 
     if (!isBrowserPlayback) {
       try {
-        const playbackInfo = await fetchPlaybackInfo(serverBase, itemId, apiKey);
+        const playbackInfo = await fetchPlaybackInfo(serverBase, itemId, apiKey, userId);
         if (playbackInfo) {
           playSessionId = playbackInfo.PlaySessionId || playSessionId;
           if (playbackInfo.MediaSources && playbackInfo.MediaSources.length > 0) {
@@ -444,6 +495,8 @@ export function createPlaybackTrackingManager({
       duration: null,
       hasReportedWatched: false,
       isBrowserPlayback: Boolean(isBrowserPlayback),
+      currentAudioStreamIndex: initialAudioIndex ?? null,
+      currentSubtitleStreamIndex: initialSubtitleIndex ?? null,
     };
 
     resumeAndReportStart(serverBase, itemId, apiKey, playSessionId, mediaSourceId, userId, knownStartPositionSeconds);
@@ -635,6 +688,32 @@ export function createPlaybackTrackingManager({
     }
   }
 
+  function updateActiveTracks(audioIndex: number | null, subIndex: number | null): void {
+    if (!currentPlaybackSession) return;
+    const prevAudio = currentPlaybackSession.currentAudioStreamIndex;
+    const prevSub = currentPlaybackSession.currentSubtitleStreamIndex;
+
+    currentPlaybackSession.currentAudioStreamIndex = audioIndex;
+    currentPlaybackSession.currentSubtitleStreamIndex = subIndex;
+
+    const changed = prevAudio !== audioIndex || prevSub !== subIndex;
+    if (changed && hasStartedPlayback) {
+      log(`[tracks] Active tracks updated: audio=${audioIndex ?? "none"}, sub=${subIndex ?? "none"}`);
+      const pos = samplePosition();
+      if (typeof pos === "number") {
+        reportPlaybackProgress(
+          currentPlaybackSession.serverBase,
+          currentPlaybackSession.itemId,
+          currentPlaybackSession.apiKey,
+          pos,
+          currentPlaybackSession.playSessionId,
+          currentPlaybackSession.mediaSourceId,
+          core.status.paused || false,
+        );
+      }
+    }
+  }
+
   function getCurrentPlaybackSession(): PlaybackSession | null {
     return currentPlaybackSession;
   }
@@ -645,5 +724,6 @@ export function createPlaybackTrackingManager({
     handlePauseChange,
     markAsWatched,
     getCurrentPlaybackSession,
+    updateActiveTracks,
   };
 }
