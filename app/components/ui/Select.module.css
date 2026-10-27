@@ -93,7 +93,7 @@
 .dropdown {
   outline: none;
   position: fixed;
-  z-index: 9999;
+  z-index: 100000;
   top: auto;
   right: auto;
   bottom: auto;
@@ -121,10 +121,22 @@
     transform 0.12s ease;
 }
 
+@keyframes dropdownFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
 .dropdownOpen {
   opacity: 1 !important;
   pointer-events: auto !important;
   transform: scale(1) !important;
+  animation: dropdownFadeIn 0.12s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .dropdown[data-align="end"] {

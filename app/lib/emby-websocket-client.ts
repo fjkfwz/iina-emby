@@ -61,16 +61,43 @@ class EmbyWebSocketManager {
   private pingTimer: ReturnType<typeof setInterval> | null = null;
   private reconnectAttempt = 0;
   private isExplicitlyClosed = false;
+  private lastMessageTime = Date.now();
+  private isAwakeListenerAttached = false;
 
   private messageListeners = new Set<MessageListener>();
   private libraryChangedListeners = new Set<LibraryChangedListener>();
   private userDataChangedListeners = new Set<UserDataChangedListener>();
   private itemListeners = new Map<string, Set<() => void>>();
 
+  private attachSystemListeners(): void {
+    if (this.isAwakeListenerAttached || typeof window === "undefined") return;
+    this.isAwakeListenerAttached = true;
+
+    const handleWake = () => {
+      if (this.isExplicitlyClosed || !this.currentServer) return;
+      const isStale = Date.now() - this.lastMessageTime > 45_000;
+      const isDead = !this.socket || this.socket.readyState !== WebSocket.OPEN;
+      if (isStale || isDead) {
+        console.log("[EmbyWS] System woke up or came online with stale socket, refreshing connection...");
+        this.reconnect();
+      }
+    };
+
+    window.addEventListener("online", handleWake);
+    if (typeof document !== "undefined") {
+      document.addEventListener("visibilitychange", () => {
+        if (document.visibilityState === "visible") {
+          handleWake();
+        }
+      });
+    }
+  }
+
   /**
    * Connects to the given server or reconnects if the server changed.
    */
   public connect(server: EmbyServer | null): void {
+    this.attachSystemListeners();
     if (!server) {
       this.disconnect();
       return;
@@ -242,12 +269,42 @@ class EmbyWebSocketManager {
     }
   }
 
+  public reconnect(): void {
+    if (!this.currentServer || this.isExplicitlyClosed) return;
+    this.stopPing();
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
+    if (this.socket) {
+      try {
+        const s = this.socket;
+        this.socket = null;
+        s.onmessage = null;
+        s.onerror = null;
+        s.onclose = null;
+        s.close(1000, "Reconnecting");
+      } catch {
+        // Ignore close error
+      }
+    }
+    this.initSocket();
+  }
+
   private startPing(): void {
     this.stopPing();
+    this.lastMessageTime = Date.now();
     this.pingTimer = setInterval(() => {
-      if (this.socket && this.socket.readyState === WebSocket.OPEN) {
-        this.sendMessage({ MessageType: "KeepAlive" });
+      if (!this.socket || this.socket.readyState !== WebSocket.OPEN) {
+        return;
       }
+      // Dead-man watchdog: if no frame received for 60 seconds (half-open socket), force reconnect
+      if (Date.now() - this.lastMessageTime > 60_000) {
+        console.warn("[EmbyWS] Dead-man timeout: no messages for 60s, reconnecting...");
+        this.reconnect();
+        return;
+      }
+      this.sendMessage({ MessageType: "KeepAlive" });
     }, 25_000);
   }
 
@@ -269,6 +326,7 @@ class EmbyWebSocketManager {
   }
 
   private handleMessage(rawData: unknown): void {
+    this.lastMessageTime = Date.now();
     if (typeof rawData !== "string") return;
 
     try {

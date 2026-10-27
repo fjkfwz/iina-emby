@@ -1,6 +1,7 @@
 import { IconCheck, IconChevronDown } from "@tabler/icons-react";
 import type React from "react";
 import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { type PopoverPlacement, usePopoverPosition } from "../../hooks/usePopoverPosition";
 import classes from "./Select.module.css";
 
@@ -43,7 +44,6 @@ export function Select({
   const triggerRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const [isOpen, setIsOpen] = useState(false);
-  const wasOpenOnPointerDown = useRef(false);
   const typeaheadQuery = useRef("");
   const typeaheadTimer = useRef<number | null>(null);
 
@@ -113,7 +113,12 @@ export function Select({
       target.scrollIntoView({ block: "nearest" });
     }
 
-    const onScrollOrResize = () => close();
+    const onScrollOrResize = (e: Event) => {
+      if (e.target && menuRef.current?.contains(e.target as Node)) {
+        return;
+      }
+      close();
+    };
     window.addEventListener("resize", onScrollOrResize);
     window.addEventListener("scroll", onScrollOrResize, true);
     return () => {
@@ -228,41 +233,46 @@ export function Select({
         </span>
       </button>
 
-      <div
-        ref={menuRef}
-        id={id}
-        role="listbox"
-        aria-label={placeholder}
-        tabIndex={-1}
-        className={`${classes.dropdown} ${isOpen ? classes.dropdownOpen : ""}`}
-        onKeyDown={handleMenuKeyDown}
-        onClick={(e) => e.stopPropagation()}
-      >
-        {normalizedOptions.map((opt) => {
-          const isSelected = opt.value === value;
-          return (
-            <button
-              key={opt.value}
-              type="button"
-              className={`${classes.item} ${isSelected ? classes.itemSelected : ""}`}
-              onClick={() => !opt.disabled && handleSelect(opt.value)}
-              role="option"
-              aria-selected={isSelected}
-              aria-disabled={opt.disabled || undefined}
-              disabled={opt.disabled}
-              tabIndex={-1}
-            >
-              {opt.icon && <span className={classes.itemIcon}>{opt.icon}</span>}
-              <span className={classes.label}>{opt.label}</span>
-              {isSelected && (
-                <span className={classes.checkIcon}>
-                  <IconCheck size={14} stroke={2.2} />
-                </span>
-              )}
-            </button>
-          );
-        })}
-      </div>
+      {isOpen &&
+        typeof document !== "undefined" &&
+        createPortal(
+          <div
+            ref={menuRef}
+            id={id}
+            role="listbox"
+            aria-label={placeholder}
+            tabIndex={-1}
+            className={`${classes.dropdown} ${classes.dropdownOpen}`}
+            onKeyDown={handleMenuKeyDown}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {normalizedOptions.map((opt) => {
+              const isSelected = opt.value === value;
+              return (
+                <button
+                  key={opt.value}
+                  type="button"
+                  className={`${classes.item} ${isSelected ? classes.itemSelected : ""}`}
+                  onClick={() => !opt.disabled && handleSelect(opt.value)}
+                  role="option"
+                  aria-selected={isSelected}
+                  aria-disabled={opt.disabled || undefined}
+                  disabled={opt.disabled}
+                  tabIndex={-1}
+                >
+                  {opt.icon && <span className={classes.itemIcon}>{opt.icon}</span>}
+                  <span className={classes.label}>{opt.label}</span>
+                  {isSelected && (
+                    <span className={classes.checkIcon}>
+                      <IconCheck size={14} stroke={2.2} />
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>,
+          document.body
+        )}
     </div>
   );
 }
