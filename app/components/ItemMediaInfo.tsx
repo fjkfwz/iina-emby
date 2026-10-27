@@ -224,16 +224,20 @@ export function ItemMediaInfo({
                     tabIndex={onSelectAudioIndex ? 0 : undefined}
                     title={onSelectAudioIndex ? `${t("audio", "Audio")}: ${lang}` : undefined}
                   >
-                    <div className={styles.streamMain}>
-                      <span className={styles.streamLanguage}>{lang}</span>
-                      {Boolean(audio.IsDefault) && <span className={styles.badgeDefault}>{t("default", "Default")}</span>}
-                      {title && <span className={styles.streamNote}>{title}</span>}
+                    <div className={styles.streamRow}>
+                      <div className={styles.streamInfo}>
+                        <div className={styles.streamHeader}>
+                          <span className={styles.streamLanguage}>{lang}</span>
+                          {Boolean(audio.IsDefault) && <span className={styles.badgeDefault}>{t("default", "Default")}</span>}
+                        </div>
+                        {title && title !== lang && <div className={styles.streamTitle} title={title}>{title}</div>}
+                        <div className={styles.streamMeta}>
+                          <span>{codec}</span>
+                          {channels && <span>• {channels}</span>}
+                          {bitRate && <span>• {bitRate}</span>}
+                        </div>
+                      </div>
                       {isSelected && <span className={styles.badgeSelectedAudio}>✓ {t("selected", "Selected")}</span>}
-                    </div>
-                    <div className={styles.streamMeta}>
-                      <span>{codec}</span>
-                      {channels && <span>• {channels}</span>}
-                      {bitRate && <span>• {bitRate}</span>}
                     </div>
                   </div>
                 );
@@ -259,12 +263,16 @@ export function ItemMediaInfo({
                   tabIndex={0}
                   title={t("subtitlesOff", "Off (Disable Subtitles)")}
                 >
-                  <div className={styles.streamMain}>
-                    <span className={styles.streamLanguage}>🚫 {t("subtitlesOff", "Off (Disable Subtitles)")}</span>
+                  <div className={styles.streamRow}>
+                    <div className={styles.streamInfo}>
+                      <div className={styles.streamHeader}>
+                        <span className={styles.streamLanguage}>🚫 {t("subtitlesOff", "Off (Disable Subtitles)")}</span>
+                      </div>
+                      <div className={styles.streamMeta}>
+                        <span>{t("disabled", "Disabled")}</span>
+                      </div>
+                    </div>
                     {selectedSubtitleIndex === -1 && <span className={styles.badgeSelectedSubtitle}>✓ {t("selected", "Selected")}</span>}
-                  </div>
-                  <div className={styles.streamMeta}>
-                    <span>{t("disabled", "Disabled")}</span>
                   </div>
                 </div>
               )}
@@ -285,18 +293,24 @@ export function ItemMediaInfo({
                     tabIndex={onSelectSubtitleIndex ? 0 : undefined}
                     title={onSelectSubtitleIndex ? `${t("subtitle", "Subtitle")}: ${lang}` : undefined}
                   >
-                    <div className={styles.streamMain}>
-                      <span className={styles.streamLanguage}>{lang}</span>
-                      {Boolean(sub.IsDefault) && <span className={styles.badgeDefault}>{t("default", "Default")}</span>}
-                      <span className={isExt ? styles.badgeExternal : styles.badgeInternal}>
-                        {isExt ? t("external", "External") : t("embedded", "Embedded")}
-                      </span>
-                      {format === "ASS" && <span className={styles.badgeAss}>{t("effects", "ASS")}</span>}
-                      {title && title !== lang && <span className={styles.streamNote}>{title}</span>}
+                    <div className={styles.streamRow}>
+                      <div className={styles.streamInfo}>
+                        <div className={styles.streamHeader}>
+                          <span className={styles.streamLanguage}>{lang}</span>
+                          <div className={styles.streamBadges}>
+                            {Boolean(sub.IsDefault) && <span className={styles.badgeDefault}>{t("default", "Default")}</span>}
+                            <span className={isExt ? styles.badgeExternal : styles.badgeInternal}>
+                              {isExt ? t("external", "External") : t("embedded", "Embedded")}
+                            </span>
+                            {format === "ASS" && <span className={styles.badgeAss}>{t("effects", "ASS")}</span>}
+                          </div>
+                        </div>
+                        {title && title !== lang && <div className={styles.streamTitle} title={title}>{title}</div>}
+                        <div className={styles.streamMeta}>
+                          <span>{t("format", "Format")}: {format}</span>
+                        </div>
+                      </div>
                       {isSelected && <span className={styles.badgeSelectedSubtitle}>✓ {t("selected", "Selected")}</span>}
-                    </div>
-                    <div className={styles.streamMeta}>
-                      <span>{t("format", "Format")}: {format}</span>
                     </div>
                   </div>
                 );
