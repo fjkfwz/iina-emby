@@ -2,6 +2,30 @@ let webpMachineInstance: any = null;
 const decodedCache = new Map<string, string>();
 const inFlightRequests = new Map<string, Promise<string>>();
 
+const MAX_DECODED_CACHE_SIZE = 64;
+
+function setMemoryCache(key: string, value: string): void {
+  if (decodedCache.has(key)) {
+    decodedCache.delete(key);
+  } else if (decodedCache.size >= MAX_DECODED_CACHE_SIZE) {
+    const oldestKey = decodedCache.keys().next().value;
+    if (oldestKey !== undefined) {
+      decodedCache.delete(oldestKey);
+    }
+  }
+  decodedCache.set(key, value);
+}
+
+function getMemoryCache(key: string): string | undefined {
+  const value = decodedCache.get(key);
+  if (value !== undefined) {
+    // Refresh LRU order
+    decodedCache.delete(key);
+    decodedCache.set(key, value);
+  }
+  return value;
+}
+
 // WebpMachine decodes sequentially because the underlying libwebp instance has shared state.
 let decodeQueue: Promise<unknown> = Promise.resolve();
 
@@ -101,7 +125,7 @@ export async function prefetchDecodedWebp(imageUrls: string[]): Promise<void> {
     missingKeys.map(async (key) => {
       const val = await getFromIdb(key);
       if (val) {
-        decodedCache.set(key, val);
+        setMemoryCache(key, val);
       }
     }),
   );
@@ -115,8 +139,9 @@ export async function prefetchDecodedWebp(imageUrls: string[]): Promise<void> {
 export async function decodeWebpToPng(imageUrl: string): Promise<string> {
   const cacheKey = getWebpCacheKey(imageUrl);
 
-  if (decodedCache.has(cacheKey)) {
-    return decodedCache.get(cacheKey)!;
+  const inMem = getMemoryCache(cacheKey);
+  if (inMem) {
+    return inMem;
   }
 
   const existingRequest = inFlightRequests.get(cacheKey);
@@ -129,7 +154,7 @@ export async function decodeWebpToPng(imageUrl: string): Promise<string> {
       // Check persistent IndexedDB cache before hitting the network
       const cachedPng = await getFromIdb(cacheKey);
       if (cachedPng) {
-        decodedCache.set(cacheKey, cachedPng);
+        setMemoryCache(cacheKey, cachedPng);
         return cachedPng;
       }
 
@@ -150,7 +175,7 @@ export async function decodeWebpToPng(imageUrl: string): Promise<string> {
         return webpMachineInstance.decode(uint8);
       });
 
-      decodedCache.set(cacheKey, pngDataUrl);
+      setMemoryCache(cacheKey, pngDataUrl);
       saveToIdb(cacheKey, pngDataUrl);
       return pngDataUrl;
     } finally {
@@ -168,7 +193,7 @@ export async function decodeWebpToPng(imageUrl: string): Promise<string> {
  */
 export function getCachedDecodedWebp(imageUrl: string): string | undefined {
   const cacheKey = getWebpCacheKey(imageUrl);
-  return decodedCache.get(cacheKey);
+  return getMemoryCache(cacheKey);
 }
 
 /**
@@ -179,3 +204,8 @@ export function _clearDecodedCacheForTest(): void {
   inFlightRequests.clear();
   dbPromise = null;
 }
+
+export function _setMemoryCacheForTest(key: string, value: string): void {
+  setMemoryCache(key, value);
+}
+

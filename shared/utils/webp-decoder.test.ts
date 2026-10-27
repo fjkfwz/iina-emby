@@ -1,6 +1,7 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import {
   _clearDecodedCacheForTest,
+  _setMemoryCacheForTest,
   decodeWebpToPng,
   getCachedDecodedWebp,
   getWebpCacheKey,
@@ -47,6 +48,19 @@ describe("webp-decoder", () => {
       } as unknown as Response);
 
       await expect(decodeWebpToPng("https://example.com/missing.webp")).rejects.toThrow("HTTP 404");
+    });
+
+    it("evicts oldest memory cache entry when exceeding maximum cache size", () => {
+      // Populate 70 items
+      for (let i = 0; i < 70; i++) {
+        _setMemoryCacheForTest(`https://example.com/img_${i}.webp`, `data:image/png;base64,mock${i}`);
+      }
+
+      // The first items should be evicted from memory cache (max 64)
+      expect(getCachedDecodedWebp("https://example.com/img_0.webp")).toBeUndefined();
+      expect(getCachedDecodedWebp("https://example.com/img_5.webp")).toBeUndefined();
+      // The newest items should still be in memory cache
+      expect(getCachedDecodedWebp("https://example.com/img_69.webp")).toBe("data:image/png;base64,mock69");
     });
   });
 });
