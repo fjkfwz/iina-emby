@@ -2605,6 +2605,13 @@ function findMatchingSubtitleTrack(subTracks, criteria) {
     let score = 0;
     const trackCanonLang = canonicalizeLanguage(track.lang);
     const trackVariant = detectChineseVariant((track.title || "") + " " + (track.lang || ""));
+    if (typeof streamIndex === "number" && Array.isArray(criteria.embyStreams) && criteria.embyStreams.length > 0) {
+      const candidateSubs = criteria.embyStreams.filter((s) => s.Type?.toLowerCase() === "subtitle" && !s.IsExternal);
+      const targetSubIdx = candidateSubs.findIndex((s) => s.Index === streamIndex);
+      if (targetSubIdx !== -1 && targetSubIdx === i) {
+        score += 200;
+      }
+    }
     const isPositionMatch = typeof trackNumber === "number" && trackNumber > 0 && i === trackNumber - 1;
     if (isPositionMatch) {
       score += 100;
@@ -2670,6 +2677,13 @@ function findMatchingAudioTrack(audioTracks, criteria) {
     const track = audioTracks[i];
     let score = 0;
     const trackCanonLang = canonicalizeLanguage(track.lang);
+    if (typeof streamIndex === "number" && Array.isArray(criteria.embyStreams) && criteria.embyStreams.length > 0) {
+      const candidateAudio = criteria.embyStreams.filter((s) => s.Type?.toLowerCase() === "audio");
+      const targetAudioIdx = candidateAudio.findIndex((s) => s.Index === streamIndex);
+      if (targetAudioIdx !== -1 && targetAudioIdx === i) {
+        score += 200;
+      }
+    }
     if (typeof trackNumber === "number" && trackNumber > 0 && i === trackNumber - 1) {
       score += 100;
     }
@@ -2678,6 +2692,21 @@ function findMatchingAudioTrack(audioTracks, criteria) {
     }
     if (targetCanonLang && trackCanonLang && targetCanonLang === trackCanonLang) {
       score += 50;
+    }
+    if (typeof criteria.channels === "number" && criteria.channels > 0) {
+      const trackChannels = typeof track["channel-count"] === "number" ? track["channel-count"] : typeof track.channels === "number" ? track.channels : typeof track["audio-channels"] === "number" ? track["audio-channels"] : 0;
+      if (trackChannels === criteria.channels) {
+        score += 30;
+      }
+    }
+    if (criteria.channelLayout) {
+      const layout = criteria.channelLayout.toLowerCase();
+      const trackTitle = (track.title || "").toLowerCase();
+      if (layout === "surround" && (trackTitle.includes("5.1") || trackTitle.includes("7.1") || trackTitle.includes("atmos"))) {
+        score += 30;
+      } else if (layout === "stereo" && (trackTitle.includes("stereo") || trackTitle.includes("2.0"))) {
+        score += 30;
+      }
     }
     if (title && track.title) {
       const cleanTargetTitle = title.trim().toLowerCase();
@@ -2818,6 +2847,17 @@ function findEmbyStreamIndexForMpvTrack(mpvTrack, embyStreams, streamType) {
       const found = candidateStreams.find((s) => s.Index === srcId);
       if (found) return found.Index;
     }
+    if (typeof mpvTrack.id === "number" && mpvTrack.id > 0) {
+      const embeddedCandidates = candidateStreams.filter((s) => !s.IsExternal);
+      if (mpvTrack.id <= embeddedCandidates.length) {
+        const candidate = embeddedCandidates[mpvTrack.id - 1];
+        const trackCanon2 = canonicalizeLanguage(mpvTrack.lang);
+        const candCanon = canonicalizeLanguage(candidate.Language);
+        if (!trackCanon2 || !candCanon || trackCanon2 === candCanon) {
+          return candidate.Index;
+        }
+      }
+    }
     const trackCanon = canonicalizeLanguage(mpvTrack.lang);
     const trackTitle = (mpvTrack.title || "").trim().toLowerCase();
     for (const s of candidateStreams) {
@@ -2829,12 +2869,18 @@ function findEmbyStreamIndexForMpvTrack(mpvTrack, embyStreams, streamType) {
         }
       }
     }
+    if (typeof mpvTrack.id === "number" && mpvTrack.id > 0) {
+      const embeddedCandidates = candidateStreams.filter((s) => !s.IsExternal);
+      if (mpvTrack.id <= embeddedCandidates.length) {
+        return embeddedCandidates[mpvTrack.id - 1].Index;
+      }
+    }
     if (trackCanon) {
       const foundLang = candidateStreams.find((s) => canonicalizeLanguage(s.Language) === trackCanon);
       if (foundLang) return foundLang.Index;
     }
   }
-  return ffIndex !== null ? ffIndex : srcId !== null ? srcId : null;
+  return ffIndex !== null ? ffIndex : srcId !== null ? srcId : typeof mpvTrack.id === "number" ? mpvTrack.id : null;
 }
 
 // plugin/src/lib/track-preference-store.ts
@@ -2874,12 +2920,14 @@ function saveTrackSelection(preferences2, itemId, selection, seriesId) {
   }
   preferences2.set(PREF_ITEM_TRACKS_KEY, JSON.stringify(itemMap));
   const effectiveSeriesId = seriesId || selection.seriesId;
-  if (effectiveSeriesId && (selection.audioLanguage || selection.subtitleLanguage || selection.subtitleStreamIndex === -1)) {
+  if (effectiveSeriesId && (selection.audioLanguage || selection.subtitleLanguage || selection.subtitleStreamIndex === -1 || selection.audioChannels || selection.channelLayout)) {
     const rawSeriesMap = preferences2.get(PREF_SERIES_TRACKS_KEY);
     const seriesMap = safeParseJson(rawSeriesMap, {});
     seriesMap[effectiveSeriesId] = {
       seriesId: effectiveSeriesId,
       audioLanguage: selection.audioLanguage ?? seriesMap[effectiveSeriesId]?.audioLanguage ?? null,
+      audioChannels: selection.audioChannels ?? seriesMap[effectiveSeriesId]?.audioChannels ?? null,
+      channelLayout: selection.channelLayout ?? seriesMap[effectiveSeriesId]?.channelLayout ?? null,
       subtitleLanguage: selection.subtitleStreamIndex === -1 ? "off" : selection.subtitleLanguage ?? seriesMap[effectiveSeriesId]?.subtitleLanguage ?? null,
       updatedAt: now
     };
@@ -2917,6 +2965,8 @@ function getSavedTrackSelection(preferences2, itemId, seriesId) {
         seriesId,
         audioStreamIndex: null,
         audioLanguage: seriesPref.audioLanguage ?? null,
+        audioChannels: seriesPref.audioChannels ?? null,
+        channelLayout: seriesPref.channelLayout ?? null,
         subtitleLanguage: seriesPref.subtitleLanguage === "off" ? null : seriesPref.subtitleLanguage ?? null,
         subtitleStreamIndex: seriesPref.subtitleLanguage === "off" ? -1 : null,
         updatedAt: seriesPref.updatedAt
@@ -3132,8 +3182,8 @@ var targetAidToEnforce = null;
 var enforcementStartTime = 0;
 var enforcementReapplyCount = 0;
 var enforcementItemId = null;
-var ENFORCEMENT_DURATION_MS = 1e4;
-var MAX_ENFORCEMENT_REAPPLIES = 8;
+var ENFORCEMENT_DURATION_MS = 1500;
+var MAX_ENFORCEMENT_REAPPLIES = 2;
 var enforcementTimer = null;
 function startEnforcingTracks(itemId, sid, aid) {
   enforcementItemId = itemId;
@@ -3167,6 +3217,63 @@ function stopEnforcingTracks() {
   enforcementReapplyCount = 0;
   enforcementItemId = null;
 }
+function snapshotCurrentTracksAndSave(source) {
+  if (isWindowClosing || !currentActiveItemId) return;
+  if (preferences.get("remember_track_selections") === false) return;
+  try {
+    const trackList = mpv.getNative("track-list");
+    if (!Array.isArray(trackList) || trackList.length === 0) return;
+    const currentAid = mpv.getString("aid");
+    const activeAudio = trackList.find(
+      (t) => t.type === "audio" && (String(t.id) === currentAid || Boolean(t.selected))
+    );
+    const audioStreamIndex = activeAudio ? findEmbyStreamIndexForMpvTrack(activeAudio, currentEmbyStreams, "Audio") : null;
+    const audioChannels = activeAudio && typeof activeAudio["channel-count"] === "number" ? activeAudio["channel-count"] : activeAudio && typeof activeAudio.channels === "number" ? activeAudio.channels : null;
+    const channelLayout = activeAudio && typeof activeAudio["demux-channels"] === "string" ? activeAudio["demux-channels"] : audioChannels === 6 ? "5.1" : audioChannels === 8 ? "7.1" : audioChannels === 2 ? "stereo" : null;
+    const currentSid = mpv.getString("sid");
+    let subVisibility = true;
+    try {
+      subVisibility = mpv.getFlag("sub-visibility");
+    } catch {
+      const visStr = mpv.getString("sub-visibility");
+      subVisibility = visStr !== "no" && visStr !== "false";
+    }
+    const isSubOff = subVisibility === false || currentSid === "no" || currentSid === "0" || currentSid === "false" || !currentSid;
+    let subStreamIndex = -1;
+    let activeSub;
+    if (!isSubOff) {
+      activeSub = trackList.find(
+        (t) => t.type === "sub" && (String(t.id) === currentSid || Boolean(t.selected))
+      );
+      if (activeSub) {
+        subStreamIndex = findEmbyStreamIndexForMpvTrack(activeSub, currentEmbyStreams, "Subtitle");
+      }
+    }
+    debugLog(
+      `[SaveTracks] (${source}) itemId=${currentActiveItemId}, audioStreamIndex=${audioStreamIndex} (aid=${currentAid}), subStreamIndex=${subStreamIndex} (sid=${currentSid}, vis=${subVisibility})`
+    );
+    saveTrackSelection(
+      preferences,
+      currentActiveItemId,
+      {
+        audioStreamIndex,
+        subtitleStreamIndex: subStreamIndex,
+        audioLanguage: activeAudio?.lang || null,
+        audioTitle: activeAudio?.title || null,
+        audioChannels,
+        channelLayout,
+        subtitleLanguage: isSubOff ? "off" : activeSub?.lang || null,
+        subtitleTitle: isSubOff ? null : activeSub?.title || null
+      },
+      currentActiveSeriesId || void 0
+    );
+    currentActiveAudioStreamIndex = audioStreamIndex;
+    currentActiveSubtitleStreamIndex = subStreamIndex;
+    updateActiveTracks(audioStreamIndex, subStreamIndex);
+  } catch (err) {
+    debugLog("[SaveTracks] Error capturing tracks:", err);
+  }
+}
 async function applySelectedAudioTrack(serverBase, itemId, apiKey, userId) {
   try {
     const trackList = mpv.getNative("track-list");
@@ -3181,6 +3288,8 @@ async function applySelectedAudioTrack(serverBase, itemId, apiKey, userId) {
     let targetAudio = getPendingAudioIndex(itemId);
     let targetAudioTrackNum = getPendingAudioTrackNumber(itemId);
     let targetAudioLang = getPendingAudioLanguage(itemId);
+    let targetAudioChannels;
+    let targetChannelLayout;
     if (typeof targetAudio !== "number" && typeof targetAudioTrackNum !== "number" && !targetAudioLang) {
       if (preferences.get("remember_track_selections") !== false) {
         const saved = getSavedTrackSelection(preferences, itemId, currentActiveSeriesId || void 0);
@@ -3191,7 +3300,15 @@ async function applySelectedAudioTrack(serverBase, itemId, apiKey, userId) {
           if (saved.audioLanguage) {
             targetAudioLang = saved.audioLanguage;
           }
-          debugLog(`[Audio] Using remembered selection for ${itemId}: streamIndex=${targetAudio}, lang=${targetAudioLang}`);
+          if (typeof saved.audioChannels === "number") {
+            targetAudioChannels = saved.audioChannels;
+          }
+          if (saved.channelLayout) {
+            targetChannelLayout = saved.channelLayout;
+          }
+          debugLog(
+            `[Audio] Using remembered selection for ${itemId}: streamIndex=${targetAudio}, lang=${targetAudioLang}, channels=${targetAudioChannels}, layout=${targetChannelLayout}`
+          );
         }
       }
     }
@@ -3216,7 +3333,10 @@ async function applySelectedAudioTrack(serverBase, itemId, apiKey, userId) {
       match = findMatchingAudioTrack(audioTracks, {
         trackNumber: targetAudioTrackNum,
         streamIndex: targetAudio,
-        language: targetAudioLang
+        language: targetAudioLang,
+        channels: targetAudioChannels,
+        channelLayout: targetChannelLayout,
+        embyStreams: currentEmbyStreams
       });
     }
     if (!match) {
@@ -3250,6 +3370,7 @@ async function applySelectedAudioTrack(serverBase, itemId, apiKey, userId) {
       const embyAudioIdx = findEmbyStreamIndexForMpvTrack(match, currentEmbyStreams, "Audio");
       currentActiveAudioStreamIndex = embyAudioIdx;
       updateActiveTracks(currentActiveAudioStreamIndex, currentActiveSubtitleStreamIndex);
+      snapshotCurrentTracksAndSave("apply-selected-audio");
     }
   } catch (err) {
     debugLog("Failed to set audio track:", err);
@@ -3311,6 +3432,7 @@ async function applySelectedSubtitleTrack(serverBase, itemId, apiKey, userId) {
     startEnforcingTracks(itemId, "no", null);
     currentActiveSubtitleStreamIndex = -1;
     updateActiveTracks(currentActiveAudioStreamIndex, -1);
+    snapshotCurrentTracksAndSave("apply-sub-off");
     return;
   }
   if (typeof pendingSubtitle === "number" && currentEmbyStreams.length > 0) {
@@ -3385,7 +3507,8 @@ async function applySelectedSubtitleTrack(serverBase, itemId, apiKey, userId) {
         streamIndex: pendingSubtitle,
         language: pendingSubLang,
         title: subtitleTitle,
-        codec: subCodec
+        codec: subCodec,
+        embyStreams: currentEmbyStreams
       });
     }
     if (!match && preferences.get("auto_select_subtitles") !== false) {
@@ -3425,6 +3548,7 @@ async function applySelectedSubtitleTrack(serverBase, itemId, apiKey, userId) {
       const embySubIdx = findEmbyStreamIndexForMpvTrack(match, currentEmbyStreams, "Subtitle");
       currentActiveSubtitleStreamIndex = embySubIdx;
       updateActiveTracks(currentActiveAudioStreamIndex, currentActiveSubtitleStreamIndex);
+      snapshotCurrentTracksAndSave("apply-selected-sub");
     }
   } catch (err) {
     debugLog("Failed to set subtitle track:", err);
@@ -3546,6 +3670,26 @@ function onFileLoaded(fileUrl) {
       setupAutoplayForEpisode(reportServerBase, embyInfo.itemId, reportApiKey, reportUserId);
     }
     const applyTracksNow = async () => {
+      try {
+        if (currentEmbyStreams.length === 0) {
+          const pb = await fetchPlaybackInfo(reportServerBase, embyInfo.itemId, reportApiKey, reportUserId);
+          if (pb?.MediaSources?.[0]?.MediaStreams) {
+            currentEmbyStreams = pb.MediaSources[0].MediaStreams;
+          }
+        }
+      } catch (e) {
+        debugLog("Error pre-fetching PlaybackInfo streams:", e);
+      }
+      try {
+        if (!currentActiveSeriesId) {
+          const meta = await fetchItemMetadata(reportServerBase, embyInfo.itemId, reportApiKey, reportUserId);
+          if (meta?.SeriesId) {
+            currentActiveSeriesId = meta.SeriesId;
+          }
+        }
+      } catch (e) {
+        debugLog("Error pre-fetching item metadata:", e);
+      }
       await applySelectedAudioTrack(reportServerBase, embyInfo.itemId, reportApiKey, reportUserId);
       await applySelectedSubtitleTrack(reportServerBase, embyInfo.itemId, reportApiKey, reportUserId);
     };
@@ -3587,6 +3731,7 @@ function onFileLoaded(fileUrl) {
   }
 }
 function handlePlaybackTermination(reason) {
+  snapshotCurrentTracksAndSave(`termination-${reason}`);
   const shouldReopen = preferences.get("reopen_browser_on_playback_end") !== false;
   if (shouldReopen && consumeLaunchedFromBrowser()) {
     console.log(`[iina-emby] Playback terminated (${reason}), requesting global reopen`);
@@ -3632,174 +3777,73 @@ var handleTracksChanged = () => {
 event.on("mpv.track-list.changed", handleTracksChanged);
 event.on("mpv.tracks-changed", handleTracksChanged);
 event.on("mpv.sid.changed", (newSidVal) => {
-  if (isWindowClosing) return;
+  if (isWindowClosing || !currentActiveItemId) return;
+  const currentSidStr = String(newSidVal ?? "");
   if (targetSidToEnforce !== null) {
-    const elapsed = Date.now() - enforcementStartTime;
-    if (elapsed > ENFORCEMENT_DURATION_MS || enforcementReapplyCount >= MAX_ENFORCEMENT_REAPPLIES) {
-      debugLog(`Track enforcement window ended for sid (elapsed=${elapsed}ms, reapplies=${enforcementReapplyCount})`);
+    const targetStr = String(targetSidToEnforce);
+    if (currentSidStr === targetStr) {
+      debugLog(`Enforcement satisfied: mpv sid reached target ${targetStr}`);
       targetSidToEnforce = null;
+      snapshotCurrentTracksAndSave("enforce-satisfied-sid");
       return;
     }
-    const currentSidStr2 = String(newSidVal ?? "");
-    if (targetSidToEnforce === "no") {
-      if (currentSidStr2 !== "no" && currentSidStr2 !== "0" && currentSidStr2 !== "false" && newSidVal !== null) {
-        debugLog(`Enforcement: Re-disabling subtitles (was set to ${newSidVal} by player core)`);
-        enforcementReapplyCount++;
-        try {
-          if (core?.subtitle) {
-            core.subtitle.currentTrack = null;
-          }
-        } catch {
-        }
-        try {
-          mpv.set("sid", "no");
-          mpv.set("sub-visibility", false);
-        } catch (err) {
-          debugLog("Error re-disabling subtitles:", err);
-        }
+    const elapsed = Date.now() - enforcementStartTime;
+    if (elapsed > ENFORCEMENT_DURATION_MS || enforcementReapplyCount >= MAX_ENFORCEMENT_REAPPLIES) {
+      debugLog(`Enforcement window ended for sid (elapsed=${elapsed}ms). User switched to sid=${currentSidStr}`);
+      targetSidToEnforce = null;
+      snapshotCurrentTracksAndSave("user-switch-sid");
+      return;
+    }
+    enforcementReapplyCount++;
+    debugLog(`Enforcement: Re-applying target sid=${targetStr} (mpv set to ${newSidVal})`);
+    try {
+      if (targetSidToEnforce === "no") {
+        mpv.set("sid", "no");
+        mpv.set("sub-visibility", false);
+      } else {
+        mpv.set("sid", targetStr);
+        mpv.set("sub-visibility", true);
       }
-    } else if (targetSidToEnforce !== null) {
-      const targetStr = String(targetSidToEnforce);
-      if (currentSidStr2 !== targetStr) {
-        debugLog(`Enforcement: Re-applying target subtitle track ${targetStr} (was set to ${newSidVal} by player core)`);
-        enforcementReapplyCount++;
-        try {
-          if (core?.subtitle) {
-            core.subtitle.currentTrack = targetSidToEnforce;
-          }
-        } catch {
-        }
-        try {
-          mpv.set("sid", targetStr);
-          mpv.set("sub-visibility", true);
-        } catch (err) {
-          debugLog("Error re-applying subtitle track:", err);
-        }
-      }
+    } catch {
     }
     return;
   }
-  if (!currentActiveItemId) return;
-  const currentSidStr = String(newSidVal ?? "");
-  const isOff = currentSidStr === "no" || currentSidStr === "0" || currentSidStr === "false" || newSidVal === null;
-  if (isOff) {
-    debugLog(`[User Action] Subtitles disabled by user`);
-    currentActiveSubtitleStreamIndex = -1;
-    if (preferences.get("remember_track_selections") !== false) {
-      saveTrackSelection(
-        preferences,
-        currentActiveItemId,
-        {
-          audioStreamIndex: currentActiveAudioStreamIndex,
-          subtitleStreamIndex: -1,
-          subtitleLanguage: "off"
-        },
-        currentActiveSeriesId || void 0
-      );
-    }
-    updateActiveTracks(currentActiveAudioStreamIndex, -1);
-  } else {
-    const trackList = mpv.getNative("track-list");
-    if (Array.isArray(trackList)) {
-      const activeTrack = trackList.find(
-        (t) => t.type === "sub" && (String(t.id) === currentSidStr || t.selected)
-      );
-      if (activeTrack) {
-        const streamIdx = findEmbyStreamIndexForMpvTrack(activeTrack, currentEmbyStreams, "Subtitle");
-        currentActiveSubtitleStreamIndex = streamIdx;
-        debugLog(`[User Action] Subtitle switched: mpvId=${activeTrack.id}, streamIndex=${streamIdx}, lang=${activeTrack.lang}`);
-        if (preferences.get("remember_track_selections") !== false) {
-          saveTrackSelection(
-            preferences,
-            currentActiveItemId,
-            {
-              audioStreamIndex: currentActiveAudioStreamIndex,
-              subtitleStreamIndex: streamIdx,
-              subtitleLanguage: activeTrack.lang || null,
-              subtitleTitle: activeTrack.title || null
-            },
-            currentActiveSeriesId || void 0
-          );
-        }
-        updateActiveTracks(currentActiveAudioStreamIndex, streamIdx);
-      }
-    }
-  }
+  debugLog(`[User Action] Subtitle track changed to sid=${currentSidStr}`);
+  snapshotCurrentTracksAndSave("user-switched-sid");
 });
 event.on("mpv.sub-visibility.changed", (vis) => {
-  if (isWindowClosing || targetSidToEnforce !== null || !currentActiveItemId) return;
-  if (vis === false || vis === "no") {
-    debugLog("[User Action] Subtitle visibility toggled to OFF");
-    currentActiveSubtitleStreamIndex = -1;
-    if (preferences.get("remember_track_selections") !== false) {
-      saveTrackSelection(
-        preferences,
-        currentActiveItemId,
-        {
-          audioStreamIndex: currentActiveAudioStreamIndex,
-          subtitleStreamIndex: -1,
-          subtitleLanguage: "off"
-        },
-        currentActiveSeriesId || void 0
-      );
-    }
-    updateActiveTracks(currentActiveAudioStreamIndex, -1);
-  }
+  if (isWindowClosing || !currentActiveItemId) return;
+  debugLog(`[User Action] Subtitle visibility changed to ${vis}`);
+  snapshotCurrentTracksAndSave("sub-visibility-changed");
 });
 event.on("mpv.aid.changed", (newAidVal) => {
-  if (isWindowClosing) return;
+  if (isWindowClosing || !currentActiveItemId) return;
+  const currentAidStr = String(newAidVal ?? "");
   if (targetAidToEnforce !== null) {
-    const elapsed = Date.now() - enforcementStartTime;
-    if (elapsed > ENFORCEMENT_DURATION_MS || enforcementReapplyCount >= MAX_ENFORCEMENT_REAPPLIES) {
+    const targetStr = String(targetAidToEnforce);
+    if (currentAidStr === targetStr) {
+      debugLog(`Enforcement satisfied: mpv aid reached target ${targetStr}`);
       targetAidToEnforce = null;
+      snapshotCurrentTracksAndSave("enforce-satisfied-aid");
       return;
     }
-    const currentAidStr2 = String(newAidVal ?? "");
-    const targetStr = String(targetAidToEnforce);
-    if (currentAidStr2 !== targetStr) {
-      debugLog(`Enforcement: Re-applying target audio track ${targetStr} (was set to ${newAidVal})`);
-      enforcementReapplyCount++;
-      try {
-        if (core?.audio) {
-          core.audio.currentTrack = targetAidToEnforce;
-        }
-      } catch {
-      }
-      try {
-        mpv.set("aid", targetStr);
-      } catch (err) {
-        debugLog("Error re-applying audio track:", err);
-      }
+    const elapsed = Date.now() - enforcementStartTime;
+    if (elapsed > ENFORCEMENT_DURATION_MS || enforcementReapplyCount >= MAX_ENFORCEMENT_REAPPLIES) {
+      debugLog(`Enforcement window ended for aid (elapsed=${elapsed}ms). User switched to aid=${currentAidStr}`);
+      targetAidToEnforce = null;
+      snapshotCurrentTracksAndSave("user-switch-aid");
+      return;
+    }
+    enforcementReapplyCount++;
+    debugLog(`Enforcement: Re-applying target aid=${targetStr} (mpv set to ${newAidVal})`);
+    try {
+      mpv.set("aid", targetStr);
+    } catch {
     }
     return;
   }
-  if (!currentActiveItemId) return;
-  const currentAidStr = String(newAidVal ?? "");
-  const trackList = mpv.getNative("track-list");
-  if (Array.isArray(trackList)) {
-    const activeTrack = trackList.find(
-      (t) => t.type === "audio" && (String(t.id) === currentAidStr || t.selected)
-    );
-    if (activeTrack) {
-      const streamIdx = findEmbyStreamIndexForMpvTrack(activeTrack, currentEmbyStreams, "Audio");
-      currentActiveAudioStreamIndex = streamIdx;
-      debugLog(`[User Action] Audio switched: mpvId=${activeTrack.id}, streamIndex=${streamIdx}, lang=${activeTrack.lang}`);
-      if (preferences.get("remember_track_selections") !== false) {
-        saveTrackSelection(
-          preferences,
-          currentActiveItemId,
-          {
-            audioStreamIndex: streamIdx,
-            subtitleStreamIndex: currentActiveSubtitleStreamIndex,
-            audioLanguage: activeTrack.lang || null,
-            audioTitle: activeTrack.title || null
-          },
-          currentActiveSeriesId || void 0
-        );
-      }
-      updateActiveTracks(streamIdx, currentActiveSubtitleStreamIndex);
-    }
-  }
+  debugLog(`[User Action] Audio track changed to aid=${currentAidStr}`);
+  snapshotCurrentTracksAndSave("user-switched-aid");
 });
 event.on("mpv.path.changed", (newPath) => {
   if (typeof newPath === "string" && newPath.trim().length > 0) {
@@ -3818,6 +3862,7 @@ event.on("mpv.playlist-pos.changed", () => {
 });
 event.on("mpv.pause.changed", () => {
   if (isWindowClosing) return;
+  snapshotCurrentTracksAndSave("pause-changed");
   handlePauseChange();
 });
 event.on("mpv.end-file", () => {

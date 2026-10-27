@@ -74,6 +74,11 @@ export function IINABridgeProvider({ children }: { children: React.ReactNode }) 
     autoplay_next_episode: true,
     auto_download_enabled: true,
     debug_logging: false,
+    remember_track_selections: true,
+    preferred_audio_language: "zh,chi,ja,jpn,en,eng",
+    preferred_audio_channel: "auto",
+    preferred_subtitle_language: "zh,chi,chs,sc,cht,tc,en",
+    auto_select_subtitles: true,
   }));
 
   const setPreference = useCallback((key: string, value: unknown) => {

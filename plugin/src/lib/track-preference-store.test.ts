@@ -47,7 +47,7 @@ describe("track-preference-store", () => {
     expect(retrieved?.subtitleStreamIndex).toBe(-1);
   });
 
-  it("inherits series-level language preference for subsequent episodes", () => {
+  it("inherits series-level language and channel layout preference for subsequent episodes", () => {
     saveTrackSelection(
       mockPreferences,
       "ep-1",
@@ -56,6 +56,8 @@ describe("track-preference-store", () => {
         subtitleStreamIndex: 4,
         audioLanguage: "jpn",
         subtitleLanguage: "chi",
+        audioChannels: 6,
+        channelLayout: "5.1",
       },
       "series-100",
     );
@@ -65,6 +67,8 @@ describe("track-preference-store", () => {
     expect(retrievedEp2).toBeDefined();
     expect(retrievedEp2?.audioLanguage).toBe("jpn");
     expect(retrievedEp2?.subtitleLanguage).toBe("chi");
+    expect(retrievedEp2?.audioChannels).toBe(6);
+    expect(retrievedEp2?.channelLayout).toBe("5.1");
     expect(retrievedEp2?.audioStreamIndex).toBeNull(); // stream indices are container-specific
   });
 

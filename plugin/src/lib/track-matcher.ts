@@ -18,6 +18,7 @@ export interface SubtitleMatchCriteria {
   language?: string | null;    // e.g. "chi", "zh", "eng"
   title?: string | null;       // e.g. "Simplified", "中文 (SRT) - Simplified"
   codec?: string | null;       // e.g. "srt", "subrip"
+  embyStreams?: LightEmbyStream[] | null;
 }
 
 export interface AudioMatchCriteria {
@@ -25,6 +26,9 @@ export interface AudioMatchCriteria {
   streamIndex?: number | null; // Container stream index / ff-index
   language?: string | null;    // e.g. "eng", "chi"
   title?: string | null;
+  channels?: number | null;
+  channelLayout?: string | null;
+  embyStreams?: LightEmbyStream[] | null;
 }
 
 const LANGUAGE_CANONICAL_MAP: Record<string, string> = {
@@ -185,6 +189,15 @@ export function findMatchingSubtitleTrack(
     const trackCanonLang = canonicalizeLanguage(track.lang);
     const trackVariant = detectChineseVariant((track.title || "") + " " + (track.lang || ""));
 
+    // 0. Emby stream direct relative index match
+    if (typeof streamIndex === "number" && Array.isArray(criteria.embyStreams) && criteria.embyStreams.length > 0) {
+      const candidateSubs = criteria.embyStreams.filter((s) => s.Type?.toLowerCase() === "subtitle" && !s.IsExternal);
+      const targetSubIdx = candidateSubs.findIndex((s) => s.Index === streamIndex);
+      if (targetSubIdx !== -1 && targetSubIdx === i) {
+        score += 200;
+      }
+    }
+
     // 1. Relative track index match (1-based index in subtitle tracks array)
     const isPositionMatch = typeof trackNumber === "number" && trackNumber > 0 && i === trackNumber - 1;
     if (isPositionMatch) {
@@ -281,6 +294,15 @@ export function findMatchingAudioTrack(
 
     const trackCanonLang = canonicalizeLanguage(track.lang);
 
+    // 0. Emby stream direct relative index match
+    if (typeof streamIndex === "number" && Array.isArray(criteria.embyStreams) && criteria.embyStreams.length > 0) {
+      const candidateAudio = criteria.embyStreams.filter((s) => s.Type?.toLowerCase() === "audio");
+      const targetAudioIdx = candidateAudio.findIndex((s) => s.Index === streamIndex);
+      if (targetAudioIdx !== -1 && targetAudioIdx === i) {
+        score += 200;
+      }
+    }
+
     if (typeof trackNumber === "number" && trackNumber > 0 && i === trackNumber - 1) {
       score += 100;
     }
@@ -291,6 +313,30 @@ export function findMatchingAudioTrack(
 
     if (targetCanonLang && trackCanonLang && targetCanonLang === trackCanonLang) {
       score += 50;
+    }
+
+    // Channel layout or channel count match bonus
+    if (typeof criteria.channels === "number" && criteria.channels > 0) {
+      const trackChannels =
+        typeof track["channel-count"] === "number"
+          ? track["channel-count"]
+          : typeof track.channels === "number"
+            ? track.channels
+            : typeof track["audio-channels"] === "number"
+              ? track["audio-channels"]
+              : 0;
+      if (trackChannels === criteria.channels) {
+        score += 30;
+      }
+    }
+    if (criteria.channelLayout) {
+      const layout = criteria.channelLayout.toLowerCase();
+      const trackTitle = (track.title || "").toLowerCase();
+      if (layout === "surround" && (trackTitle.includes("5.1") || trackTitle.includes("7.1") || trackTitle.includes("atmos"))) {
+        score += 30;
+      } else if (layout === "stereo" && (trackTitle.includes("stereo") || trackTitle.includes("2.0"))) {
+        score += 30;
+      }
     }
 
     if (title && track.title) {
@@ -526,7 +572,20 @@ export function findEmbyStreamIndexForMpvTrack(
       if (found) return found.Index;
     }
 
-    // 3. Metadata matching (language + title)
+    // 3. Exact 1-based relative track index match for embedded container streams
+    if (typeof mpvTrack.id === "number" && mpvTrack.id > 0) {
+      const embeddedCandidates = candidateStreams.filter((s) => !s.IsExternal);
+      if (mpvTrack.id <= embeddedCandidates.length) {
+        const candidate = embeddedCandidates[mpvTrack.id - 1];
+        const trackCanon = canonicalizeLanguage(mpvTrack.lang);
+        const candCanon = canonicalizeLanguage(candidate.Language);
+        if (!trackCanon || !candCanon || trackCanon === candCanon) {
+          return candidate.Index;
+        }
+      }
+    }
+
+    // 4. Metadata matching (language + title)
     const trackCanon = canonicalizeLanguage(mpvTrack.lang);
     const trackTitle = (mpvTrack.title || "").trim().toLowerCase();
 
@@ -541,13 +600,21 @@ export function findEmbyStreamIndexForMpvTrack(
       }
     }
 
-    // 4. First matching language
+    // 5. Embedded relative position fallback (mpv.id -> N-th embedded stream)
+    if (typeof mpvTrack.id === "number" && mpvTrack.id > 0) {
+      const embeddedCandidates = candidateStreams.filter((s) => !s.IsExternal);
+      if (mpvTrack.id <= embeddedCandidates.length) {
+        return embeddedCandidates[mpvTrack.id - 1].Index;
+      }
+    }
+
+    // 6. First matching language
     if (trackCanon) {
       const foundLang = candidateStreams.find((s) => canonicalizeLanguage(s.Language) === trackCanon);
       if (foundLang) return foundLang.Index;
     }
   }
 
-  return ffIndex !== null ? ffIndex : srcId !== null ? srcId : null;
+  return ffIndex !== null ? ffIndex : srcId !== null ? srcId : typeof mpvTrack.id === "number" ? mpvTrack.id : null;
 }
 

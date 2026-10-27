@@ -7,6 +7,8 @@ export interface SavedTrackSelection {
   subtitleLanguage?: string | null;
   audioTitle?: string | null;
   subtitleTitle?: string | null;
+  audioChannels?: number | null;
+  channelLayout?: string | null;
   updatedAt: number;
 }
 
@@ -14,6 +16,8 @@ export interface SeriesTrackPreference {
   seriesId: string;
   audioLanguage?: string | null;
   subtitleLanguage?: string | null;
+  audioChannels?: number | null;
+  channelLayout?: string | null;
   updatedAt: number;
 }
 
@@ -73,13 +77,15 @@ export function saveTrackSelection(
 
   // If this item belongs to a TV series, also update series-level language preference
   const effectiveSeriesId = seriesId || selection.seriesId;
-  if (effectiveSeriesId && (selection.audioLanguage || selection.subtitleLanguage || selection.subtitleStreamIndex === -1)) {
+  if (effectiveSeriesId && (selection.audioLanguage || selection.subtitleLanguage || selection.subtitleStreamIndex === -1 || selection.audioChannels || selection.channelLayout)) {
     const rawSeriesMap = preferences.get(PREF_SERIES_TRACKS_KEY);
     const seriesMap = safeParseJson<Record<string, SeriesTrackPreference>>(rawSeriesMap, {});
 
     seriesMap[effectiveSeriesId] = {
       seriesId: effectiveSeriesId,
       audioLanguage: selection.audioLanguage ?? seriesMap[effectiveSeriesId]?.audioLanguage ?? null,
+      audioChannels: selection.audioChannels ?? seriesMap[effectiveSeriesId]?.audioChannels ?? null,
+      channelLayout: selection.channelLayout ?? seriesMap[effectiveSeriesId]?.channelLayout ?? null,
       subtitleLanguage:
         selection.subtitleStreamIndex === -1
           ? "off"
@@ -133,6 +139,8 @@ export function getSavedTrackSelection(
         seriesId,
         audioStreamIndex: null,
         audioLanguage: seriesPref.audioLanguage ?? null,
+        audioChannels: seriesPref.audioChannels ?? null,
+        channelLayout: seriesPref.channelLayout ?? null,
         subtitleLanguage: seriesPref.subtitleLanguage === "off" ? null : (seriesPref.subtitleLanguage ?? null),
         subtitleStreamIndex: seriesPref.subtitleLanguage === "off" ? -1 : null,
         updatedAt: seriesPref.updatedAt,

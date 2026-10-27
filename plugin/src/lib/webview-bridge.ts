@@ -90,37 +90,39 @@ export interface SetupBridgeOptions {
   isStandalone?: boolean;
 }
 
+export function buildPreferencesPayload(preferences?: typeof iina.preferences): Record<string, unknown> {
+  if (!preferences) return {};
+  return {
+    auto_open_on_launch: preferences.get("auto_open_on_launch") !== false,
+    open_in_new_window: Boolean(preferences.get("open_in_new_window")),
+    sync_playback_progress: preferences.get("sync_playback_progress") !== false,
+    reopen_browser_on_playback_end: preferences.get("reopen_browser_on_playback_end") !== false,
+    autoplay_next_episode: preferences.get("autoplay_next_episode") !== false,
+    auto_download_enabled: preferences.get("auto_download_enabled") !== false,
+    debug_logging: Boolean(preferences.get("debug_logging")),
+    remember_track_selections: preferences.get("remember_track_selections") !== false,
+    preferred_audio_language: (preferences.get("preferred_audio_language") as string) || "zh,chi,ja,jpn,en,eng",
+    preferred_audio_channel: (preferences.get("preferred_audio_channel") as string) || "auto",
+    preferred_subtitle_language: (preferences.get("preferred_subtitle_language") as string) || "zh,chi,chs,sc,cht,tc,en",
+    auto_select_subtitles: preferences.get("auto_select_subtitles") !== false,
+    emby_track_preferences: preferences.get("emby_track_preferences"),
+    emby_series_track_preferences: preferences.get("emby_series_track_preferences"),
+  };
+}
+
 /**
  * Registers common message handlers on any Webview target (sidebar or standalone window).
  */
 export function registerBridgeHandlers(view: WebviewTarget, deps: WebviewBridgeDeps, options?: SetupBridgeOptions): void {
-  function getPreferencesPayload(): Record<string, unknown> {
-    if (!deps.preferences) return {};
-    return {
-      auto_open_on_launch: deps.preferences.get("auto_open_on_launch") !== false,
-      open_in_new_window: Boolean(deps.preferences.get("open_in_new_window")),
-      sync_playback_progress: deps.preferences.get("sync_playback_progress") !== false,
-      reopen_browser_on_playback_end: deps.preferences.get("reopen_browser_on_playback_end") !== false,
-      autoplay_next_episode: deps.preferences.get("autoplay_next_episode") !== false,
-      auto_download_enabled: deps.preferences.get("auto_download_enabled") !== false,
-      debug_logging: Boolean(deps.preferences.get("debug_logging")),
-      remember_track_selections: deps.preferences.get("remember_track_selections") !== false,
-      preferred_audio_language: (deps.preferences.get("preferred_audio_language") as string) || "zh,chi,ja,jpn,en,eng",
-      preferred_audio_channel: (deps.preferences.get("preferred_audio_channel") as string) || "auto",
-      preferred_subtitle_language: (deps.preferences.get("preferred_subtitle_language") as string) || "zh,chi,chs,sc,cht,tc,en",
-      auto_select_subtitles: deps.preferences.get("auto_select_subtitles") !== false,
-    };
-  }
-
   view.onMessage("get-preferences", () => {
-    view.postMessage("preferences-data", getPreferencesPayload());
+    view.postMessage("preferences-data", buildPreferencesPayload(deps.preferences));
   });
 
   view.onMessage("set-preference", (data?: { key?: string; value?: unknown }) => {
     if (deps.preferences && data?.key) {
       deps.log(`Setting preference: ${data.key} = ${data.value}`);
       deps.preferences.set(data.key, data.value);
-      view.postMessage("preferences-data", getPreferencesPayload());
+      view.postMessage("preferences-data", buildPreferencesPayload(deps.preferences));
     }
   });
 
@@ -235,14 +237,6 @@ export function sendInitialBridgeState(view: WebviewTarget, deps: WebviewBridgeD
     view.postMessage("session-available", sessionData);
   }
   if (deps.preferences) {
-    view.postMessage("preferences-data", {
-      auto_open_on_launch: deps.preferences.get("auto_open_on_launch") !== false,
-      open_in_new_window: Boolean(deps.preferences.get("open_in_new_window")),
-      sync_playback_progress: deps.preferences.get("sync_playback_progress") !== false,
-      reopen_browser_on_playback_end: deps.preferences.get("reopen_browser_on_playback_end") !== false,
-      autoplay_next_episode: deps.preferences.get("autoplay_next_episode") !== false,
-      auto_download_enabled: deps.preferences.get("auto_download_enabled") !== false,
-      debug_logging: Boolean(deps.preferences.get("debug_logging")),
-    });
+    view.postMessage("preferences-data", buildPreferencesPayload(deps.preferences));
   }
 }

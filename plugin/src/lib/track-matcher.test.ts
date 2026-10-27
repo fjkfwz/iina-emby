@@ -276,5 +276,39 @@ describe("track-matcher", () => {
       ];
       expect(findEmbyStreamIndexForMpvTrack(track, embyStreams, "Audio")).toBe(3);
     });
+
+    it("matches embedded subtitle track using 1-based track id position", () => {
+      // Container: Stream 0 is Video, Stream 1 is Audio, Stream 3 is Sub 1 (chs), Stream 4 is Sub 2 (eng)
+      // mpv track for Sub 1 has id=1, Sub 2 has id=2
+      const embyStreams = [
+        { Type: "Video", Index: 0 },
+        { Type: "Audio", Index: 1, Language: "jpn" },
+        { Type: "Subtitle", Index: 3, Language: "chi", IsExternal: false },
+        { Type: "Subtitle", Index: 4, Language: "eng", IsExternal: false },
+      ];
+      const track1: MpvTrack = { id: 1, type: "sub", lang: "zh" };
+      const track2: MpvTrack = { id: 2, type: "sub", lang: "en" };
+
+      expect(findEmbyStreamIndexForMpvTrack(track1, embyStreams, "Subtitle")).toBe(3);
+      expect(findEmbyStreamIndexForMpvTrack(track2, embyStreams, "Subtitle")).toBe(4);
+    });
+
+    it("matches mpv audio track using embyStreams direct relative index", () => {
+      const audioTracks: MpvTrack[] = [
+        { id: 1, type: "audio", lang: "eng", title: "Stereo" },
+        { id: 2, type: "audio", lang: "chi", title: "Surround 5.1" },
+      ];
+      const embyStreams = [
+        { Type: "Video", Index: 0 },
+        { Type: "Audio", Index: 1, Language: "eng" },
+        { Type: "Audio", Index: 2, Language: "chi" },
+      ];
+
+      const match = findMatchingAudioTrack(audioTracks, {
+        streamIndex: 2,
+        embyStreams,
+      });
+      expect(match?.id).toBe(2);
+    });
   });
 });

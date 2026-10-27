@@ -117,32 +117,34 @@ function createBridgeDeps({
     onPlayMediaList
   };
 }
+function buildPreferencesPayload(preferences2) {
+  if (!preferences2) return {};
+  return {
+    auto_open_on_launch: preferences2.get("auto_open_on_launch") !== false,
+    open_in_new_window: Boolean(preferences2.get("open_in_new_window")),
+    sync_playback_progress: preferences2.get("sync_playback_progress") !== false,
+    reopen_browser_on_playback_end: preferences2.get("reopen_browser_on_playback_end") !== false,
+    autoplay_next_episode: preferences2.get("autoplay_next_episode") !== false,
+    auto_download_enabled: preferences2.get("auto_download_enabled") !== false,
+    debug_logging: Boolean(preferences2.get("debug_logging")),
+    remember_track_selections: preferences2.get("remember_track_selections") !== false,
+    preferred_audio_language: preferences2.get("preferred_audio_language") || "zh,chi,ja,jpn,en,eng",
+    preferred_audio_channel: preferences2.get("preferred_audio_channel") || "auto",
+    preferred_subtitle_language: preferences2.get("preferred_subtitle_language") || "zh,chi,chs,sc,cht,tc,en",
+    auto_select_subtitles: preferences2.get("auto_select_subtitles") !== false,
+    emby_track_preferences: preferences2.get("emby_track_preferences"),
+    emby_series_track_preferences: preferences2.get("emby_series_track_preferences")
+  };
+}
 function registerBridgeHandlers(view, deps, options) {
-  function getPreferencesPayload() {
-    if (!deps.preferences) return {};
-    return {
-      auto_open_on_launch: deps.preferences.get("auto_open_on_launch") !== false,
-      open_in_new_window: Boolean(deps.preferences.get("open_in_new_window")),
-      sync_playback_progress: deps.preferences.get("sync_playback_progress") !== false,
-      reopen_browser_on_playback_end: deps.preferences.get("reopen_browser_on_playback_end") !== false,
-      autoplay_next_episode: deps.preferences.get("autoplay_next_episode") !== false,
-      auto_download_enabled: deps.preferences.get("auto_download_enabled") !== false,
-      debug_logging: Boolean(deps.preferences.get("debug_logging")),
-      remember_track_selections: deps.preferences.get("remember_track_selections") !== false,
-      preferred_audio_language: deps.preferences.get("preferred_audio_language") || "zh,chi,ja,jpn,en,eng",
-      preferred_audio_channel: deps.preferences.get("preferred_audio_channel") || "auto",
-      preferred_subtitle_language: deps.preferences.get("preferred_subtitle_language") || "zh,chi,chs,sc,cht,tc,en",
-      auto_select_subtitles: deps.preferences.get("auto_select_subtitles") !== false
-    };
-  }
   view.onMessage("get-preferences", () => {
-    view.postMessage("preferences-data", getPreferencesPayload());
+    view.postMessage("preferences-data", buildPreferencesPayload(deps.preferences));
   });
   view.onMessage("set-preference", (data) => {
     if (deps.preferences && data?.key) {
       deps.log(`Setting preference: ${data.key} = ${data.value}`);
       deps.preferences.set(data.key, data.value);
-      view.postMessage("preferences-data", getPreferencesPayload());
+      view.postMessage("preferences-data", buildPreferencesPayload(deps.preferences));
     }
   });
   view.onMessage("get-window-context", () => {
@@ -242,15 +244,7 @@ function sendInitialBridgeState(view, deps) {
     view.postMessage("session-available", sessionData);
   }
   if (deps.preferences) {
-    view.postMessage("preferences-data", {
-      auto_open_on_launch: deps.preferences.get("auto_open_on_launch") !== false,
-      open_in_new_window: Boolean(deps.preferences.get("open_in_new_window")),
-      sync_playback_progress: deps.preferences.get("sync_playback_progress") !== false,
-      reopen_browser_on_playback_end: deps.preferences.get("reopen_browser_on_playback_end") !== false,
-      autoplay_next_episode: deps.preferences.get("autoplay_next_episode") !== false,
-      auto_download_enabled: deps.preferences.get("auto_download_enabled") !== false,
-      debug_logging: Boolean(deps.preferences.get("debug_logging"))
-    });
+    view.postMessage("preferences-data", buildPreferencesPayload(deps.preferences));
   }
 }
 

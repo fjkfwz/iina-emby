@@ -1,6 +1,6 @@
 import { type EmbyItemMetadata, formatFullEpisodeTitle, formatSubtitleDisplayLabel } from "@shared";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router";
 import { EpisodeDetailModal } from "../components/EpisodeDetailModal";
 import { ItemHero } from "../components/ItemHero";
@@ -22,7 +22,7 @@ export default function ItemDetailRoute() {
   const navigate = useNavigate();
   const location = useLocation();
   const queryClient = useQueryClient();
-  const { activeServer, playMedia } = useIINABridge();
+  const { activeServer, playMedia, preferences } = useIINABridge();
   const { t } = useTranslation();
 
   const stateItem = location.state?.item as EmbyItemMetadata | undefined;
@@ -80,23 +80,47 @@ export default function ItemDetailRoute() {
   const audioStreams = Array.isArray(mediaStreams) ? mediaStreams.filter((s) => s.Type === "Audio") : [];
   const subtitleStreams = Array.isArray(mediaStreams) ? mediaStreams.filter((s) => s.Type === "Subtitle") : [];
 
+  const rememberedTracks = useMemo(() => {
+    const raw = preferences?.emby_track_preferences;
+    if (!raw) return {};
+    if (typeof raw === "string") {
+      try {
+        return JSON.parse(raw);
+      } catch {
+        return {};
+      }
+    }
+    if (typeof raw === "object") return raw as Record<string, any>;
+    return {};
+  }, [preferences?.emby_track_preferences]);
+
+  const targetSaved = playTarget?.Id ? rememberedTracks[playTarget.Id] : undefined;
+
   const defaultAudioIdx = (playTarget || item)?.MediaSources?.[0]?.DefaultAudioStreamIndex;
   const defaultSubIdx = (playTarget || item)?.MediaSources?.[0]?.DefaultSubtitleStreamIndex;
 
   const effectiveAudioIndex =
     selectedAudioIndex !== undefined
       ? selectedAudioIndex
-      : typeof defaultAudioIdx === "number" && audioStreams.some((s) => s.Index === defaultAudioIdx)
-        ? defaultAudioIdx
-        : (audioStreams.find((s) => s.IsDefault) || audioStreams[0])?.Index;
+      : typeof targetSaved?.audioStreamIndex === "number" &&
+        audioStreams.some((s) => s.Index === targetSaved.audioStreamIndex)
+        ? targetSaved.audioStreamIndex
+        : typeof defaultAudioIdx === "number" && audioStreams.some((s) => s.Index === defaultAudioIdx)
+          ? defaultAudioIdx
+          : (audioStreams.find((s) => s.IsDefault) || audioStreams[0])?.Index;
 
   const effectiveSubtitleIndex =
     selectedSubtitleIndex !== undefined
       ? selectedSubtitleIndex
-      : typeof defaultSubIdx === "number" &&
-          (defaultSubIdx === -1 || subtitleStreams.some((s) => s.Index === defaultSubIdx))
-        ? defaultSubIdx
-        : (subtitleStreams.find((s) => s.IsDefault) || subtitleStreams[0])?.Index;
+      : targetSaved?.subtitleStreamIndex === -1 || targetSaved?.subtitleLanguage === "off"
+        ? -1
+        : typeof targetSaved?.subtitleStreamIndex === "number" &&
+          subtitleStreams.some((s) => s.Index === targetSaved.subtitleStreamIndex)
+          ? targetSaved.subtitleStreamIndex
+          : typeof defaultSubIdx === "number" &&
+              (defaultSubIdx === -1 || subtitleStreams.some((s) => s.Index === defaultSubIdx))
+            ? defaultSubIdx
+            : (subtitleStreams.find((s) => s.IsDefault) || subtitleStreams[0])?.Index;
 
   const selectedAudioStream = audioStreams.find((s) => s.Index === effectiveAudioIndex);
   const selectedSubtitleStream = subtitleStreams.find((s) => s.Index === effectiveSubtitleIndex);
@@ -142,18 +166,21 @@ export default function ItemDetailRoute() {
         title: playTitle,
         streamUrl: buildStreamUrl(activeServer, playTarget.Id),
         startPositionTicks: playTarget.UserData?.PlaybackPositionTicks,
-        selectedAudioIndex: effectiveAudioIndex,
-        selectedSubtitleIndex: effectiveSubtitleIndex,
-        audioTrackNumber,
-        subtitleTrackNumber,
-        audioLanguage: selectedAudioStream?.Language,
-        subtitleLanguage: selectedSubtitleStream?.Language,
-        isExternalSubtitle: selectedSubtitleStream?.IsExternal,
-        subtitlePath: selectedSubtitleStream?.Path,
-        subtitleCodec: selectedSubtitleStream?.Codec,
+        selectedAudioIndex: selectedAudioIndex !== undefined ? selectedAudioIndex : undefined,
+        selectedSubtitleIndex: selectedSubtitleIndex !== undefined ? selectedSubtitleIndex : undefined,
+        audioTrackNumber: selectedAudioIndex !== undefined ? audioTrackNumber : undefined,
+        subtitleTrackNumber: selectedSubtitleIndex !== undefined ? subtitleTrackNumber : undefined,
+        audioLanguage: selectedAudioIndex !== undefined ? selectedAudioStream?.Language : undefined,
+        subtitleLanguage: selectedSubtitleIndex !== undefined ? selectedSubtitleStream?.Language : undefined,
+        isExternalSubtitle: selectedSubtitleIndex !== undefined ? selectedSubtitleStream?.IsExternal : undefined,
+        subtitlePath: selectedSubtitleIndex !== undefined ? selectedSubtitleStream?.Path : undefined,
+        subtitleCodec: selectedSubtitleIndex !== undefined ? selectedSubtitleStream?.Codec : undefined,
         mediaSourceId,
-        subtitleDeliveryUrl: selectedSubtitleStream?.DeliveryUrl,
-        subtitleTitle: selectedSubtitleStream?.DisplayTitle || selectedSubtitleStream?.Title || selectedSubtitleStream?.DisplayLanguage,
+        subtitleDeliveryUrl: selectedSubtitleIndex !== undefined ? selectedSubtitleStream?.DeliveryUrl : undefined,
+        subtitleTitle:
+          selectedSubtitleIndex !== undefined
+            ? selectedSubtitleStream?.DisplayTitle || selectedSubtitleStream?.Title || selectedSubtitleStream?.DisplayLanguage
+            : undefined,
       });
     } finally {
       setIsPlaying(false);
@@ -225,22 +252,25 @@ export default function ItemDetailRoute() {
       }
     }
 
+    const hasExplicitAudioSelection = selectedAudioIndex !== undefined;
+    const hasExplicitSubSelection = selectedSubtitleIndex !== undefined;
+
     playMedia({
       title: playTitle,
       streamUrl: buildStreamUrl(activeServer, ep.Id),
       startPositionTicks: ep.UserData?.PlaybackPositionTicks,
-      selectedAudioIndex: epAudioIndex,
-      selectedSubtitleIndex: epSubIndex,
-      audioTrackNumber: epAudioTrackNum,
-      subtitleTrackNumber: epSubTrackNum,
-      audioLanguage: selectedAudioStream?.Language,
-      subtitleLanguage: selectedSubtitleStream?.Language,
-      isExternalSubtitle: epSubExt,
-      subtitlePath: epSubPath,
-      subtitleCodec: epSubCodec,
+      selectedAudioIndex: hasExplicitAudioSelection ? epAudioIndex : undefined,
+      selectedSubtitleIndex: hasExplicitSubSelection ? epSubIndex : undefined,
+      audioTrackNumber: hasExplicitAudioSelection ? epAudioTrackNum : undefined,
+      subtitleTrackNumber: hasExplicitSubSelection ? epSubTrackNum : undefined,
+      audioLanguage: hasExplicitAudioSelection ? selectedAudioStream?.Language : undefined,
+      subtitleLanguage: hasExplicitSubSelection ? selectedSubtitleStream?.Language : undefined,
+      isExternalSubtitle: hasExplicitSubSelection ? epSubExt : undefined,
+      subtitlePath: hasExplicitSubSelection ? epSubPath : undefined,
+      subtitleCodec: hasExplicitSubSelection ? epSubCodec : undefined,
       mediaSourceId: epMediaSourceId,
-      subtitleDeliveryUrl: epSubDeliveryUrl,
-      subtitleTitle: epSubTitle,
+      subtitleDeliveryUrl: hasExplicitSubSelection ? epSubDeliveryUrl : undefined,
+      subtitleTitle: hasExplicitSubSelection ? epSubTitle : undefined,
     });
   };
 
