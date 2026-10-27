@@ -60,6 +60,7 @@ export function useInView<T extends HTMLElement = HTMLElement>(
   const [isInView, setIsInView] = useState(!enabled);
   const elementRef = useRef<T | null>(null);
   const observerInstanceRef = useRef<SharedObserverInstance | null>(null);
+  const fallbackTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const ref = useCallback(
     (element: T | null) => {
@@ -74,10 +75,37 @@ export function useInView<T extends HTMLElement = HTMLElement>(
         observerInstanceRef.current.elements.delete(elementRef.current);
         observerInstanceRef.current.observer.unobserve(elementRef.current);
       }
+      if (fallbackTimerRef.current) {
+        clearTimeout(fallbackTimerRef.current);
+        fallbackTimerRef.current = null;
+      }
 
       elementRef.current = element;
 
       if (!element) return;
+
+      // Fast-path: immediately detect if element is already within (or near) the viewport.
+      // Solves WebKit/Safari 13 bug where IntersectionObserver in horizontal/vertical overflow containers fails to dispatch.
+      if (typeof window !== "undefined") {
+        try {
+          const rect = element.getBoundingClientRect();
+          const winHeight = window.innerHeight || 800;
+          const winWidth = window.innerWidth || 1200;
+          if (
+            rect.width > 0 &&
+            rect.height > 0 &&
+            rect.bottom > -300 &&
+            rect.top < winHeight + 300 &&
+            rect.right > -300 &&
+            rect.left < winWidth + 300
+          ) {
+            setIsInView(true);
+            if (triggerOnce) return;
+          }
+        } catch {
+          // ignore measurement errors
+        }
+      }
 
       const instance = getSharedObserver(rootMargin, root);
       if (!instance) {
@@ -90,6 +118,10 @@ export function useInView<T extends HTMLElement = HTMLElement>(
       instance.elements.set(element, (isIntersecting) => {
         if (isIntersecting) {
           setIsInView(true);
+          if (fallbackTimerRef.current) {
+            clearTimeout(fallbackTimerRef.current);
+            fallbackTimerRef.current = null;
+          }
           if (triggerOnce) {
             instance.elements.delete(element);
             instance.observer.unobserve(element);
@@ -100,12 +132,21 @@ export function useInView<T extends HTMLElement = HTMLElement>(
       });
 
       instance.observer.observe(element);
+
+      // Safe fallback timer for legacy Safari 13 WebKit where IntersectionObserver in nested scroll containers may stall
+      fallbackTimerRef.current = setTimeout(() => {
+        setIsInView(true);
+      }, 1200);
     },
     [enabled, triggerOnce, rootMargin, root],
   );
 
   useEffect(() => {
     return () => {
+      if (fallbackTimerRef.current) {
+        clearTimeout(fallbackTimerRef.current);
+        fallbackTimerRef.current = null;
+      }
       if (elementRef.current && observerInstanceRef.current) {
         observerInstanceRef.current.elements.delete(elementRef.current);
         observerInstanceRef.current.observer.unobserve(elementRef.current);

@@ -12,7 +12,7 @@ import {
 } from "@shared";
 import { IconCheck, IconDots, IconInfoCircle, IconMovie, IconPlayerPlay } from "@tabler/icons-react";
 import type React from "react";
-import { memo, useCallback, useState } from "react";
+import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { useInView } from "../hooks/useInView";
 import { useItemPlayedStatus } from "../hooks/useItemPlayedStatus";
@@ -78,10 +78,35 @@ export const MediaThumb = memo(function MediaThumb({
   const navigate = useNavigate();
   const { t } = useTranslation();
   const [imageError, setImageError] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
+  const [useFallback, setUseFallback] = useState(false);
+  const retryTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
+    };
+  }, []);
 
   const handleImgError = useCallback(() => {
+    // If request failed (e.g. proxy congestion / socket drop on initial load), retry with backoff
+    if (retryCount < 2) {
+      if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
+      retryTimerRef.current = setTimeout(() => {
+        setRetryCount((prev) => prev + 1);
+      }, (retryCount + 1) * 1200);
+      return;
+    }
+
+    // If retries for thumb exhausted, try primary fallback candidate if available
+    if (!useFallback && (item.ImageTags?.Primary || item.SeriesPrimaryImageTag)) {
+      setUseFallback(true);
+      setRetryCount(0);
+      return;
+    }
+
     setImageError(true);
-  }, []);
+  }, [retryCount, useFallback, item]);
   const {
     isPlayed,
     unplayedCount,
@@ -112,14 +137,21 @@ export const MediaThumb = memo(function MediaThumb({
       : undefined;
   const subtitle = customSubtitle !== undefined ? customSubtitle : defaultSubtitle;
 
-  const imageUrl = !imageError
+  const candidateStrategy = useFallback ? "primary" : "thumb";
+  const rawImageUrl = !imageError
     ? getItemImageUrl(server.serverUrl, item, {
-        prefer: "thumb",
+        prefer: candidateStrategy,
         maxWidth: 520,
         maxHeight: 293,
         quality: 85,
         accessToken: server.accessToken,
       })
+    : undefined;
+
+  const imageUrl = rawImageUrl
+    ? retryCount > 0
+      ? `${rawImageUrl}&_r=${retryCount}`
+      : rawImageUrl
     : undefined;
 
   const isNativeLazy = isNativeLazyLoadingSupported();

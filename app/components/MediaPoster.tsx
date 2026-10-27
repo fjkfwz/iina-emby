@@ -2,7 +2,7 @@ import type { EmbyItemMetadata, EmbyServer, EmbyUserData, RemoteSearchResult } f
 import { getItemImageUrl, isNativeLazyLoadingSupported } from "@shared";
 import { IconCheck, IconDots, IconFingerprint, IconInfoCircle, IconMovie } from "@tabler/icons-react";
 import type React from "react";
-import { memo, useCallback, useState } from "react";
+import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { useInView } from "../hooks/useInView";
 import { useItemPlayedStatus } from "../hooks/useItemPlayedStatus";
@@ -58,12 +58,37 @@ export const MediaPoster = memo(function MediaPoster({
   const navigate = useNavigate();
   const { t } = useTranslation();
   const [imgError, setImgError] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
+  const [useFallback, setUseFallback] = useState(false);
+  const retryTimerRef = useRef<NodeJS.Timeout | null>(null);
   const [isIdentifyOpen, setIsIdentifyOpen] = useState(false);
   const canIdentify = Boolean(server.user?.Policy?.IsAdministrator) && isIdentifySupported(item.Type);
 
-  const handleImgError = useCallback(() => {
-    setImgError(true);
+  useEffect(() => {
+    return () => {
+      if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
+    };
   }, []);
+
+  const handleImgError = useCallback(() => {
+    // If request failed (e.g. proxy congestion / socket drop on initial load), retry with backoff
+    if (retryCount < 2) {
+      if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
+      retryTimerRef.current = setTimeout(() => {
+        setRetryCount((prev) => prev + 1);
+      }, (retryCount + 1) * 1200);
+      return;
+    }
+
+    // If retries for primary exhausted, try backdrop fallback candidate if available
+    if (!useFallback && (item.BackdropImageTags?.[0] || item.ImageTags?.Thumb)) {
+      setUseFallback(true);
+      setRetryCount(0);
+      return;
+    }
+
+    setImgError(true);
+  }, [retryCount, useFallback, item]);
 
   const {
     isPlayed,
@@ -86,15 +111,22 @@ export const MediaPoster = memo(function MediaPoster({
   const isSyncing = Boolean(item.isIdentifying);
   const pendingImg = item.pendingImageUrl as string | undefined;
 
-  const imageUrl = !imgError
+  const candidateStrategy = useFallback ? "backdrop" : "primary";
+  const rawImageUrl = !imgError
     ? pendingImg ||
       getItemImageUrl(server.serverUrl, item, {
-        prefer: "primary",
+        prefer: candidateStrategy,
         maxWidth: 280,
         maxHeight: 420,
         quality: 85,
         accessToken: server.accessToken,
       })
+    : undefined;
+
+  const imageUrl = rawImageUrl
+    ? retryCount > 0
+      ? `${rawImageUrl}&_r=${retryCount}`
+      : rawImageUrl
     : undefined;
 
   const isNativeLazy = isNativeLazyLoadingSupported();
