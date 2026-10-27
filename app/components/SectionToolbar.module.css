@@ -34,22 +34,31 @@
   width: 100%;
   height: var(--height-btn-sm);
   background: var(--bg-control);
-  border: none;
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: var(--radius-m);
   padding: 0 0.625rem;
   box-sizing: border-box;
   color: var(--text-primary);
-  transition: background-color 0.12s ease;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
 }
 
 .searchWrapper:hover {
   background: var(--bg-control-hover);
+  border-color: rgba(255, 255, 255, 0.16);
 }
 
 .searchWrapper:focus-within {
   background: var(--bg-control-active);
-  outline: 2px solid var(--border-focus);
-  outline-offset: 1px;
+  border-color: rgba(56, 189, 248, 0.55);
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.2);
+  outline: none;
+}
+
+.searchWrapper:focus-within .searchIcon {
+  color: #38bdf8;
 }
 
 .searchIcon {
@@ -57,6 +66,7 @@
   flex-shrink: 0;
   margin-right: 0.375rem;
   pointer-events: none;
+  transition: color 0.15s ease;
 }
 
 .searchInput {
