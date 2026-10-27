@@ -1,5 +1,5 @@
 import { QueryClientProvider } from "@tanstack/react-query";
-import { useEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useRef } from "react";
 import { HashRouter, Navigate, Route, Routes, useLocation } from "react-router";
 import { ScrollProgress } from "./components/ui";
 import { IINABridgeProvider } from "./hooks/useIINABridge";
@@ -35,18 +35,34 @@ function AppContent() {
   }, [isHome]);
 
   // Restore Home scroll position instantly upon returning
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!isHome) return;
     const rootEl = document.getElementById("root");
     if (!rootEl) return;
 
     const savedTop = homeScrollTopRef.current;
-    if (savedTop > 0) {
-      requestAnimationFrame(() => {
+    rootEl.scrollTop = savedTop;
+    requestAnimationFrame(() => {
+      if (rootEl.scrollTop !== savedTop) {
         rootEl.scrollTop = savedTop;
-      });
-    }
+      }
+    });
   }, [isHome]);
+
+  // Reset scroll to top when navigating to non-home routes or between items/sections
+  useLayoutEffect(() => {
+    if (isHome) return;
+    const rootEl = document.getElementById("root");
+    if (rootEl) {
+      rootEl.scrollTop = 0;
+    }
+    window.scrollTo(0, 0);
+    requestAnimationFrame(() => {
+      if (rootEl && rootEl.scrollTop !== 0) {
+        rootEl.scrollTop = 0;
+      }
+    });
+  }, [location.pathname, isHome]);
 
   return (
     <>
