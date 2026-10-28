@@ -7,4 +7,5 @@ export * from "./utils/time";
 export * from "./utils/url";
 export * from "./utils/subtitle";
 export * from "./utils/outro";
+export * from "./utils/intro";
 export * from "./utils/webp-decoder";

@@ -96,6 +96,7 @@ export interface PluginPreferencesPayload {
   sync_playback_progress?: boolean;
   reopen_browser_on_playback_end?: boolean;
   autoplay_next_episode?: boolean;
+  auto_skip_intro?: boolean;
   auto_skip_outro?: boolean;
   auto_download_enabled?: boolean;
   debug_logging?: boolean;

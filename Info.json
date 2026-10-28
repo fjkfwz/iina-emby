@@ -24,6 +24,7 @@
     "open_in_new_window": false,
     "auto_login_enabled": true,
     "autoplay_next_episode": true,
+    "auto_skip_intro": true,
     "auto_skip_outro": true,
     "sync_playback_progress": true,
     "reopen_browser_on_playback_end": true,

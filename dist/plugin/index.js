@@ -320,6 +320,100 @@ function findOutroSegment(options) {
   return null;
 }
 
+// shared/utils/intro.ts
+var INTRO_TITLE_PATTERN = /(?:^|[\s_\-–—([#])(?:intro(?:duction)?|open(?:ing)?|\bop(?:\s*\d+)?)(?:[\s_\-–—)\]#\d]|$)|(?:片头|片头曲|片头动画|开头|オープニング)/i;
+function isIntroStartMarker(markerType, chapterType) {
+  if (!markerType && !chapterType) return false;
+  const mt = String(markerType || "").trim().toLowerCase();
+  const ct = String(chapterType || "").trim().toLowerCase();
+  return mt === "introstart" || mt === "intro" || ct === "intro";
+}
+function isIntroEndMarker(markerType, chapterType) {
+  if (!markerType && !chapterType) return false;
+  const mt = String(markerType || "").trim().toLowerCase();
+  const ct = String(chapterType || "").trim().toLowerCase();
+  return mt === "introend" || ct === "introend";
+}
+function isIntroTitle(title) {
+  if (!title || typeof title !== "string") return false;
+  const trimmed = title.trim();
+  if (!trimmed) return false;
+  return INTRO_TITLE_PATTERN.test(trimmed);
+}
+function isIntroPosition(startSeconds, duration) {
+  if (startSeconds < 0) return false;
+  if (typeof duration === "number" && duration > 0) {
+    return startSeconds <= duration * 0.5;
+  }
+  return startSeconds <= 900;
+}
+function findIntroSegment(options) {
+  const { chapters, mpvChapters, duration } = options;
+  if (Array.isArray(chapters) && chapters.length > 0) {
+    const validChapters = chapters.map((ch, idx) => {
+      const startSeconds = typeof ch.StartPositionTicks === "number" ? ticksToSeconds(ch.StartPositionTicks) : 0;
+      return {
+        index: idx,
+        startSeconds,
+        name: ch.Name,
+        markerType: ch.MarkerType,
+        chapterType: ch.ChapterType
+      };
+    }).filter((ch) => ch.startSeconds >= 0).sort((a, b) => a.startSeconds - b.startSeconds);
+    const markerIndex = validChapters.findIndex((ch) => isIntroStartMarker(ch.markerType, ch.chapterType));
+    if (markerIndex !== -1) {
+      const match = validChapters[markerIndex];
+      const endMarker = validChapters.slice(markerIndex + 1).find((ch) => isIntroEndMarker(ch.markerType, ch.chapterType));
+      const nextChapter = validChapters[markerIndex + 1];
+      const endSeconds = endMarker ? endMarker.startSeconds : nextChapter ? nextChapter.startSeconds : void 0;
+      if (typeof endSeconds === "number" && endSeconds > match.startSeconds) {
+        return {
+          startSeconds: match.startSeconds,
+          endSeconds,
+          title: match.name || "Intro",
+          source: "emby-marker"
+        };
+      }
+    }
+    const titleIndex = validChapters.findIndex((ch) => isIntroTitle(ch.name) && isIntroPosition(ch.startSeconds, duration));
+    if (titleIndex !== -1) {
+      const match = validChapters[titleIndex];
+      const nextChapter = validChapters[titleIndex + 1];
+      const endSeconds = nextChapter ? nextChapter.startSeconds : void 0;
+      if (typeof endSeconds === "number" && endSeconds > match.startSeconds) {
+        return {
+          startSeconds: match.startSeconds,
+          endSeconds,
+          title: match.name || "Intro",
+          source: "emby-chapter"
+        };
+      }
+    }
+  }
+  if (Array.isArray(mpvChapters) && mpvChapters.length > 0) {
+    const validMpv = mpvChapters.map((ch, idx) => ({
+      index: idx,
+      startSeconds: typeof ch.time === "number" ? ch.time : 0,
+      name: ch.title
+    })).filter((ch) => ch.startSeconds >= 0).sort((a, b) => a.startSeconds - b.startSeconds);
+    const mpvIndex = validMpv.findIndex((ch) => isIntroTitle(ch.name) && isIntroPosition(ch.startSeconds, duration));
+    if (mpvIndex !== -1) {
+      const match = validMpv[mpvIndex];
+      const nextChapter = validMpv[mpvIndex + 1];
+      const endSeconds = nextChapter ? nextChapter.startSeconds : void 0;
+      if (typeof endSeconds === "number" && endSeconds > match.startSeconds) {
+        return {
+          startSeconds: match.startSeconds,
+          endSeconds,
+          title: match.name || "Intro",
+          source: "mpv-chapter"
+        };
+      }
+    }
+  }
+  return null;
+}
+
 // shared/utils/webp-decoder.ts
 var decodeQueue = Promise.resolve();
 
@@ -879,6 +973,127 @@ function createEmbyApi({ http: http2, preferences: preferences2, log }) {
     fetchItemMetadata: fetchItemMetadata2,
     secondsToTicks,
     ticksToSeconds
+  };
+}
+
+// plugin/src/lib/intro-manager.ts
+function createIntroManager({ core: core2, mpv: mpv2, preferences: preferences2, log }) {
+  let currentIntroSegment = null;
+  let hasSkippedIntro = false;
+  let currentItemId = null;
+  let cachedMetadataChapters = [];
+  function setSession(itemId) {
+    currentItemId = itemId;
+  }
+  function resetForNewFile2() {
+    currentIntroSegment = null;
+    hasSkippedIntro = false;
+    currentItemId = null;
+    cachedMetadataChapters = [];
+  }
+  function updateMetadataChapters(chapters, duration) {
+    if (Array.isArray(chapters) && chapters.length > 0) {
+      cachedMetadataChapters = chapters;
+    }
+    const effectiveDuration = typeof duration === "number" && duration > 0 ? duration : core2.status?.duration || mpv2.getNumber("duration") || void 0;
+    const detected = findIntroSegment({
+      chapters: cachedMetadataChapters,
+      duration: effectiveDuration
+    });
+    if (detected) {
+      currentIntroSegment = detected;
+      log(
+        `[Intro] Intro segment detected from Emby chapters for ${currentItemId}: start=${detected.startSeconds}s, end=${detected.endSeconds}s, title="${detected.title}", source=${detected.source}`
+      );
+    }
+  }
+  function checkMpvChapters() {
+    if (currentIntroSegment && currentIntroSegment.source === "emby-marker") {
+      return;
+    }
+    try {
+      const rawChapters = mpv2.getNative("chapter-list");
+      if (!Array.isArray(rawChapters) || rawChapters.length === 0) {
+        return;
+      }
+      const effectiveDuration = core2.status?.duration || mpv2.getNumber("duration") || void 0;
+      const detected = findIntroSegment({
+        chapters: cachedMetadataChapters.length > 0 ? cachedMetadataChapters : null,
+        mpvChapters: rawChapters,
+        duration: effectiveDuration
+      });
+      if (detected) {
+        currentIntroSegment = detected;
+        log(
+          `[Intro] Intro segment updated from MPV chapter list for ${currentItemId}: start=${detected.startSeconds}s, end=${detected.endSeconds}s, title="${detected.title}", source=${detected.source}`
+        );
+      }
+    } catch (err) {
+      log("[Intro] Error inspecting mpv chapter-list:", err);
+    }
+  }
+  function executeSkip(source) {
+    if (!currentIntroSegment) {
+      log(`[Intro] Skip requested (${source}) but no intro segment is detected`);
+      return false;
+    }
+    hasSkippedIntro = true;
+    const targetPos = currentIntroSegment.endSeconds;
+    log(`[Intro] Executing skip intro (${source}) for item ${currentItemId}: seeking to ${targetPos}s`);
+    try {
+      core2.seekTo(targetPos);
+    } catch {
+      try {
+        mpv2.set("time-pos", targetPos);
+      } catch (err) {
+        log("[Intro] Failed to seek to end of intro:", err);
+      }
+    }
+    if (preferences2.get("show_notifications") !== false) {
+      core2.osd("\u5DF2\u8DF3\u8FC7\u7247\u5934");
+    }
+    return true;
+  }
+  function checkAndTriggerSkip(timePos) {
+    if (!currentIntroSegment) {
+      return false;
+    }
+    if (hasSkippedIntro && timePos < currentIntroSegment.startSeconds - 5) {
+      log(`[Intro] Position (${timePos}s) rewound before intro start (${currentIntroSegment.startSeconds}s). Re-arming skip trigger.`);
+      hasSkippedIntro = false;
+      return false;
+    }
+    if (hasSkippedIntro) {
+      return false;
+    }
+    const isAutoSkipEnabled = preferences2.get("auto_skip_intro") !== false;
+    if (!isAutoSkipEnabled) {
+      return false;
+    }
+    if (timePos >= currentIntroSegment.startSeconds && timePos < currentIntroSegment.endSeconds) {
+      log(
+        `[Intro] checkAndTriggerSkip: pos=${timePos}s in intro range [${currentIntroSegment.startSeconds}s, ${currentIntroSegment.endSeconds}s], triggering skip`
+      );
+      return executeSkip("auto");
+    }
+    return false;
+  }
+  function manualSkipIntro() {
+    if (!currentIntroSegment) {
+      core2.osd("\u672A\u68C0\u6D4B\u5230\u7247\u5934");
+      return false;
+    }
+    return executeSkip("manual");
+  }
+  return {
+    setSession,
+    resetForNewFile: resetForNewFile2,
+    updateMetadataChapters,
+    checkMpvChapters,
+    checkAndTriggerSkip,
+    manualSkipIntro,
+    getCurrentIntroSegment: () => currentIntroSegment,
+    hasSkipped: () => hasSkippedIntro
   };
 }
 
@@ -3441,6 +3656,12 @@ var {
   clearQueuedFlag,
   log: debugLog
 });
+var introManager = createIntroManager({
+  core,
+  mpv,
+  preferences,
+  log: debugLog
+});
 var outroManager = createOutroManager({
   core,
   mpv,
@@ -3987,6 +4208,9 @@ function onFileLoaded(fileUrl) {
     currentEmbyStreams = [];
     currentActiveAudioStreamIndex = getPendingAudioIndex(embyInfo.itemId);
     currentActiveSubtitleStreamIndex = getPendingSubtitleIndex(embyInfo.itemId);
+    introManager.resetForNewFile();
+    introManager.setSession(embyInfo.itemId);
+    introManager.checkMpvChapters();
     outroManager.resetForNewFile();
     outroManager.setSession(reportServerBase, embyInfo.itemId, reportApiKey);
     outroManager.checkMpvChapters();
@@ -4002,6 +4226,7 @@ function onFileLoaded(fileUrl) {
       if (meta?.SeriesId) {
         currentActiveSeriesId = meta.SeriesId;
       }
+      introManager.updateMetadataChapters(meta?.Chapters);
       outroManager.updateMetadataChapters(meta?.Chapters);
       if (preferences.get("set_video_title") && meta) {
         const known = getPendingMediaTitle(embyInfo.itemId);
@@ -4092,6 +4317,7 @@ function onFileLoaded(fileUrl) {
           if (meta?.SeriesId) {
             currentActiveSeriesId = meta.SeriesId;
           }
+          introManager.updateMetadataChapters(meta?.Chapters);
           outroManager.updateMetadataChapters(meta?.Chapters);
         }
       } catch (e) {
@@ -4150,7 +4376,12 @@ function handlePlaybackTermination(reason) {
 }
 menu.addItem(menu.item("Download Emby Subtitles", manualDownloadSubtitles));
 menu.addItem(menu.item("Set Emby Title", manualSetTitle));
-menu.addItem(menu.item("Skip Outro", () => outroManager.manualSkipOutro()));
+menu.addItem(menu.item("Skip Intro", () => {
+  introManager.manualSkipIntro();
+}));
+menu.addItem(menu.item("Skip Outro", () => {
+  outroManager.manualSkipOutro();
+}));
 event.on("iina.file-loaded", onFileLoaded);
 event.on("iina.file-started", () => {
   isWindowClosing = false;
@@ -4158,16 +4389,19 @@ event.on("iina.file-started", () => {
 event.on("mpv.file-loaded", () => {
   isWindowClosing = false;
   onFileLoaded();
+  introManager.checkMpvChapters();
   outroManager.checkMpvChapters();
 });
 event.on("mpv.time-pos.changed", (newTimeVal) => {
   if (isWindowClosing || !currentActiveItemId) return;
   const timePos = typeof newTimeVal === "number" ? newTimeVal : Number(newTimeVal);
   if (!Number.isFinite(timePos)) return;
+  introManager.checkAndTriggerSkip(timePos);
   outroManager.checkAndTriggerSkip(timePos);
 });
 event.on("mpv.chapter-list.changed", () => {
   if (isWindowClosing || !currentActiveItemId) return;
+  introManager.checkMpvChapters();
   outroManager.checkMpvChapters();
 });
 var handleTracksChanged = () => {
@@ -4312,6 +4546,7 @@ event.on("mpv.end-file", () => {
     return;
   }
   currentLoadedFileUrl = null;
+  introManager.resetForNewFile();
   outroManager.resetForNewFile();
   stopEnforcingTracks();
   clearPendingTracks();
@@ -4324,6 +4559,7 @@ event.on("iina.window-will-close", () => {
   debugLog("Window closing, stopping playback tracking");
   currentLoadedFileUrl = null;
   resetForNewFile();
+  introManager.resetForNewFile();
   outroManager.resetForNewFile();
   clearQueuedFlag();
   stopEnforcingTracks();

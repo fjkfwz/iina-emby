@@ -6,6 +6,7 @@ import { formatFullEpisodeTitle, isGenericOrEmptySubtitleTitle, isSameEmbyHost }
 import { createAutoplayManager } from "./lib/autoplay-manager";
 import { createDebugLogger } from "./lib/debug-log";
 import { createEmbyApi } from "./lib/emby-api";
+import { createIntroManager } from "./lib/intro-manager";
 import { createMediaActionsManager } from "./lib/media-actions";
 import { createOutroManager } from "./lib/outro-manager";
 import { createPlaybackCoordinator } from "./lib/playback-coordinator";
@@ -148,6 +149,13 @@ const {
   global: iinaGlobal,
   getCurrentPlaybackSession,
   clearQueuedFlag,
+  log: debugLog,
+});
+
+const introManager = createIntroManager({
+  core,
+  mpv,
+  preferences,
   log: debugLog,
 });
 
@@ -821,6 +829,10 @@ function onFileLoaded(fileUrl?: string): void {
     currentActiveAudioStreamIndex = getPendingAudioIndex(embyInfo.itemId);
     currentActiveSubtitleStreamIndex = getPendingSubtitleIndex(embyInfo.itemId);
 
+    introManager.resetForNewFile();
+    introManager.setSession(embyInfo.itemId);
+    introManager.checkMpvChapters();
+
     outroManager.resetForNewFile();
     outroManager.setSession(reportServerBase, embyInfo.itemId, reportApiKey);
     outroManager.checkMpvChapters();
@@ -842,6 +854,7 @@ function onFileLoaded(fileUrl?: string): void {
         if (meta?.SeriesId) {
           currentActiveSeriesId = meta.SeriesId;
         }
+        introManager.updateMetadataChapters(meta?.Chapters);
         outroManager.updateMetadataChapters(meta?.Chapters);
         if (preferences.get("set_video_title") && meta) {
           const known = getPendingMediaTitle(embyInfo.itemId);
@@ -951,6 +964,7 @@ function onFileLoaded(fileUrl?: string): void {
           if (meta?.SeriesId) {
             currentActiveSeriesId = meta.SeriesId;
           }
+          introManager.updateMetadataChapters(meta?.Chapters);
           outroManager.updateMetadataChapters(meta?.Chapters);
         }
       } catch (e) {
@@ -1022,7 +1036,12 @@ function handlePlaybackTermination(reason: "end-file" | "window-close"): void {
 // Menu items (Show Emby Browser is registered in globalEntry so it is always available without duplicates)
 menu.addItem(menu.item("Download Emby Subtitles", manualDownloadSubtitles));
 menu.addItem(menu.item("Set Emby Title", manualSetTitle));
-menu.addItem(menu.item("Skip Outro", () => outroManager.manualSkipOutro()));
+menu.addItem(menu.item("Skip Intro", () => {
+  introManager.manualSkipIntro();
+}));
+menu.addItem(menu.item("Skip Outro", () => {
+  outroManager.manualSkipOutro();
+}));
 
 // Event handlers
 event.on("iina.file-loaded", onFileLoaded);
@@ -1034,6 +1053,7 @@ event.on("iina.file-started", () => {
 event.on("mpv.file-loaded", () => {
   isWindowClosing = false;
   onFileLoaded();
+  introManager.checkMpvChapters();
   outroManager.checkMpvChapters();
 });
 
@@ -1041,11 +1061,13 @@ event.on("mpv.time-pos.changed", (newTimeVal: unknown) => {
   if (isWindowClosing || !currentActiveItemId) return;
   const timePos = typeof newTimeVal === "number" ? newTimeVal : Number(newTimeVal);
   if (!Number.isFinite(timePos)) return;
+  introManager.checkAndTriggerSkip(timePos);
   outroManager.checkAndTriggerSkip(timePos);
 });
 
 event.on("mpv.chapter-list.changed", () => {
   if (isWindowClosing || !currentActiveItemId) return;
+  introManager.checkMpvChapters();
   outroManager.checkMpvChapters();
 });
 
@@ -1212,6 +1234,7 @@ event.on("mpv.end-file", () => {
     return;
   }
   currentLoadedFileUrl = null;
+  introManager.resetForNewFile();
   outroManager.resetForNewFile();
   stopEnforcingTracks();
   clearPendingTracks();
@@ -1226,6 +1249,7 @@ event.on("iina.window-will-close", () => {
   debugLog("Window closing, stopping playback tracking");
   currentLoadedFileUrl = null;
   resetForNewFile();
+  introManager.resetForNewFile();
   outroManager.resetForNewFile();
   clearQueuedFlag();
   stopEnforcingTracks();

@@ -311,6 +311,28 @@ export default function SettingsRoute() {
 
             <div className={styles.divider} />
 
+            {/* Auto Skip Intro */}
+            <div className={styles.settingRow}>
+              <div className={styles.rowLeft}>
+                <span className={styles.rowIcon}>
+                  <IconPlayerTrackNext size={18} />
+                </span>
+                <div className={styles.textGroup}>
+                  <span className={styles.rowTitle}>{t("autoSkipIntro", "Automatically skip intro / opening")}</span>
+                  <span className={styles.rowSubtitle}>
+                    {t("autoSkipIntroDesc", "Skip opening theme using Emby markers or chapter titles and enter the main feature")}
+                  </span>
+                </div>
+              </div>
+              <ToggleSwitch
+                id="pref-auto-skip-intro"
+                checked={preferences.auto_skip_intro !== false}
+                onChange={(val) => setPreference("auto_skip_intro", val)}
+              />
+            </div>
+
+            <div className={styles.divider} />
+
             {/* Auto Skip Outro */}
             <div className={styles.settingRow}>
               <div className={styles.rowLeft}>

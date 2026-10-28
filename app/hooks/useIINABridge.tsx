@@ -74,6 +74,7 @@ export function IINABridgeProvider({ children }: { children: React.ReactNode }) 
     sync_playback_progress: true,
     reopen_browser_on_playback_end: true,
     autoplay_next_episode: true,
+    auto_skip_intro: true,
     auto_skip_outro: true,
     auto_download_enabled: true,
     debug_logging: false,

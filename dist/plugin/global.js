@@ -125,6 +125,7 @@ function buildPreferencesPayload(preferences2) {
     sync_playback_progress: preferences2.get("sync_playback_progress") !== false,
     reopen_browser_on_playback_end: preferences2.get("reopen_browser_on_playback_end") !== false,
     autoplay_next_episode: preferences2.get("autoplay_next_episode") !== false,
+    auto_skip_intro: preferences2.get("auto_skip_intro") !== false,
     auto_skip_outro: preferences2.get("auto_skip_outro") !== false,
     auto_download_enabled: preferences2.get("auto_download_enabled") !== false,
     debug_logging: Boolean(preferences2.get("debug_logging")),

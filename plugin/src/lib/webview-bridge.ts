@@ -98,6 +98,7 @@ export function buildPreferencesPayload(preferences?: typeof iina.preferences): 
     sync_playback_progress: preferences.get("sync_playback_progress") !== false,
     reopen_browser_on_playback_end: preferences.get("reopen_browser_on_playback_end") !== false,
     autoplay_next_episode: preferences.get("autoplay_next_episode") !== false,
+    auto_skip_intro: preferences.get("auto_skip_intro") !== false,
     auto_skip_outro: preferences.get("auto_skip_outro") !== false,
     auto_download_enabled: preferences.get("auto_download_enabled") !== false,
     debug_logging: Boolean(preferences.get("debug_logging")),
