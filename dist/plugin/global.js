@@ -125,6 +125,7 @@ function buildPreferencesPayload(preferences2) {
     sync_playback_progress: preferences2.get("sync_playback_progress") !== false,
     reopen_browser_on_playback_end: preferences2.get("reopen_browser_on_playback_end") !== false,
     autoplay_next_episode: preferences2.get("autoplay_next_episode") !== false,
+    auto_skip_outro: preferences2.get("auto_skip_outro") !== false,
     auto_download_enabled: preferences2.get("auto_download_enabled") !== false,
     debug_logging: Boolean(preferences2.get("debug_logging")),
     remember_track_selections: preferences2.get("remember_track_selections") !== false,
@@ -600,7 +601,8 @@ function createEmbyApi({ http: http2, preferences: preferences2, log }) {
   }
   async function fetchItemMetadata(serverBase, itemId, apiKey, userId) {
     try {
-      const metadataUrl = userId ? `${serverBase}/Users/${encodeURIComponent(userId)}/Items/${encodeURIComponent(itemId)}?api_key=${apiKey}` : `${serverBase}/Items/${encodeURIComponent(itemId)}?api_key=${apiKey}`;
+      const query = [`api_key=${apiKey}`, "Fields=Chapters"].join("&");
+      const metadataUrl = userId ? `${serverBase}/Users/${encodeURIComponent(userId)}/Items/${encodeURIComponent(itemId)}?${query}` : `${serverBase}/Items/${encodeURIComponent(itemId)}?${query}`;
       log(`Fetching item metadata from: ${metadataUrl}`);
       const response = await http2.get(metadataUrl, {
         headers: buildEmbyHeaders2(apiKey, {

@@ -7,6 +7,7 @@ import { createAutoplayManager } from "./lib/autoplay-manager";
 import { createDebugLogger } from "./lib/debug-log";
 import { createEmbyApi } from "./lib/emby-api";
 import { createMediaActionsManager } from "./lib/media-actions";
+import { createOutroManager } from "./lib/outro-manager";
 import { createPlaybackCoordinator } from "./lib/playback-coordinator";
 import { createPlaybackTrackingManager } from "./lib/playback-tracking";
 import { createSafeHttp } from "./lib/safe-http";
@@ -35,28 +36,23 @@ const { storeEmbySession, getStoredEmbySession } = serverSessionStore;
 
 debugLog("Emby Plugin loaded");
 
-const {
-  startPlaybackTracking,
-  stopPlaybackTracking,
-  handlePauseChange,
-  getCurrentPlaybackSession,
-  updateActiveTracks,
-} = createPlaybackTrackingManager({
-  core,
-  http: safeHttp,
-  preferences,
-  buildEmbyHeaders,
-  fetchPlaybackInfo,
-  fetchItemMetadata,
-  secondsToTicks,
-  ticksToSeconds,
-  onProgressUpdated: (data) => {
-    if (iinaGlobal && typeof iinaGlobal.postMessage === "function") {
-      iinaGlobal.postMessage("playback-progress-updated", data);
-    }
-  },
-  log: debugLog,
-});
+const { startPlaybackTracking, stopPlaybackTracking, handlePauseChange, getCurrentPlaybackSession, updateActiveTracks, markAsWatched } =
+  createPlaybackTrackingManager({
+    core,
+    http: safeHttp,
+    preferences,
+    buildEmbyHeaders,
+    fetchPlaybackInfo,
+    fetchItemMetadata,
+    secondsToTicks,
+    ticksToSeconds,
+    onProgressUpdated: (data) => {
+      if (iinaGlobal && typeof iinaGlobal.postMessage === "function") {
+        iinaGlobal.postMessage("playback-progress-updated", data);
+      }
+    },
+    log: debugLog,
+  });
 
 let isWindowClosing = false;
 
@@ -74,20 +70,26 @@ const { setupAutoplayForEpisode, resetForNewFile, clearQueuedFlag, isQueued } = 
   log: debugLog,
 });
 
-const { setVideoTitleFromMetadata, downloadAllSubtitles, downloadExternalSubtitle, manualDownloadSubtitles, manualSetTitle, updateFromFileUrl } =
-  createMediaActionsManager({
-    core,
-    http: safeHttp,
-    utils,
-    preferences,
-    mpv,
-    parseEmbyUrl,
-    isEmbyUrl,
-    fetchPlaybackInfo,
-    fetchItemMetadata,
-    getActiveSession: getStoredEmbySession,
-    log: debugLog,
-  });
+const {
+  setVideoTitleFromMetadata,
+  downloadAllSubtitles,
+  downloadExternalSubtitle,
+  manualDownloadSubtitles,
+  manualSetTitle,
+  updateFromFileUrl,
+} = createMediaActionsManager({
+  core,
+  http: safeHttp,
+  utils,
+  preferences,
+  mpv,
+  parseEmbyUrl,
+  isEmbyUrl,
+  fetchPlaybackInfo,
+  fetchItemMetadata,
+  getActiveSession: getStoredEmbySession,
+  log: debugLog,
+});
 
 import type { EmbyItemMetadata } from "@shared";
 import {
@@ -99,11 +101,7 @@ import {
   type LightEmbyStream,
   type MpvTrack,
 } from "./lib/track-matcher";
-import {
-  clearTrackSelection,
-  getSavedTrackSelection,
-  saveTrackSelection,
-} from "./lib/track-preference-store";
+import { clearTrackSelection, getSavedTrackSelection, saveTrackSelection } from "./lib/track-preference-store";
 
 let currentEmbyStreams: LightEmbyStream[] = [];
 let currentItemMetadata: EmbyItemMetadata | null = null;
@@ -115,8 +113,10 @@ let currentActiveSubtitleStreamIndex: number | null = null;
 const {
   handlePlayMedia,
   handlePlayMediaList,
+  queueRemainingPlaylistItems,
   flushPendingPlaylistQueue,
   consumeReplacementGuard,
+  markReplacingPlayback,
   markLaunchedFromBrowser,
   clearLaunchedFromBrowser,
   consumeLaunchedFromBrowser,
@@ -151,6 +151,15 @@ const {
   log: debugLog,
 });
 
+const outroManager = createOutroManager({
+  core,
+  mpv,
+  preferences,
+  markReplacingPlayback,
+  markAsWatched,
+  log: debugLog,
+});
+
 // Check if this player window was spawned specifically for Emby playback
 if (iinaGlobal && typeof iinaGlobal.getLabel === "function") {
   const label = iinaGlobal.getLabel();
@@ -181,6 +190,16 @@ if (iinaGlobal && typeof iinaGlobal.onMessage === "function") {
     clearQueuedFlag();
     markLaunchedFromBrowser();
     handlePlayMediaList(data);
+  });
+  iinaGlobal.onMessage("queue-pending-playlist", (data?: PlayMediaListMessage) => {
+    debugLog("Received queue-pending-playlist from global entry", data);
+    if (!data?.items || data.items.length <= 1) return;
+    const queuedItems = data.items.slice(1);
+    const firstItem = data.items[0];
+    const firstItemId =
+      (firstItem as any)?.itemId || (String(firstItem.streamUrl).match(/\/(?:Items|Videos|Audio)\/([^/?]+)/) || [])[1] || null;
+    markLaunchedFromBrowser();
+    queueRemainingPlaylistItems(queuedItems, firstItemId);
   });
   iinaGlobal.onMessage("apply-pending-media", (data?: PlayMediaMessage) => {
     debugLog("Received apply-pending-media from global entry", data);
@@ -319,12 +338,8 @@ function snapshotCurrentTracksAndSave(source: string): void {
 
     // 1. Audio track
     const currentAid = mpv.getString("aid");
-    const activeAudio = trackList.find(
-      (t) => t.type === "audio" && (String(t.id) === currentAid || Boolean(t.selected)),
-    );
-    const audioStreamIndex = activeAudio
-      ? findEmbyStreamIndexForMpvTrack(activeAudio, currentEmbyStreams, "Audio")
-      : null;
+    const activeAudio = trackList.find((t) => t.type === "audio" && (String(t.id) === currentAid || Boolean(t.selected)));
+    const audioStreamIndex = activeAudio ? findEmbyStreamIndexForMpvTrack(activeAudio, currentEmbyStreams, "Audio") : null;
 
     const audioChannels =
       activeAudio && typeof activeAudio["channel-count"] === "number"
@@ -353,20 +368,13 @@ function snapshotCurrentTracksAndSave(source: string): void {
       const visStr = mpv.getString("sub-visibility");
       subVisibility = visStr !== "no" && visStr !== "false";
     }
-    const isSubOff =
-      subVisibility === false ||
-      currentSid === "no" ||
-      currentSid === "0" ||
-      currentSid === "false" ||
-      !currentSid;
+    const isSubOff = subVisibility === false || currentSid === "no" || currentSid === "0" || currentSid === "false" || !currentSid;
 
     let subStreamIndex: number | null = -1;
     let activeSub: MpvTrack | undefined;
 
     if (!isSubOff) {
-      activeSub = trackList.find(
-        (t) => t.type === "sub" && (String(t.id) === currentSid || Boolean(t.selected)),
-      );
+      activeSub = trackList.find((t) => t.type === "sub" && (String(t.id) === currentSid || Boolean(t.selected)));
       if (activeSub) {
         subStreamIndex = findEmbyStreamIndexForMpvTrack(activeSub, currentEmbyStreams, "Subtitle");
       }
@@ -400,12 +408,7 @@ function snapshotCurrentTracksAndSave(source: string): void {
   }
 }
 
-async function applySelectedAudioTrack(
-  serverBase: string,
-  itemId: string,
-  apiKey: string,
-  userId?: string,
-): Promise<void> {
+async function applySelectedAudioTrack(serverBase: string, itemId: string, apiKey: string, userId?: string): Promise<void> {
   try {
     const trackList = mpv.getNative<MpvTrack[]>("track-list");
     if (!Array.isArray(trackList) || trackList.length === 0) {
@@ -525,12 +528,7 @@ async function applySelectedAudioTrack(
 
 let isDownloadingExternalSubtitle = false;
 
-async function applySelectedSubtitleTrack(
-  serverBase: string,
-  itemId: string,
-  apiKey: string,
-  userId?: string,
-): Promise<void> {
+async function applySelectedSubtitleTrack(serverBase: string, itemId: string, apiKey: string, userId?: string): Promise<void> {
   let pendingSubtitle = getPendingSubtitleIndex(itemId);
   let pendingSubTrackNum = getPendingSubtitleTrackNumber(itemId);
   let pendingSubLang = getPendingSubtitleLanguage(itemId);
@@ -624,7 +622,9 @@ async function applySelectedSubtitleTrack(
       return;
     }
 
-    debugLog(`Selected subtitle is external (Index: ${pendingSubtitle}, MediaSourceId: ${mediaSourceId || "none"}). Downloading and loading...`);
+    debugLog(
+      `Selected subtitle is external (Index: ${pendingSubtitle}, MediaSourceId: ${mediaSourceId || "none"}). Downloading and loading...`,
+    );
     try {
       isDownloadingExternalSubtitle = true;
       const loaded = await downloadExternalSubtitle(
@@ -685,8 +685,7 @@ async function applySelectedSubtitleTrack(
 
     // 6. If no match and auto_select_subtitles is true, match against global preference
     if (!match && preferences.get("auto_select_subtitles") !== false) {
-      const preferredSubLang =
-        (preferences.get("preferred_subtitle_language") as string) || "zh,chi,chs,sc,cht,tc,en";
+      const preferredSubLang = (preferences.get("preferred_subtitle_language") as string) || "zh,chi,chs,sc,cht,tc,en";
       match = findBestSubtitleTrackByPreference(subTracks, preferredSubLang);
       if (match) {
         debugLog(`[Subtitle] Using global preference match: trackId=${match.id}, lang=${match.lang}, title=${match.title}`);
@@ -720,9 +719,12 @@ async function applySelectedSubtitleTrack(
       startEnforcingTracks(itemId, targetSid, null);
 
       if (preferences.get("show_notifications")) {
-        const cleanTitle = subtitleTitle && !isGenericOrEmptySubtitleTitle(subtitleTitle)
-          ? subtitleTitle
-          : (pendingSubLang ? `${pendingSubLang.toUpperCase()} 字幕` : "字幕");
+        const cleanTitle =
+          subtitleTitle && !isGenericOrEmptySubtitleTitle(subtitleTitle)
+            ? subtitleTitle
+            : pendingSubLang
+              ? `${pendingSubLang.toUpperCase()} 字幕`
+              : "字幕";
         core.osd(`字幕: ${cleanTitle}`);
       }
 
@@ -819,6 +821,10 @@ function onFileLoaded(fileUrl?: string): void {
     currentActiveAudioStreamIndex = getPendingAudioIndex(embyInfo.itemId);
     currentActiveSubtitleStreamIndex = getPendingSubtitleIndex(embyInfo.itemId);
 
+    outroManager.resetForNewFile();
+    outroManager.setSession(reportServerBase, embyInfo.itemId, reportApiKey);
+    outroManager.checkMpvChapters();
+
     // Pre-fetch PlaybackInfo and Metadata to get seriesId and mediaStreams
     fetchPlaybackInfo(reportServerBase, embyInfo.itemId, reportApiKey, reportUserId)
       .then((pb) => {
@@ -836,6 +842,7 @@ function onFileLoaded(fileUrl?: string): void {
         if (meta?.SeriesId) {
           currentActiveSeriesId = meta.SeriesId;
         }
+        outroManager.updateMetadataChapters(meta?.Chapters);
       })
       .catch((e) => {
         debugLog("Error pre-fetching item metadata:", e);
@@ -884,8 +891,8 @@ function onFileLoaded(fileUrl?: string): void {
       }
     }
 
-    // Setup autoplay for TV episodes if enabled (only when not launched from browser)
-    if (!isBrowser && preferences.get("autoplay_next_episode")) {
+    // Setup autoplay for TV episodes if enabled
+    if (preferences.get("autoplay_next_episode")) {
       debugLog(`Setting up autoplay for episode (itemId): ${embyInfo.itemId}, userId: ${reportUserId || "none"}`);
       resetForNewFile();
       setupAutoplayForEpisode(reportServerBase, embyInfo.itemId, reportApiKey, reportUserId);
@@ -910,6 +917,7 @@ function onFileLoaded(fileUrl?: string): void {
           if (meta?.SeriesId) {
             currentActiveSeriesId = meta.SeriesId;
           }
+          outroManager.updateMetadataChapters(meta?.Chapters);
         }
       } catch (e) {
         debugLog("Error pre-fetching item metadata:", e);
@@ -980,6 +988,7 @@ function handlePlaybackTermination(reason: "end-file" | "window-close"): void {
 // Menu items (Show Emby Browser is registered in globalEntry so it is always available without duplicates)
 menu.addItem(menu.item("Download Emby Subtitles", manualDownloadSubtitles));
 menu.addItem(menu.item("Set Emby Title", manualSetTitle));
+menu.addItem(menu.item("Skip Outro", () => outroManager.manualSkipOutro()));
 
 // Event handlers
 event.on("iina.file-loaded", onFileLoaded);
@@ -991,6 +1000,19 @@ event.on("iina.file-started", () => {
 event.on("mpv.file-loaded", () => {
   isWindowClosing = false;
   onFileLoaded();
+  outroManager.checkMpvChapters();
+});
+
+event.on("mpv.time-pos.changed", (newTimeVal: unknown) => {
+  if (isWindowClosing || !currentActiveItemId) return;
+  const timePos = typeof newTimeVal === "number" ? newTimeVal : Number(newTimeVal);
+  if (!Number.isFinite(timePos)) return;
+  outroManager.checkAndTriggerSkip(timePos);
+});
+
+event.on("mpv.chapter-list.changed", () => {
+  if (isWindowClosing || !currentActiveItemId) return;
+  outroManager.checkMpvChapters();
 });
 
 const handleTracksChanged = () => {
@@ -1156,6 +1178,7 @@ event.on("mpv.end-file", () => {
     return;
   }
   currentLoadedFileUrl = null;
+  outroManager.resetForNewFile();
   stopEnforcingTracks();
   clearPendingTracks();
   stopPlaybackTracking();
@@ -1169,6 +1192,7 @@ event.on("iina.window-will-close", () => {
   debugLog("Window closing, stopping playback tracking");
   currentLoadedFileUrl = null;
   resetForNewFile();
+  outroManager.resetForNewFile();
   clearQueuedFlag();
   stopEnforcingTracks();
   clearPendingTracks();

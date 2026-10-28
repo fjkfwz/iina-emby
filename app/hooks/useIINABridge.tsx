@@ -1,6 +1,7 @@
 import {
   type EmbyServer,
   type PlaybackProgressUpdatedPayload,
+  type PlayMediaListPayload,
   type PlayMediaPayload,
   type PluginPreferencesPayload,
   type TypedIinaBridge,
@@ -35,6 +36,7 @@ export interface IINABridgeContextType {
   selectServer: (serverId: string) => void;
   removeServer: (serverId: string) => void;
   playMedia: (payload: PlayMediaPayload) => void;
+  playMediaList: (payload: PlayMediaListPayload) => void;
   preferences: PluginPreferencesPayload;
   setPreference: (key: string, value: unknown) => void;
 }
@@ -72,6 +74,7 @@ export function IINABridgeProvider({ children }: { children: React.ReactNode }) 
     sync_playback_progress: true,
     reopen_browser_on_playback_end: true,
     autoplay_next_episode: true,
+    auto_skip_outro: true,
     auto_download_enabled: true,
     debug_logging: false,
     remember_track_selections: true,
@@ -203,11 +206,7 @@ export function IINABridgeProvider({ children }: { children: React.ReactNode }) 
 
         // Sync playback progress safely to Emby server from WebView
         const endpoint =
-          data.event === "start"
-            ? "/Sessions/Playing"
-            : data.event === "stop"
-              ? "/Sessions/Playing/Stopped"
-              : "/Sessions/Playing/Progress";
+          data.event === "start" ? "/Sessions/Playing" : data.event === "stop" ? "/Sessions/Playing/Stopped" : "/Sessions/Playing/Progress";
 
         const url = `${currentServer.serverUrl}${endpoint}?api_key=${currentServer.accessToken}`;
         const bodyData: Record<string, unknown> = {
@@ -314,11 +313,7 @@ export function IINABridgeProvider({ children }: { children: React.ReactNode }) 
       if (!target) return;
 
       // Do NOT drag if interacting with controls, inputs, buttons, links, etc.
-      if (
-        target.closest(
-          'button, input, select, textarea, a, [data-no-drag], [role="button"], [tabindex]:not([tabindex="-1"])'
-        )
-      ) {
+      if (target.closest('button, input, select, textarea, a, [data-no-drag], [role="button"], [tabindex]:not([tabindex="-1"])')) {
         return;
       }
 
@@ -446,6 +441,14 @@ export function IINABridgeProvider({ children }: { children: React.ReactNode }) 
     }
   }, []);
 
+  const playMediaList = useCallback((payload: PlayMediaListPayload) => {
+    if (window?.iina?.postMessage) {
+      window.iina.postMessage("play-media-list", payload);
+    } else {
+      console.log("[Dev Playback] play-media-list:", payload);
+    }
+  }, []);
+
   useEffect(() => {
     embyWebSocket.connect(activeServer);
   }, [activeServer?.id, activeServer?.serverUrl, activeServer?.accessToken]);
@@ -474,6 +477,7 @@ export function IINABridgeProvider({ children }: { children: React.ReactNode }) 
     selectServer,
     removeServer,
     playMedia,
+    playMediaList,
     preferences,
     setPreference,
   };

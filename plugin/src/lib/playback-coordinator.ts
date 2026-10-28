@@ -368,6 +368,26 @@ export function createPlaybackCoordinator({
 
   // Items waiting to join the playlist behind the one currently being opened.
   let pendingPlaylistQueue: PendingPlaylistQueue | null = null;
+  let lastQueuedPlaylistItemId: string | null = null;
+
+  function queueRemainingPlaylistItems(queuedItems: PlaylistItem[], firstItemId: string | null): void {
+    if (!queuedItems || queuedItems.length === 0) return;
+    if (lastQueuedPlaylistItemId && lastQueuedPlaylistItemId === firstItemId) {
+      log("Playlist items already processed for this item, skipping duplicate queue");
+      return;
+    }
+    lastQueuedPlaylistItemId = firstItemId;
+    log(`queueRemainingPlaylistItems called with ${queuedItems.length} item(s)`);
+    pendingPlaylistQueue = { items: queuedItems, at: Date.now(), itemId: firstItemId };
+    try {
+      const currentUrl = mpv.getString("path");
+      if (currentUrl) {
+        flushPendingPlaylistQueue(currentUrl);
+      }
+    } catch {
+      // Ignore
+    }
+  }
 
   /**
    * Append the items held back by handlePlayMediaList. Called once the first item
@@ -554,6 +574,7 @@ export function createPlaybackCoordinator({
     openInNewInstance,
     openInCurrentWindow,
     flushPendingPlaylistQueue,
+    queueRemainingPlaylistItems,
     handlePlayMediaList,
     handlePlayMedia,
     setPendingPlaybackData,

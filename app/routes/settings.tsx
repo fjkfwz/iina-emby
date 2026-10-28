@@ -39,13 +39,7 @@ interface ToggleSwitchProps {
 function ToggleSwitch({ id, checked, onChange, disabled }: ToggleSwitchProps) {
   return (
     <label className={styles.switch} htmlFor={id}>
-      <input
-        type="checkbox"
-        id={id}
-        checked={checked}
-        disabled={disabled}
-        onChange={(e) => onChange(e.target.checked)}
-      />
+      <input type="checkbox" id={id} checked={checked} disabled={disabled} onChange={(e) => onChange(e.target.checked)} />
       <span className={styles.slider} />
     </label>
   );
@@ -67,12 +61,7 @@ export default function SettingsRoute() {
 
   return (
     <>
-      <PageHeader
-        onBack={handleBack}
-        backTitle={t("back", "Back")}
-        className={styles.pageHeader}
-        title={t("settingsTitle", "Settings")}
-      />
+      <PageHeader onBack={handleBack} backTitle={t("back", "Back")} className={styles.pageHeader} title={t("settingsTitle", "Settings")} />
 
       <div className={styles.container}>
         {/* Language Selection */}
@@ -106,9 +95,7 @@ export default function SettingsRoute() {
                     onClick={() => setLanguage(lang.code)}
                   >
                     <span className={styles.langNative}>{lang.nativeLabel}</span>
-                    <span className={styles.langCode}>
-                      {lang.code === "auto" ? t("followSystem", "System") : lang.code}
-                    </span>
+                    <span className={styles.langCode}>{lang.code === "auto" ? t("followSystem", "System") : lang.code}</span>
                   </button>
                 );
               })}
@@ -131,11 +118,7 @@ export default function SettingsRoute() {
                   <span className={styles.rowSubtitle}>{t("moduleHeroDesc", "Top carousel spotlight with quick play")}</span>
                 </div>
               </div>
-              <ToggleSwitch
-                id="toggle-hero"
-                checked={modulesConfig.hero}
-                onChange={() => toggleModule("hero")}
-              />
+              <ToggleSwitch id="toggle-hero" checked={modulesConfig.hero} onChange={() => toggleModule("hero")} />
             </div>
 
             <div className={styles.divider} />
@@ -151,11 +134,7 @@ export default function SettingsRoute() {
                   <span className={styles.rowSubtitle}>{t("moduleCategoriesDesc", "Quick navigation for Movies, TV, Anime")}</span>
                 </div>
               </div>
-              <ToggleSwitch
-                id="toggle-categories"
-                checked={modulesConfig.categories}
-                onChange={() => toggleModule("categories")}
-              />
+              <ToggleSwitch id="toggle-categories" checked={modulesConfig.categories} onChange={() => toggleModule("categories")} />
             </div>
 
             <div className={styles.divider} />
@@ -191,11 +170,7 @@ export default function SettingsRoute() {
                   <span className={styles.rowSubtitle}>{t("moduleFavoritesDesc", "Items marked as personal favorites")}</span>
                 </div>
               </div>
-              <ToggleSwitch
-                id="toggle-favorites"
-                checked={modulesConfig.favorites}
-                onChange={() => toggleModule("favorites")}
-              />
+              <ToggleSwitch id="toggle-favorites" checked={modulesConfig.favorites} onChange={() => toggleModule("favorites")} />
             </div>
 
             <div className={styles.divider} />
@@ -208,7 +183,9 @@ export default function SettingsRoute() {
                 </span>
                 <div className={styles.textGroup}>
                   <span className={styles.rowTitle}>{t("moduleLibrarySections", "Library Sections")}</span>
-                  <span className={styles.rowSubtitle}>{t("moduleLibrarySectionsDesc", "Latest additions and popular items from libraries")}</span>
+                  <span className={styles.rowSubtitle}>
+                    {t("moduleLibrarySectionsDesc", "Latest additions and popular items from libraries")}
+                  </span>
                 </div>
               </div>
               <ToggleSwitch
@@ -334,6 +311,28 @@ export default function SettingsRoute() {
 
             <div className={styles.divider} />
 
+            {/* Auto Skip Outro */}
+            <div className={styles.settingRow}>
+              <div className={styles.rowLeft}>
+                <span className={styles.rowIcon}>
+                  <IconPlayerTrackNext size={18} />
+                </span>
+                <div className={styles.textGroup}>
+                  <span className={styles.rowTitle}>{t("autoSkipOutro", "Automatically skip outro / credits")}</span>
+                  <span className={styles.rowSubtitle}>
+                    {t("autoSkipOutroDesc", "Skip end credits using Emby markers or chapter titles and transition to next episode")}
+                  </span>
+                </div>
+              </div>
+              <ToggleSwitch
+                id="pref-auto-skip-outro"
+                checked={preferences.auto_skip_outro !== false}
+                onChange={(val) => setPreference("auto_skip_outro", val)}
+              />
+            </div>
+
+            <div className={styles.divider} />
+
             {/* Auto Download Subtitles */}
             <div className={styles.settingRow}>
               <div className={styles.rowLeft}>
@@ -364,9 +363,7 @@ export default function SettingsRoute() {
                 </span>
                 <div className={styles.textGroup}>
                   <span className={styles.rowTitle}>{t("debugLogging", "Verbose debug logging")}</span>
-                  <span className={styles.rowSubtitle}>
-                    {t("debugLoggingDesc", "Output detailed diagnostic logs for troubleshooting")}
-                  </span>
+                  <span className={styles.rowSubtitle}>{t("debugLoggingDesc", "Output detailed diagnostic logs for troubleshooting")}</span>
                 </div>
               </div>
               <ToggleSwitch
@@ -391,7 +388,10 @@ export default function SettingsRoute() {
                 <div className={styles.textGroup}>
                   <span className={styles.rowTitle}>{t("rememberTrackSelections", "Remember Audio & Subtitle Tracks")}</span>
                   <span className={styles.rowSubtitle}>
-                    {t("rememberTrackSelectionsDesc", "Automatically restore your last chosen audio channel and subtitle track when resuming playback")}
+                    {t(
+                      "rememberTrackSelectionsDesc",
+                      "Automatically restore your last chosen audio channel and subtitle track when resuming playback",
+                    )}
                   </span>
                 </div>
               </div>
@@ -413,7 +413,10 @@ export default function SettingsRoute() {
                 <div className={styles.textGroup}>
                   <span className={styles.rowTitle}>{t("preferredAudioLanguage", "Preferred Audio Languages")}</span>
                   <span className={styles.rowSubtitle}>
-                    {t("preferredAudioLanguageDesc", "Comma-separated language codes for preferred audio tracks (e.g. zh,chi,ja,jpn,en,eng)")}
+                    {t(
+                      "preferredAudioLanguageDesc",
+                      "Comma-separated language codes for preferred audio tracks (e.g. zh,chi,ja,jpn,en,eng)",
+                    )}
                   </span>
                 </div>
               </div>
@@ -466,7 +469,10 @@ export default function SettingsRoute() {
                 <div className={styles.textGroup}>
                   <span className={styles.rowTitle}>{t("preferredSubtitleLanguage", "Preferred Subtitle Languages")}</span>
                   <span className={styles.rowSubtitle}>
-                    {t("preferredSubtitleLanguageDesc", "Comma-separated language codes and variants for subtitles (e.g. zh,chi,chs,sc,cht,tc,en)")}
+                    {t(
+                      "preferredSubtitleLanguageDesc",
+                      "Comma-separated language codes and variants for subtitles (e.g. zh,chi,chs,sc,cht,tc,en)",
+                    )}
                   </span>
                 </div>
               </div>

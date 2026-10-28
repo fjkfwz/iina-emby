@@ -170,6 +170,16 @@ export interface EmbyPerson {
   [key: string]: unknown;
 }
 
+export interface EmbyChapterInfo {
+  StartPositionTicks: number;
+  Name?: string;
+  ImageTag?: string;
+  MarkerType?: "Chapter" | "IntroStart" | "IntroEnd" | "CreditsStart" | "OutroStart" | "OutroEnd" | string;
+  ChapterType?: string;
+  ChapterIndex?: number;
+  [key: string]: unknown;
+}
+
 export interface EmbyItemMetadata {
   Id: string;
   Name?: string;
@@ -195,6 +205,7 @@ export interface EmbyItemMetadata {
   MediaStreams?: EmbyMediaStream[];
   UserData?: EmbyUserData;
   MediaSources?: EmbyMediaSource[];
+  Chapters?: EmbyChapterInfo[];
   ImageTags?: Record<string, string>;
   BackdropImageTags?: string[];
   ParentThumbItemId?: string;

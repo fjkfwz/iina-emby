@@ -222,6 +222,104 @@ function formatSubtitleTrackInfo(subtitleTitle, language, extension = "srt") {
   };
 }
 
+// shared/utils/outro.ts
+var OUTRO_TITLE_PATTERN = /(?:^|[\s_\-–—([#])(?:credits?|end(?:ing)?(?:\s*credits?)?|outro|closing|\bed(?:\s*\d+)?)(?:[\s_\-–—)\]#\d]|$)|(?:片尾|片尾曲|片尾字幕|结尾|演职员表|演职人员|エンディング|エンドクレジット|クレジット)/i;
+var POST_CREDITS_PATTERN = /(?:post|after|mid)[-\s]*credits?|彩蛋/i;
+function isOutroMarker(markerType, chapterType) {
+  if (!markerType && !chapterType) return false;
+  const mt = String(markerType || "").trim().toLowerCase();
+  const ct = String(chapterType || "").trim().toLowerCase();
+  return mt === "creditsstart" || mt === "outrostart" || mt === "credits" || mt === "outro" || ct === "credits" || ct === "outro";
+}
+function isOutroTitle(title) {
+  if (!title || typeof title !== "string") return false;
+  const trimmed = title.trim();
+  if (!trimmed) return false;
+  if (POST_CREDITS_PATTERN.test(trimmed)) return false;
+  return OUTRO_TITLE_PATTERN.test(trimmed);
+}
+function isOutroPosition(startSeconds, duration) {
+  if (startSeconds <= 0) return false;
+  if (typeof duration === "number" && duration > 0) {
+    return startSeconds >= duration * 0.5;
+  }
+  return startSeconds >= 60;
+}
+function findOutroSegment(options) {
+  const { chapters, mpvChapters, duration } = options;
+  if (Array.isArray(chapters) && chapters.length > 0) {
+    const validChapters = chapters.map((ch, idx) => {
+      const startSeconds = typeof ch.StartPositionTicks === "number" ? ticksToSeconds(ch.StartPositionTicks) : 0;
+      return {
+        index: idx,
+        startSeconds,
+        name: ch.Name,
+        markerType: ch.MarkerType,
+        chapterType: ch.ChapterType
+      };
+    }).filter((ch) => ch.startSeconds > 0).sort((a, b) => a.startSeconds - b.startSeconds);
+    const markerIndex = validChapters.findIndex((ch) => isOutroMarker(ch.markerType, ch.chapterType));
+    if (markerIndex !== -1) {
+      const match = validChapters[markerIndex];
+      const nextChapter = validChapters[markerIndex + 1];
+      const isNextAlsoOutro = nextChapter && (isOutroMarker(nextChapter.markerType, nextChapter.chapterType) || isOutroTitle(nextChapter.name));
+      const hasNextChapter = Boolean(nextChapter && !isNextAlsoOutro);
+      const nextChapterStartTime = hasNextChapter ? nextChapter.startSeconds : void 0;
+      const endSeconds = hasNextChapter ? nextChapterStartTime : typeof duration === "number" && duration > 0 ? duration : void 0;
+      return {
+        startSeconds: match.startSeconds,
+        endSeconds,
+        title: match.name || "Credits",
+        source: "emby-marker",
+        hasNextChapter,
+        nextChapterStartTime
+      };
+    }
+    const titleIndex = validChapters.findIndex((ch) => isOutroTitle(ch.name) && isOutroPosition(ch.startSeconds, duration));
+    if (titleIndex !== -1) {
+      const match = validChapters[titleIndex];
+      const nextChapter = validChapters[titleIndex + 1];
+      const isNextAlsoOutro = nextChapter && isOutroTitle(nextChapter.name);
+      const hasNextChapter = Boolean(nextChapter && !isNextAlsoOutro);
+      const nextChapterStartTime = hasNextChapter ? nextChapter.startSeconds : void 0;
+      const endSeconds = hasNextChapter ? nextChapterStartTime : typeof duration === "number" && duration > 0 ? duration : void 0;
+      return {
+        startSeconds: match.startSeconds,
+        endSeconds,
+        title: match.name || "Outro",
+        source: "emby-chapter",
+        hasNextChapter,
+        nextChapterStartTime
+      };
+    }
+  }
+  if (Array.isArray(mpvChapters) && mpvChapters.length > 0) {
+    const validMpv = mpvChapters.map((ch, idx) => ({
+      index: idx,
+      startSeconds: typeof ch.time === "number" ? ch.time : 0,
+      name: ch.title
+    })).filter((ch) => ch.startSeconds > 0).sort((a, b) => a.startSeconds - b.startSeconds);
+    const mpvIndex = validMpv.findIndex((ch) => isOutroTitle(ch.name) && isOutroPosition(ch.startSeconds, duration));
+    if (mpvIndex !== -1) {
+      const match = validMpv[mpvIndex];
+      const nextChapter = validMpv[mpvIndex + 1];
+      const isNextAlsoOutro = nextChapter && isOutroTitle(nextChapter.name);
+      const hasNextChapter = Boolean(nextChapter && !isNextAlsoOutro);
+      const nextChapterStartTime = hasNextChapter ? nextChapter.startSeconds : void 0;
+      const endSeconds = hasNextChapter ? nextChapterStartTime : typeof duration === "number" && duration > 0 ? duration : void 0;
+      return {
+        startSeconds: match.startSeconds,
+        endSeconds,
+        title: match.name || "Outro",
+        source: "mpv-chapter",
+        hasNextChapter,
+        nextChapterStartTime
+      };
+    }
+  }
+  return null;
+}
+
 // shared/utils/webp-decoder.ts
 var decodeQueue = Promise.resolve();
 
@@ -742,7 +840,8 @@ function createEmbyApi({ http: http2, preferences: preferences2, log }) {
   }
   async function fetchItemMetadata2(serverBase, itemId, apiKey, userId) {
     try {
-      const metadataUrl = userId ? `${serverBase}/Users/${encodeURIComponent(userId)}/Items/${encodeURIComponent(itemId)}?api_key=${apiKey}` : `${serverBase}/Items/${encodeURIComponent(itemId)}?api_key=${apiKey}`;
+      const query = [`api_key=${apiKey}`, "Fields=Chapters"].join("&");
+      const metadataUrl = userId ? `${serverBase}/Users/${encodeURIComponent(userId)}/Items/${encodeURIComponent(itemId)}?${query}` : `${serverBase}/Items/${encodeURIComponent(itemId)}?${query}`;
       log(`Fetching item metadata from: ${metadataUrl}`);
       const response = await http2.get(metadataUrl, {
         headers: buildEmbyHeaders3(apiKey, {
@@ -1202,6 +1301,177 @@ function createMediaActionsManager({
   };
 }
 
+// plugin/src/lib/outro-manager.ts
+function createOutroManager({ core: core2, mpv: mpv2, preferences: preferences2, markReplacingPlayback: markReplacingPlayback2, markAsWatched: markAsWatched2, log }) {
+  let currentOutroSegment = null;
+  let hasSkippedOutro = false;
+  let currentServerBase = null;
+  let currentItemId = null;
+  let currentApiKey = null;
+  let cachedMetadataChapters = [];
+  function setSession(serverBase, itemId, apiKey) {
+    currentServerBase = serverBase;
+    currentItemId = itemId;
+    currentApiKey = apiKey;
+  }
+  function resetForNewFile2() {
+    currentOutroSegment = null;
+    hasSkippedOutro = false;
+    currentServerBase = null;
+    currentItemId = null;
+    currentApiKey = null;
+    cachedMetadataChapters = [];
+  }
+  function updateMetadataChapters(chapters, duration) {
+    if (Array.isArray(chapters) && chapters.length > 0) {
+      cachedMetadataChapters = chapters;
+    }
+    const effectiveDuration = typeof duration === "number" && duration > 0 ? duration : core2.status?.duration || mpv2.getNumber("duration") || void 0;
+    const detected = findOutroSegment({
+      chapters: cachedMetadataChapters,
+      duration: effectiveDuration
+    });
+    if (detected) {
+      currentOutroSegment = detected;
+      log(
+        `[Outro] Outro segment detected from Emby chapters for ${currentItemId}: start=${detected.startSeconds}s, end=${detected.endSeconds ?? "end"}s, title="${detected.title}", hasNext=${detected.hasNextChapter}`
+      );
+    }
+  }
+  function checkMpvChapters() {
+    if (currentOutroSegment && currentOutroSegment.source === "emby-marker") {
+      return;
+    }
+    try {
+      const rawChapters = mpv2.getNative("chapter-list");
+      if (!Array.isArray(rawChapters) || rawChapters.length === 0) {
+        return;
+      }
+      const effectiveDuration = core2.status?.duration || mpv2.getNumber("duration") || void 0;
+      const detected = findOutroSegment({
+        chapters: cachedMetadataChapters.length > 0 ? cachedMetadataChapters : null,
+        mpvChapters: rawChapters,
+        duration: effectiveDuration
+      });
+      if (detected) {
+        currentOutroSegment = detected;
+        log(
+          `[Outro] Outro segment updated from MPV chapter list for ${currentItemId}: start=${detected.startSeconds}s, end=${detected.endSeconds ?? "end"}s, source=${detected.source}`
+        );
+      }
+    } catch (err) {
+      log("[Outro] Error inspecting mpv chapter-list:", err);
+    }
+  }
+  function executeSkip(source) {
+    hasSkippedOutro = true;
+    log(`[Outro] Executing skip outro (${source}) for item ${currentItemId}`);
+    if (currentServerBase && currentItemId && currentApiKey) {
+      try {
+        markAsWatched2(currentServerBase, currentItemId, currentApiKey).catch((err) => {
+          log("[Outro] Error marking as watched on outro skip:", err);
+        });
+      } catch (err) {
+        log("[Outro] Error invoking markAsWatched:", err);
+      }
+    }
+    if (preferences2.get("show_notifications")) {
+      core2.osd("\u5DF2\u8DF3\u8FC7\u7247\u5C3E");
+    }
+    let hasNextInPlaylist = false;
+    try {
+      const playlistCount = Number(mpv2.getNumber("playlist-count") || 0);
+      const currentPos = Number(mpv2.getNumber("playlist-pos") || 0);
+      hasNextInPlaylist = playlistCount > 0 && currentPos < playlistCount - 1;
+    } catch {
+    }
+    if (hasNextInPlaylist) {
+      log("[Outro] Advancing to next episode via playlist-next");
+      markReplacingPlayback2();
+      try {
+        mpv2.command("playlist-next", []);
+      } catch (err) {
+        log("[Outro] Failed to advance to next playlist item:", err);
+      }
+      return true;
+    }
+    if (currentOutroSegment?.hasNextChapter && typeof currentOutroSegment.nextChapterStartTime === "number") {
+      const targetPos = currentOutroSegment.nextChapterStartTime;
+      log(`[Outro] Skipping outro to post-credits chapter at ${targetPos}s`);
+      try {
+        core2.seekTo(targetPos);
+      } catch {
+        try {
+          mpv2.set("time-pos", targetPos);
+        } catch (err) {
+          log("[Outro] Failed to seek to next chapter:", err);
+        }
+      }
+      return true;
+    }
+    const duration = core2.status?.duration || mpv2.getNumber("duration") || 0;
+    if (duration > 0) {
+      const targetPos = Math.max(0, duration - 0.2);
+      log(`[Outro] End of playlist reached, seeking to end of file (${targetPos}s) to trigger completion`);
+      try {
+        core2.seekTo(targetPos);
+      } catch {
+        try {
+          mpv2.set("time-pos", targetPos);
+        } catch (err) {
+          log("[Outro] Failed to seek to end of file:", err);
+        }
+      }
+      return true;
+    }
+    return true;
+  }
+  function checkAndTriggerSkip(currentPosition) {
+    if (!currentOutroSegment) {
+      return false;
+    }
+    if (hasSkippedOutro) {
+      if (currentPosition < currentOutroSegment.startSeconds - 5) {
+        hasSkippedOutro = false;
+        log(
+          `[Outro] Playback position rewound (${currentPosition.toFixed(1)}s < ${currentOutroSegment.startSeconds}s), reset hasSkippedOutro`
+        );
+      }
+      return false;
+    }
+    if (preferences2.get("auto_skip_outro") === false) {
+      return false;
+    }
+    if (currentPosition >= currentOutroSegment.startSeconds - 0.3) {
+      if (currentOutroSegment.endSeconds && currentPosition >= currentOutroSegment.endSeconds) {
+        return false;
+      }
+      return executeSkip("auto");
+    }
+    return false;
+  }
+  function manualSkipOutro() {
+    log(`[Outro] Manual skip requested by user for item ${currentItemId}`);
+    executeSkip("manual");
+  }
+  function getCurrentOutroSegment() {
+    return currentOutroSegment;
+  }
+  function hasSkipped() {
+    return hasSkippedOutro;
+  }
+  return {
+    setSession,
+    resetForNewFile: resetForNewFile2,
+    updateMetadataChapters,
+    checkMpvChapters,
+    checkAndTriggerSkip,
+    manualSkipOutro,
+    getCurrentOutroSegment,
+    hasSkipped
+  };
+}
+
 // plugin/src/lib/playback-coordinator.ts
 var REPLACEMENT_GUARD_MS = 1e4;
 var PENDING_QUEUE_TTL_MS = 6e4;
@@ -1388,7 +1658,7 @@ function createPlaybackCoordinator({
     clearPendingSubtitle2(itemId);
     clearPendingAudio2(itemId);
   }
-  function markReplacingPlayback() {
+  function markReplacingPlayback2() {
     replacingPlaybackAt = Date.now();
   }
   function consumeReplacementGuard2() {
@@ -1434,7 +1704,7 @@ function createPlaybackCoordinator({
     currentPlaybackItemId = (String(streamUrl).match(/\/(?:Items|Videos|Audio)\/([^/?]+)/) || [])[1] || null;
     currentPlaybackStartPositionSeconds = typeof startPositionSeconds === "number" ? startPositionSeconds : null;
     if (getCurrentPlaybackSession2()) {
-      markReplacingPlayback();
+      markReplacingPlayback2();
     }
     try {
       const playlistCount = Number(mpv2.getNumber("playlist-count") || 0);
@@ -1467,6 +1737,24 @@ function createPlaybackCoordinator({
     core2.open(streamUrl);
   }
   let pendingPlaylistQueue = null;
+  let lastQueuedPlaylistItemId = null;
+  function queueRemainingPlaylistItems2(queuedItems, firstItemId) {
+    if (!queuedItems || queuedItems.length === 0) return;
+    if (lastQueuedPlaylistItemId && lastQueuedPlaylistItemId === firstItemId) {
+      log("Playlist items already processed for this item, skipping duplicate queue");
+      return;
+    }
+    lastQueuedPlaylistItemId = firstItemId;
+    log(`queueRemainingPlaylistItems called with ${queuedItems.length} item(s)`);
+    pendingPlaylistQueue = { items: queuedItems, at: Date.now(), itemId: firstItemId };
+    try {
+      const currentUrl = mpv2.getString("path");
+      if (currentUrl) {
+        flushPendingPlaylistQueue2(currentUrl);
+      }
+    } catch {
+    }
+  }
   function flushPendingPlaylistQueue2(fileUrl) {
     if (!pendingPlaylistQueue) {
       return;
@@ -1601,7 +1889,7 @@ ${item.streamUrl}
     });
   }
   return {
-    markReplacingPlayback,
+    markReplacingPlayback: markReplacingPlayback2,
     consumeReplacementGuard: consumeReplacementGuard2,
     markLaunchedFromBrowser: markLaunchedFromBrowser2,
     clearLaunchedFromBrowser: clearLaunchedFromBrowser2,
@@ -1610,6 +1898,7 @@ ${item.streamUrl}
     openInNewInstance,
     openInCurrentWindow,
     flushPendingPlaylistQueue: flushPendingPlaylistQueue2,
+    queueRemainingPlaylistItems: queueRemainingPlaylistItems2,
     handlePlayMediaList: handlePlayMediaList2,
     handlePlayMedia: handlePlayMedia2,
     setPendingPlaybackData: setPendingPlaybackData2,
@@ -1910,7 +2199,7 @@ function createPlaybackTrackingManager({
       return false;
     }
   }
-  async function markAsWatched(serverBase, itemId, apiKey) {
+  async function markAsWatched2(serverBase, itemId, apiKey) {
     try {
       if (!preferences2.get("sync_playback_progress")) {
         log("Playback progress sync disabled, skipping mark as watched");
@@ -2045,7 +2334,7 @@ function createPlaybackTrackingManager({
             log(`Playback progress: ${(percentComplete * 100).toFixed(1)}%`);
             if (percentComplete >= WATCHED_THRESHOLD) {
               log(`Reached ${WATCHED_THRESHOLD * 100}% threshold, marking as watched`);
-              markAsWatched(serverBase, itemId, apiKey);
+              markAsWatched2(serverBase, itemId, apiKey);
               currentPlaybackSession.hasReportedWatched = true;
             }
           }
@@ -2058,7 +2347,7 @@ function createPlaybackTrackingManager({
             if (!currentPlaybackSession.hasReportedWatched) {
               const finished = currentPlaybackSession;
               finished.hasReportedWatched = true;
-              markAsWatched(finished.serverBase, finished.itemId, finished.apiKey);
+              markAsWatched2(finished.serverBase, finished.itemId, finished.apiKey);
             }
             stopPlaybackTracking2();
           }
@@ -2159,7 +2448,7 @@ function createPlaybackTrackingManager({
     startPlaybackTracking: startPlaybackTracking2,
     stopPlaybackTracking: stopPlaybackTracking2,
     handlePauseChange: handlePauseChange2,
-    markAsWatched,
+    markAsWatched: markAsWatched2,
     getCurrentPlaybackSession: getCurrentPlaybackSession2,
     updateActiveTracks: updateActiveTracks2
   };
@@ -2991,13 +3280,7 @@ var serverSessionStore = createServerSessionStore({
 });
 var { storeEmbySession, getStoredEmbySession } = serverSessionStore;
 debugLog("Emby Plugin loaded");
-var {
-  startPlaybackTracking,
-  stopPlaybackTracking,
-  handlePauseChange,
-  getCurrentPlaybackSession,
-  updateActiveTracks
-} = createPlaybackTrackingManager({
+var { startPlaybackTracking, stopPlaybackTracking, handlePauseChange, getCurrentPlaybackSession, updateActiveTracks, markAsWatched } = createPlaybackTrackingManager({
   core,
   http: safeHttp,
   preferences,
@@ -3027,7 +3310,14 @@ var { setupAutoplayForEpisode, resetForNewFile, clearQueuedFlag, isQueued } = cr
   fetchItemMetadata,
   log: debugLog
 });
-var { setVideoTitleFromMetadata, downloadAllSubtitles, downloadExternalSubtitle, manualDownloadSubtitles, manualSetTitle, updateFromFileUrl } = createMediaActionsManager({
+var {
+  setVideoTitleFromMetadata,
+  downloadAllSubtitles,
+  downloadExternalSubtitle,
+  manualDownloadSubtitles,
+  manualSetTitle,
+  updateFromFileUrl
+} = createMediaActionsManager({
   core,
   http: safeHttp,
   utils,
@@ -3049,8 +3339,10 @@ var currentActiveSubtitleStreamIndex = null;
 var {
   handlePlayMedia,
   handlePlayMediaList,
+  queueRemainingPlaylistItems,
   flushPendingPlaylistQueue,
   consumeReplacementGuard,
+  markReplacingPlayback,
   markLaunchedFromBrowser,
   clearLaunchedFromBrowser,
   consumeLaunchedFromBrowser,
@@ -3084,6 +3376,14 @@ var {
   clearQueuedFlag,
   log: debugLog
 });
+var outroManager = createOutroManager({
+  core,
+  mpv,
+  preferences,
+  markReplacingPlayback,
+  markAsWatched,
+  log: debugLog
+});
 if (iinaGlobal && typeof iinaGlobal.getLabel === "function") {
   const label = iinaGlobal.getLabel();
   if (label?.startsWith("emby-")) {
@@ -3111,6 +3411,15 @@ if (iinaGlobal && typeof iinaGlobal.onMessage === "function") {
     clearQueuedFlag();
     markLaunchedFromBrowser();
     handlePlayMediaList(data);
+  });
+  iinaGlobal.onMessage("queue-pending-playlist", (data) => {
+    debugLog("Received queue-pending-playlist from global entry", data);
+    if (!data?.items || data.items.length <= 1) return;
+    const queuedItems = data.items.slice(1);
+    const firstItem = data.items[0];
+    const firstItemId = firstItem?.itemId || (String(firstItem.streamUrl).match(/\/(?:Items|Videos|Audio)\/([^/?]+)/) || [])[1] || null;
+    markLaunchedFromBrowser();
+    queueRemainingPlaylistItems(queuedItems, firstItemId);
   });
   iinaGlobal.onMessage("apply-pending-media", (data) => {
     debugLog("Received apply-pending-media from global entry", data);
@@ -3224,9 +3533,7 @@ function snapshotCurrentTracksAndSave(source) {
     const trackList = mpv.getNative("track-list");
     if (!Array.isArray(trackList) || trackList.length === 0) return;
     const currentAid = mpv.getString("aid");
-    const activeAudio = trackList.find(
-      (t) => t.type === "audio" && (String(t.id) === currentAid || Boolean(t.selected))
-    );
+    const activeAudio = trackList.find((t) => t.type === "audio" && (String(t.id) === currentAid || Boolean(t.selected)));
     const audioStreamIndex = activeAudio ? findEmbyStreamIndexForMpvTrack(activeAudio, currentEmbyStreams, "Audio") : null;
     const audioChannels = activeAudio && typeof activeAudio["channel-count"] === "number" ? activeAudio["channel-count"] : activeAudio && typeof activeAudio.channels === "number" ? activeAudio.channels : null;
     const channelLayout = activeAudio && typeof activeAudio["demux-channels"] === "string" ? activeAudio["demux-channels"] : audioChannels === 6 ? "5.1" : audioChannels === 8 ? "7.1" : audioChannels === 2 ? "stereo" : null;
@@ -3242,9 +3549,7 @@ function snapshotCurrentTracksAndSave(source) {
     let subStreamIndex = -1;
     let activeSub;
     if (!isSubOff) {
-      activeSub = trackList.find(
-        (t) => t.type === "sub" && (String(t.id) === currentSid || Boolean(t.selected))
-      );
+      activeSub = trackList.find((t) => t.type === "sub" && (String(t.id) === currentSid || Boolean(t.selected)));
       if (activeSub) {
         subStreamIndex = findEmbyStreamIndexForMpvTrack(activeSub, currentEmbyStreams, "Subtitle");
       }
@@ -3458,7 +3763,9 @@ async function applySelectedSubtitleTrack(serverBase, itemId, apiKey, userId) {
       debugLog("External subtitle download already in progress, skipping duplicate call");
       return;
     }
-    debugLog(`Selected subtitle is external (Index: ${pendingSubtitle}, MediaSourceId: ${mediaSourceId || "none"}). Downloading and loading...`);
+    debugLog(
+      `Selected subtitle is external (Index: ${pendingSubtitle}, MediaSourceId: ${mediaSourceId || "none"}). Downloading and loading...`
+    );
     try {
       isDownloadingExternalSubtitle = true;
       const loaded = await downloadExternalSubtitle(
@@ -3615,6 +3922,9 @@ function onFileLoaded(fileUrl) {
     currentEmbyStreams = [];
     currentActiveAudioStreamIndex = getPendingAudioIndex(embyInfo.itemId);
     currentActiveSubtitleStreamIndex = getPendingSubtitleIndex(embyInfo.itemId);
+    outroManager.resetForNewFile();
+    outroManager.setSession(reportServerBase, embyInfo.itemId, reportApiKey);
+    outroManager.checkMpvChapters();
     fetchPlaybackInfo(reportServerBase, embyInfo.itemId, reportApiKey, reportUserId).then((pb) => {
       if (pb?.MediaSources?.[0]?.MediaStreams) {
         currentEmbyStreams = pb.MediaSources[0].MediaStreams;
@@ -3627,6 +3937,7 @@ function onFileLoaded(fileUrl) {
       if (meta?.SeriesId) {
         currentActiveSeriesId = meta.SeriesId;
       }
+      outroManager.updateMetadataChapters(meta?.Chapters);
     }).catch((e) => {
       debugLog("Error pre-fetching item metadata:", e);
     });
@@ -3664,7 +3975,7 @@ function onFileLoaded(fileUrl) {
         setVideoTitleFromMetadata(reportServerBase, embyInfo.itemId, reportApiKey, reportUserId);
       }
     }
-    if (!isBrowser && preferences.get("autoplay_next_episode")) {
+    if (preferences.get("autoplay_next_episode")) {
       debugLog(`Setting up autoplay for episode (itemId): ${embyInfo.itemId}, userId: ${reportUserId || "none"}`);
       resetForNewFile();
       setupAutoplayForEpisode(reportServerBase, embyInfo.itemId, reportApiKey, reportUserId);
@@ -3686,6 +3997,7 @@ function onFileLoaded(fileUrl) {
           if (meta?.SeriesId) {
             currentActiveSeriesId = meta.SeriesId;
           }
+          outroManager.updateMetadataChapters(meta?.Chapters);
         }
       } catch (e) {
         debugLog("Error pre-fetching item metadata:", e);
@@ -3743,6 +4055,7 @@ function handlePlaybackTermination(reason) {
 }
 menu.addItem(menu.item("Download Emby Subtitles", manualDownloadSubtitles));
 menu.addItem(menu.item("Set Emby Title", manualSetTitle));
+menu.addItem(menu.item("Skip Outro", () => outroManager.manualSkipOutro()));
 event.on("iina.file-loaded", onFileLoaded);
 event.on("iina.file-started", () => {
   isWindowClosing = false;
@@ -3750,6 +4063,17 @@ event.on("iina.file-started", () => {
 event.on("mpv.file-loaded", () => {
   isWindowClosing = false;
   onFileLoaded();
+  outroManager.checkMpvChapters();
+});
+event.on("mpv.time-pos.changed", (newTimeVal) => {
+  if (isWindowClosing || !currentActiveItemId) return;
+  const timePos = typeof newTimeVal === "number" ? newTimeVal : Number(newTimeVal);
+  if (!Number.isFinite(timePos)) return;
+  outroManager.checkAndTriggerSkip(timePos);
+});
+event.on("mpv.chapter-list.changed", () => {
+  if (isWindowClosing || !currentActiveItemId) return;
+  outroManager.checkMpvChapters();
 });
 var handleTracksChanged = () => {
   if (isWindowClosing) return;
@@ -3893,6 +4217,7 @@ event.on("mpv.end-file", () => {
     return;
   }
   currentLoadedFileUrl = null;
+  outroManager.resetForNewFile();
   stopEnforcingTracks();
   clearPendingTracks();
   stopPlaybackTracking();
@@ -3904,6 +4229,7 @@ event.on("iina.window-will-close", () => {
   debugLog("Window closing, stopping playback tracking");
   currentLoadedFileUrl = null;
   resetForNewFile();
+  outroManager.resetForNewFile();
   clearQueuedFlag();
   stopEnforcingTracks();
   clearPendingTracks();

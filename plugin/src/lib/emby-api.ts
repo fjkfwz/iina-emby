@@ -131,12 +131,7 @@ export function createEmbyApi({ http, preferences, log }: EmbyApiDeps) {
     );
   }
 
-  async function fetchPlaybackInfo(
-    serverBase: string,
-    itemId: string,
-    apiKey: string,
-    userId?: string,
-  ): Promise<EmbyPlaybackInfo> {
+  async function fetchPlaybackInfo(serverBase: string, itemId: string, apiKey: string, userId?: string): Promise<EmbyPlaybackInfo> {
     try {
       const userParam = userId ? `&UserId=${encodeURIComponent(userId)}` : "";
       const playbackUrl = `${serverBase}/Items/${itemId}/PlaybackInfo?api_key=${apiKey}${userParam}`;
@@ -174,9 +169,10 @@ export function createEmbyApi({ http, preferences, log }: EmbyApiDeps) {
 
   async function fetchItemMetadata(serverBase: string, itemId: string, apiKey: string, userId?: string): Promise<EmbyItemMetadata> {
     try {
+      const query = [`api_key=${apiKey}`, "Fields=Chapters"].join("&");
       const metadataUrl = userId
-        ? `${serverBase}/Users/${encodeURIComponent(userId)}/Items/${encodeURIComponent(itemId)}?api_key=${apiKey}`
-        : `${serverBase}/Items/${encodeURIComponent(itemId)}?api_key=${apiKey}`;
+        ? `${serverBase}/Users/${encodeURIComponent(userId)}/Items/${encodeURIComponent(itemId)}?${query}`
+        : `${serverBase}/Items/${encodeURIComponent(itemId)}?${query}`;
       log(`Fetching item metadata from: ${metadataUrl}`);
 
       const response = await http.get(metadataUrl, {

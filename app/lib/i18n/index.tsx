@@ -159,6 +159,8 @@ export const translations: Record<LanguageCode, Record<string, string>> = {
     reopenBrowserOnEndDesc: "播放完毕或关闭播放器时自动唤出 Emby 浏览窗口",
     autoplayNextEpisode: "自动播放下一集",
     autoplayNextEpisodeDesc: "电视剧播放结束时自动缓冲并播放下一集",
+    autoSkipOutro: "自动跳过片尾",
+    autoSkipOutroDesc: "基于 Emby 标记或章节信息自动跳过片尾并播放下一集",
     autoDownloadSubtitles: "自动下载外挂字幕",
     autoDownloadSubtitlesDesc: "检测到外挂字幕时自动下载并关联到播放器",
     trackLanguageSection: "音轨与字幕偏好",
@@ -391,6 +393,8 @@ export const translations: Record<LanguageCode, Record<string, string>> = {
     reopenBrowserOnEndDesc: "播放完畢或關閉播放器時自動喚出 Emby 視窗",
     autoplayNextEpisode: "自動播放下一集",
     autoplayNextEpisodeDesc: "影集播放結束時自動載入並播放下一集",
+    autoSkipOutro: "自動略過片尾",
+    autoSkipOutroDesc: "依據 Emby 標記或章節資訊自動略過片尾並播放下一集",
     autoDownloadSubtitles: "自動下載外掛字幕",
     autoDownloadSubtitlesDesc: "偵測到外掛字幕時自動下載並載入至播放器",
     trackLanguageSection: "音軌與字幕偏好",
@@ -623,6 +627,8 @@ export const translations: Record<LanguageCode, Record<string, string>> = {
     reopenBrowserOnEndDesc: "Bring back the Emby browser window when video finishes or closes",
     autoplayNextEpisode: "Autoplay next episode",
     autoplayNextEpisodeDesc: "Automatically buffer and start the next episode when current ends",
+    autoSkipOutro: "Automatically skip outro / credits",
+    autoSkipOutroDesc: "Skip end credits using Emby markers or chapter titles and transition to next episode",
     autoDownloadSubtitles: "Auto-download external subtitles",
     autoDownloadSubtitlesDesc: "Automatically fetch and load external subtitle streams",
     trackLanguageSection: "Audio & Subtitle Preferences",
@@ -855,6 +861,8 @@ export const translations: Record<LanguageCode, Record<string, string>> = {
     reopenBrowserOnEndDesc: "Vuelve a mostrar la ventana de Emby cuando termine la reproducción",
     autoplayNextEpisode: "Reproducir siguiente episodio",
     autoplayNextEpisodeDesc: "Comienza automáticamente el siguiente episodio de una serie",
+    autoSkipOutro: "Saltar créditos finales automáticamente",
+    autoSkipOutroDesc: "Omitir los créditos usando marcadores de Emby y pasar al siguiente episodio",
     autoDownloadSubtitles: "Descargar subtítulos externos",
     autoDownloadSubtitlesDesc: "Carga automáticamente los subtítulos externos disponibles",
     trackLanguageSection: "Preferencias de audio y subtítulos",
@@ -1087,6 +1095,8 @@ export const translations: Record<LanguageCode, Record<string, string>> = {
     reopenBrowserOnEndDesc: "再生が終了した際、自動で Emby ブラウザ画面を再表示します",
     autoplayNextEpisode: "次のエピソードを自動再生",
     autoplayNextEpisodeDesc: "ドラマ視聴完了時に次の話を自動で再生開始します",
+    autoSkipOutro: "エンディング（クレジット）を自動スキップ",
+    autoSkipOutroDesc: "Embyマーカーやチャプター情報からエンディングを自動でスキップし次のエピソードへ移行します",
     autoDownloadSubtitles: "外部字幕を自動読み込み",
     autoDownloadSubtitlesDesc: "外部字幕が利用可能な場合に自動でプレイヤーに設定します",
     trackLanguageSection: "音声と字幕の設定",
@@ -1319,6 +1329,8 @@ export const translations: Record<LanguageCode, Record<string, string>> = {
     reopenBrowserOnEndDesc: "동영상 재생이 끝나거나 창을 닫았을 때 Emby 창을 다시 엽니다",
     autoplayNextEpisode: "다음 화 자동 재생",
     autoplayNextEpisodeDesc: "에피소드가 끝나면 자동으로 다음 에피소드를 재생합니다",
+    autoSkipOutro: "엔딩 크레딧 자동 건너뛰기",
+    autoSkipOutroDesc: "Emby 마커 또는 챕터 정보를 기반으로 엔딩 크레딧을 건너뛰고 다음 에피소드로 전환합니다",
     autoDownloadSubtitles: "외부 자막 자동 로드",
     autoDownloadSubtitlesDesc: "외부 자막이 있을 경우 자동으로 플레이어에 추가합니다",
     trackLanguageSection: "오디오 및 자막 설정",
@@ -1421,20 +1433,12 @@ export const translations: Record<LanguageCode, Record<string, string>> = {
  */
 export function detectSystemLanguage(): LanguageCode {
   if (typeof navigator !== "undefined") {
-    const list =
-      Array.isArray(navigator.languages) && navigator.languages.length > 0
-        ? navigator.languages
-        : [navigator.language || ""];
+    const list = Array.isArray(navigator.languages) && navigator.languages.length > 0 ? navigator.languages : [navigator.language || ""];
 
     for (const lang of list) {
       if (!lang) continue;
       const lower = lang.toLowerCase();
-      if (
-        lower.includes("tw") ||
-        lower.includes("hk") ||
-        lower.includes("mo") ||
-        lower.includes("hant")
-      ) {
+      if (lower.includes("tw") || lower.includes("hk") || lower.includes("mo") || lower.includes("hant")) {
         return "zh-TW";
       }
       if (lower.startsWith("zh")) {
@@ -1527,11 +1531,7 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
     [activeLanguage],
   );
 
-  return (
-    <LanguageContext.Provider value={{ setting, language: activeLanguage, setLanguage, t }}>
-      {children}
-    </LanguageContext.Provider>
-  );
+  return <LanguageContext.Provider value={{ setting, language: activeLanguage, setLanguage, t }}>{children}</LanguageContext.Provider>;
 }
 
 export function useTranslation() {
