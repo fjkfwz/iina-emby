@@ -19,7 +19,7 @@ const debugLog = createDebugLogger(preferences, console, file);
 debugLog("Emby Plugin Global Entry loaded");
 console.log("[iina-emby] Global Entry initialized");
 
-const safeHttp = createSafeHttp(utils, debugLog);
+const safeHttp = createSafeHttp(utils, debugLog, http);
 
 // Shared API and Session Store
 const { getClientIdentity } = createEmbyApi({

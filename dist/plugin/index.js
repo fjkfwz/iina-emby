@@ -3,7 +3,7 @@
 // shared/constants.ts
 var CLIENT_NAME = "IINA Emby Plugin";
 var DEVICE_NAME = "IINA";
-var CLIENT_VERSION = true ? "0.8.2" : "0.1.0";
+var CLIENT_VERSION = true ? "0.8.3" : "0.1.0";
 
 // shared/utils/auth.ts
 function buildAuthorizationHeader(identity, token) {
@@ -1110,6 +1110,7 @@ function subtitleExtensionForCodec(codec) {
 function createMediaActionsManager({
   core: core2,
   http: http2,
+  file: file2,
   utils: utils2,
   preferences: preferences2,
   mpv: mpv2,
@@ -1214,11 +1215,7 @@ function createMediaActionsManager({
         const cleanBase = serverBase.replace(/\/+$/, "");
         subtitleUrl = `${cleanBase}/Videos/${encodeURIComponent(itemId)}/${encodeURIComponent(effectiveMediaSourceId || itemId)}/Subtitles/${streamIndex}/Stream.${extension}?api_key=${encodeURIComponent(apiKey)}`;
       }
-      const { title: trackTitle, lang: trackLang, fileName } = formatSubtitleTrackInfo(
-        subtitleTitle,
-        language,
-        extension
-      );
+      const { title: trackTitle, lang: trackLang, fileName } = formatSubtitleTrackInfo(subtitleTitle, language, extension);
       const sanitizedItemId = String(itemId).replace(/[^a-zA-Z0-9_-]/g, "_");
       const safeStreamIndex = typeof streamIndex === "number" ? streamIndex : 0;
       const localPath = `@tmp/emby_${sanitizedItemId}_${safeStreamIndex}/${fileName}`;
@@ -1232,13 +1229,11 @@ function createMediaActionsManager({
       await http2.download(subtitleUrl, localPath);
       const resolvedPath = typeof utils2.resolvePath === "function" ? utils2.resolvePath(localPath) : localPath;
       log(`External subtitle downloaded to: ${resolvedPath}`);
-      try {
-        const statRes = await utils2.exec("/usr/bin/test", ["-s", resolvedPath]);
-        if (statRes.status !== 0) {
-          log.error(`Downloaded subtitle file is empty or does not exist: ${resolvedPath}`);
+      if (file2 && typeof file2.exists === "function") {
+        if (!file2.exists(resolvedPath)) {
+          log.error(`Downloaded subtitle file does not exist: ${resolvedPath}`);
           return false;
         }
-      } catch {
       }
       const flag = selectTrack ? "select" : "auto";
       try {
@@ -1291,9 +1286,7 @@ function createMediaActionsManager({
           const trackList = mpv2.getNative("track-list");
           if (Array.isArray(trackList)) {
             const subTracks = trackList.filter((t) => t.type === "sub");
-            const matched = subTracks.find(
-              (t) => t["external-filename"] === resolvedPath || t.title && t.title === trackTitle
-            ) || subTracks[subTracks.length - 1];
+            const matched = subTracks.find((t) => t["external-filename"] === resolvedPath || t.title && t.title === trackTitle) || subTracks[subTracks.length - 1];
             if (matched && typeof matched.id === "number") {
               log(`Activating subtitle track: id=${matched.id}, title="${matched.title || trackTitle}"`);
               mpv2.set("sid", matched.id);
@@ -1976,15 +1969,15 @@ function createPlaybackCoordinator({
       } catch {
       }
     }
-    if (typeof startPositionSeconds === "number" && startPositionSeconds > 0) {
-      log(`Setting initial start position to ${startPositionSeconds}s`);
-      try {
-        mpv2.set("start", `${startPositionSeconds}`);
-      } catch (err) {
-        log(`Could not set mpv start position: ${String(err)}`);
-      }
+    try {
+      mpv2.set("start", "none");
+    } catch {
     }
     core2.open(streamUrl);
+    try {
+      mpv2.set("pause", false);
+    } catch {
+    }
   }
   let pendingPlaylistQueue = null;
   let lastQueuedPlaylistItemId = null;
@@ -2735,9 +2728,8 @@ function createPlaybackTrackingManager({
 }
 
 // plugin/src/lib/safe-http.ts
-function createSafeHttp(utils2, log) {
+function createSafeHttp(utils2, log, iinaHttp) {
   async function request(method, url, options) {
-    const timeout = options?.timeoutSeconds ?? 15;
     let finalUrl = url;
     if (options?.params) {
       const q = Object.entries(options.params).map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`).join("&");
@@ -2745,15 +2737,47 @@ function createSafeHttp(utils2, log) {
         finalUrl += (finalUrl.includes("?") ? "&" : "?") + q;
       }
     }
-    const args = [
-      "-s",
-      "-S",
-      "-L",
-      "--max-time",
-      String(timeout),
-      "-X",
-      method
-    ];
+    const methodLower = method.toLowerCase();
+    if (iinaHttp && typeof iinaHttp[methodLower] === "function") {
+      if (log) {
+        log(`[safeHttp:native] ${method} ${finalUrl}`);
+      }
+      try {
+        const reqOpts = {};
+        if (options?.headers) {
+          reqOpts.headers = options.headers;
+        }
+        if (options?.params) {
+          reqOpts.params = options.params;
+        }
+        if (options?.data !== void 0 && options?.data !== null) {
+          reqOpts.data = options.data;
+        }
+        const fn = iinaHttp[methodLower].bind(iinaHttp);
+        const res2 = await fn(finalUrl, reqOpts);
+        let data2 = res2?.data;
+        if (typeof data2 === "string") {
+          try {
+            data2 = JSON.parse(data2);
+          } catch {
+          }
+        }
+        const status = typeof res2?.status === "number" ? res2.status : 200;
+        const text = typeof res2?.data === "string" ? res2.data : typeof res2?.text === "string" ? res2.text : JSON.stringify(res2?.data ?? "");
+        return {
+          status,
+          statusCode: status,
+          data: data2,
+          text
+        };
+      } catch (err) {
+        const errMsg = err instanceof Error ? err.message : String(err);
+        if (log) log.error(`[safeHttp:native] ${method} failed: ${errMsg}`);
+        throw err;
+      }
+    }
+    const timeout = options?.timeoutSeconds ?? 15;
+    const args = ["-s", "-S", "-L", "--max-time", String(timeout), "-X", method];
     if (options?.headers) {
       for (const [k, v] of Object.entries(options.headers)) {
         args.push("-H", `${k}: ${v}`);
@@ -2766,12 +2790,12 @@ function createSafeHttp(utils2, log) {
     args.push("-w", "\n%{http_code}");
     args.push(finalUrl);
     if (log) {
-      log(`[safeHttp] ${method} ${finalUrl}`);
+      log(`[safeHttp:curl] ${method} ${finalUrl}`);
     }
     const res = await utils2.exec("/usr/bin/curl", args);
     if (res.status !== 0 && !res.stdout) {
       const errMsg = `curl ${method} failed with exit code ${res.status}: ${res.stderr || "unknown error"}`;
-      if (log) log.error(`[safeHttp] ${errMsg}`);
+      if (log) log.error(`[safeHttp:curl] ${errMsg}`);
       throw new Error(errMsg);
     }
     const stdout = res.stdout || "";
@@ -2802,8 +2826,21 @@ function createSafeHttp(utils2, log) {
   }
   async function download(url, destPath, timeoutSeconds = 30) {
     const resolved = typeof utils2.resolvePath === "function" ? utils2.resolvePath(destPath) : destPath;
+    if (iinaHttp && typeof iinaHttp.download === "function") {
+      if (log) {
+        log(`[safeHttp:native] Download ${url} -> ${resolved}`);
+      }
+      try {
+        await iinaHttp.download(url, resolved);
+        return;
+      } catch (err) {
+        const errMsg = err instanceof Error ? err.message : String(err);
+        if (log) log.error(`[safeHttp:native] Download failed: ${errMsg}`);
+        throw err;
+      }
+    }
     if (log) {
-      log(`[safeHttp] Download ${url} -> ${resolved}`);
+      log(`[safeHttp:curl] Download ${url} -> ${resolved}`);
     }
     if (resolved && resolved.includes("/")) {
       const dir = resolved.substring(0, resolved.lastIndexOf("/"));
@@ -2812,21 +2849,11 @@ function createSafeHttp(utils2, log) {
       } catch {
       }
     }
-    const args = [
-      "-s",
-      "-S",
-      "-f",
-      "-L",
-      "--max-time",
-      String(timeoutSeconds),
-      "-o",
-      resolved,
-      url
-    ];
+    const args = ["-s", "-S", "-f", "-L", "--max-time", String(timeoutSeconds), "-o", resolved, url];
     const res = await utils2.exec("/usr/bin/curl", args);
     if (res.status !== 0) {
       const errMsg = `curl download failed with exit code ${res.status}: ${res.stderr || "unknown error"}`;
-      if (log) log.error(`[safeHttp] ${errMsg}`);
+      if (log) log.error(`[safeHttp:curl] ${errMsg}`);
       throw new Error(errMsg);
     }
   }
@@ -3548,7 +3575,7 @@ function getSavedTrackSelection(preferences2, itemId, seriesId) {
 // plugin/src/index.ts
 var { core, console: iinaConsole, menu, event, http, utils, preferences, mpv, global: iinaGlobal, file } = iina;
 var debugLog = createDebugLogger(preferences, iinaConsole, file);
-var safeHttp = createSafeHttp(utils, debugLog);
+var safeHttp = createSafeHttp(utils, debugLog, http);
 var { buildEmbyHeaders: buildEmbyHeaders2, parseEmbyUrl, isEmbyUrl, fetchPlaybackInfo, fetchItemMetadata, secondsToTicks: secondsToTicks2, ticksToSeconds: ticksToSeconds2 } = createEmbyApi({
   http: safeHttp,
   preferences,
@@ -3600,6 +3627,7 @@ var {
 } = createMediaActionsManager({
   core,
   http: safeHttp,
+  file,
   utils,
   preferences,
   mpv,
@@ -3877,7 +3905,7 @@ async function applySelectedAudioTrack(serverBase, itemId, apiKey, userId) {
       return;
     }
     let targetAudio = getPendingAudioIndex(itemId);
-    let targetAudioTrackNum = getPendingAudioTrackNumber(itemId);
+    const targetAudioTrackNum = getPendingAudioTrackNumber(itemId);
     let targetAudioLang = getPendingAudioLanguage(itemId);
     let targetAudioChannels;
     let targetChannelLayout;
@@ -3970,12 +3998,12 @@ async function applySelectedAudioTrack(serverBase, itemId, apiKey, userId) {
 var isDownloadingExternalSubtitle = false;
 async function applySelectedSubtitleTrack(serverBase, itemId, apiKey, userId) {
   let pendingSubtitle = getPendingSubtitleIndex(itemId);
-  let pendingSubTrackNum = getPendingSubtitleTrackNumber(itemId);
+  const pendingSubTrackNum = getPendingSubtitleTrackNumber(itemId);
   let pendingSubLang = getPendingSubtitleLanguage(itemId);
   let isExternal = getPendingIsExternalSubtitle(itemId);
   let subCodec = getPendingSubtitleCodec(itemId);
   let subPath = getPendingSubtitlePath(itemId);
-  let mediaSourceId = getPendingMediaSourceId(itemId);
+  const mediaSourceId = getPendingMediaSourceId(itemId);
   let deliveryUrl = getPendingSubtitleDeliveryUrl(itemId);
   let subtitleTitle = getPendingSubtitleTitle(itemId);
   if (typeof pendingSubtitle !== "number" && typeof pendingSubTrackNum !== "number" && !pendingSubLang) {
@@ -4286,7 +4314,7 @@ function onFileLoaded(fileUrl) {
           mpv.set("title", knownTitle);
         } catch {
         }
-      } else {
+      } else if (!currentItemMetadata) {
         try {
           mpv.set("force-media-title", "");
         } catch {
@@ -4312,8 +4340,9 @@ function onFileLoaded(fileUrl) {
         debugLog("Error pre-fetching PlaybackInfo streams:", e);
       }
       try {
-        if (!currentActiveSeriesId) {
+        if (!currentItemMetadata) {
           const meta = await fetchItemMetadata(reportServerBase, embyInfo.itemId, reportApiKey, reportUserId);
+          currentItemMetadata = meta;
           if (meta?.SeriesId) {
             currentActiveSeriesId = meta.SeriesId;
           }
@@ -4376,12 +4405,16 @@ function handlePlaybackTermination(reason) {
 }
 menu.addItem(menu.item("Download Emby Subtitles", manualDownloadSubtitles));
 menu.addItem(menu.item("Set Emby Title", manualSetTitle));
-menu.addItem(menu.item("Skip Intro", () => {
-  introManager.manualSkipIntro();
-}));
-menu.addItem(menu.item("Skip Outro", () => {
-  outroManager.manualSkipOutro();
-}));
+menu.addItem(
+  menu.item("Skip Intro", () => {
+    introManager.manualSkipIntro();
+  })
+);
+menu.addItem(
+  menu.item("Skip Outro", () => {
+    outroManager.manualSkipOutro();
+  })
+);
 event.on("iina.file-loaded", onFileLoaded);
 event.on("iina.file-started", () => {
   isWindowClosing = false;

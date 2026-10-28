@@ -19,8 +19,8 @@ const { core, console: iinaConsole, menu, event, http, utils, preferences, mpv, 
 
 const debugLog = createDebugLogger(preferences, iinaConsole, file);
 
-// Use safe HTTP wrapper (curl via utils.exec) to avoid IINA 1.5.0 crash on NSURLSession callbacks
-const safeHttp = createSafeHttp(utils, debugLog);
+// Use safe HTTP wrapper (prefers native iina.http, fallback to curl)
+const safeHttp = createSafeHttp(utils, debugLog, http);
 
 const { buildEmbyHeaders, parseEmbyUrl, isEmbyUrl, fetchPlaybackInfo, fetchItemMetadata, secondsToTicks, ticksToSeconds } = createEmbyApi({
   http: safeHttp,
@@ -81,6 +81,7 @@ const {
 } = createMediaActionsManager({
   core,
   http: safeHttp,
+  file,
   utils,
   preferences,
   mpv,
@@ -430,7 +431,7 @@ async function applySelectedAudioTrack(serverBase: string, itemId: string, apiKe
     }
 
     let targetAudio = getPendingAudioIndex(itemId);
-    let targetAudioTrackNum = getPendingAudioTrackNumber(itemId);
+    const targetAudioTrackNum = getPendingAudioTrackNumber(itemId);
     let targetAudioLang = getPendingAudioLanguage(itemId);
     let targetAudioChannels: number | null | undefined;
     let targetChannelLayout: string | null | undefined;
@@ -538,12 +539,12 @@ let isDownloadingExternalSubtitle = false;
 
 async function applySelectedSubtitleTrack(serverBase: string, itemId: string, apiKey: string, userId?: string): Promise<void> {
   let pendingSubtitle = getPendingSubtitleIndex(itemId);
-  let pendingSubTrackNum = getPendingSubtitleTrackNumber(itemId);
+  const pendingSubTrackNum = getPendingSubtitleTrackNumber(itemId);
   let pendingSubLang = getPendingSubtitleLanguage(itemId);
   let isExternal = getPendingIsExternalSubtitle(itemId);
   let subCodec = getPendingSubtitleCodec(itemId);
   let subPath = getPendingSubtitlePath(itemId);
-  let mediaSourceId = getPendingMediaSourceId(itemId);
+  const mediaSourceId = getPendingMediaSourceId(itemId);
   let deliveryUrl = getPendingSubtitleDeliveryUrl(itemId);
   let subtitleTitle = getPendingSubtitleTitle(itemId);
 
@@ -927,7 +928,7 @@ function onFileLoaded(fileUrl?: string): void {
         } catch {
           // Ignore
         }
-      } else {
+      } else if (!currentItemMetadata) {
         try {
           mpv.set("force-media-title", "");
         } catch {
@@ -959,8 +960,9 @@ function onFileLoaded(fileUrl?: string): void {
       }
 
       try {
-        if (!currentActiveSeriesId) {
+        if (!currentItemMetadata) {
           const meta = await fetchItemMetadata(reportServerBase, embyInfo.itemId, reportApiKey, reportUserId);
+          currentItemMetadata = meta;
           if (meta?.SeriesId) {
             currentActiveSeriesId = meta.SeriesId;
           }
@@ -1036,12 +1038,16 @@ function handlePlaybackTermination(reason: "end-file" | "window-close"): void {
 // Menu items (Show Emby Browser is registered in globalEntry so it is always available without duplicates)
 menu.addItem(menu.item("Download Emby Subtitles", manualDownloadSubtitles));
 menu.addItem(menu.item("Set Emby Title", manualSetTitle));
-menu.addItem(menu.item("Skip Intro", () => {
-  introManager.manualSkipIntro();
-}));
-menu.addItem(menu.item("Skip Outro", () => {
-  outroManager.manualSkipOutro();
-}));
+menu.addItem(
+  menu.item("Skip Intro", () => {
+    introManager.manualSkipIntro();
+  }),
+);
+menu.addItem(
+  menu.item("Skip Outro", () => {
+    outroManager.manualSkipOutro();
+  }),
+);
 
 // Event handlers
 event.on("iina.file-loaded", onFileLoaded);

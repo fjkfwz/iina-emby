@@ -3,7 +3,7 @@
 // shared/constants.ts
 var CLIENT_NAME = "IINA Emby Plugin";
 var DEVICE_NAME = "IINA";
-var CLIENT_VERSION = true ? "0.8.2" : "0.1.0";
+var CLIENT_VERSION = true ? "0.8.3" : "0.1.0";
 var WINDOW_DIMENSIONS = {
   DEFAULT_WIDTH: 960,
   DEFAULT_HEIGHT: 680,
@@ -645,9 +645,8 @@ function createEmbyApi({ http: http2, preferences: preferences2, log }) {
 }
 
 // plugin/src/lib/safe-http.ts
-function createSafeHttp(utils2, log) {
+function createSafeHttp(utils2, log, iinaHttp) {
   async function request(method, url, options) {
-    const timeout = options?.timeoutSeconds ?? 15;
     let finalUrl = url;
     if (options?.params) {
       const q = Object.entries(options.params).map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`).join("&");
@@ -655,15 +654,47 @@ function createSafeHttp(utils2, log) {
         finalUrl += (finalUrl.includes("?") ? "&" : "?") + q;
       }
     }
-    const args = [
-      "-s",
-      "-S",
-      "-L",
-      "--max-time",
-      String(timeout),
-      "-X",
-      method
-    ];
+    const methodLower = method.toLowerCase();
+    if (iinaHttp && typeof iinaHttp[methodLower] === "function") {
+      if (log) {
+        log(`[safeHttp:native] ${method} ${finalUrl}`);
+      }
+      try {
+        const reqOpts = {};
+        if (options?.headers) {
+          reqOpts.headers = options.headers;
+        }
+        if (options?.params) {
+          reqOpts.params = options.params;
+        }
+        if (options?.data !== void 0 && options?.data !== null) {
+          reqOpts.data = options.data;
+        }
+        const fn = iinaHttp[methodLower].bind(iinaHttp);
+        const res2 = await fn(finalUrl, reqOpts);
+        let data2 = res2?.data;
+        if (typeof data2 === "string") {
+          try {
+            data2 = JSON.parse(data2);
+          } catch {
+          }
+        }
+        const status = typeof res2?.status === "number" ? res2.status : 200;
+        const text = typeof res2?.data === "string" ? res2.data : typeof res2?.text === "string" ? res2.text : JSON.stringify(res2?.data ?? "");
+        return {
+          status,
+          statusCode: status,
+          data: data2,
+          text
+        };
+      } catch (err) {
+        const errMsg = err instanceof Error ? err.message : String(err);
+        if (log) log.error(`[safeHttp:native] ${method} failed: ${errMsg}`);
+        throw err;
+      }
+    }
+    const timeout = options?.timeoutSeconds ?? 15;
+    const args = ["-s", "-S", "-L", "--max-time", String(timeout), "-X", method];
     if (options?.headers) {
       for (const [k, v] of Object.entries(options.headers)) {
         args.push("-H", `${k}: ${v}`);
@@ -676,12 +707,12 @@ function createSafeHttp(utils2, log) {
     args.push("-w", "\n%{http_code}");
     args.push(finalUrl);
     if (log) {
-      log(`[safeHttp] ${method} ${finalUrl}`);
+      log(`[safeHttp:curl] ${method} ${finalUrl}`);
     }
     const res = await utils2.exec("/usr/bin/curl", args);
     if (res.status !== 0 && !res.stdout) {
       const errMsg = `curl ${method} failed with exit code ${res.status}: ${res.stderr || "unknown error"}`;
-      if (log) log.error(`[safeHttp] ${errMsg}`);
+      if (log) log.error(`[safeHttp:curl] ${errMsg}`);
       throw new Error(errMsg);
     }
     const stdout = res.stdout || "";
@@ -712,8 +743,21 @@ function createSafeHttp(utils2, log) {
   }
   async function download(url, destPath, timeoutSeconds = 30) {
     const resolved = typeof utils2.resolvePath === "function" ? utils2.resolvePath(destPath) : destPath;
+    if (iinaHttp && typeof iinaHttp.download === "function") {
+      if (log) {
+        log(`[safeHttp:native] Download ${url} -> ${resolved}`);
+      }
+      try {
+        await iinaHttp.download(url, resolved);
+        return;
+      } catch (err) {
+        const errMsg = err instanceof Error ? err.message : String(err);
+        if (log) log.error(`[safeHttp:native] Download failed: ${errMsg}`);
+        throw err;
+      }
+    }
     if (log) {
-      log(`[safeHttp] Download ${url} -> ${resolved}`);
+      log(`[safeHttp:curl] Download ${url} -> ${resolved}`);
     }
     if (resolved && resolved.includes("/")) {
       const dir = resolved.substring(0, resolved.lastIndexOf("/"));
@@ -722,21 +766,11 @@ function createSafeHttp(utils2, log) {
       } catch {
       }
     }
-    const args = [
-      "-s",
-      "-S",
-      "-f",
-      "-L",
-      "--max-time",
-      String(timeoutSeconds),
-      "-o",
-      resolved,
-      url
-    ];
+    const args = ["-s", "-S", "-f", "-L", "--max-time", String(timeoutSeconds), "-o", resolved, url];
     const res = await utils2.exec("/usr/bin/curl", args);
     if (res.status !== 0) {
       const errMsg = `curl download failed with exit code ${res.status}: ${res.stderr || "unknown error"}`;
-      if (log) log.error(`[safeHttp] ${errMsg}`);
+      if (log) log.error(`[safeHttp:curl] ${errMsg}`);
       throw new Error(errMsg);
     }
   }
@@ -962,7 +996,7 @@ var { global, console, preferences, standaloneWindow, utils, http, menu, file } 
 var debugLog = createDebugLogger(preferences, console, file);
 debugLog("Emby Plugin Global Entry loaded");
 console.log("[iina-emby] Global Entry initialized");
-var safeHttp = createSafeHttp(utils, debugLog);
+var safeHttp = createSafeHttp(utils, debugLog, http);
 var { getClientIdentity } = createEmbyApi({
   http: safeHttp,
   preferences,

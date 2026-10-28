@@ -393,16 +393,21 @@ export function createPlaybackCoordinator({
       }
     }
 
-    if (typeof startPositionSeconds === "number" && startPositionSeconds > 0) {
-      log(`Setting initial start position to ${startPositionSeconds}s`);
-      try {
-        mpv.set("start", `${startPositionSeconds}`);
-      } catch (err: unknown) {
-        log(`Could not set mpv start position: ${String(err)}`);
-      }
+    // Clear sticky mpv 'start' property so it doesn't linger and stall playback on streaming URLs
+    try {
+      mpv.set("start", "none");
+    } catch {
+      // Ignore
     }
 
     core.open(streamUrl);
+
+    // Ensure playback resumes immediately (unpause)
+    try {
+      mpv.set("pause", false);
+    } catch {
+      // Ignore
+    }
   }
 
   // Items waiting to join the playlist behind the one currently being opened.
@@ -532,9 +537,7 @@ export function createPlaybackCoordinator({
 
       // The rest can only be appended once the first item has loaded.
       const firstItemId =
-        (firstItem as any)?.itemId ||
-        (String(firstItem.streamUrl).match(/\/(?:Items|Videos|Audio)\/([^/?]+)/) || [])[1] ||
-        null;
+        (firstItem as any)?.itemId || (String(firstItem.streamUrl).match(/\/(?:Items|Videos|Audio)\/([^/?]+)/) || [])[1] || null;
       pendingPlaylistQueue = queuedItems.length > 0 ? { items: queuedItems, at: Date.now(), itemId: firstItemId } : null;
       lastQueuedPlaylistItemId = firstItemId;
 

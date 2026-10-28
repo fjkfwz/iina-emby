@@ -16,6 +16,7 @@ import type { StoredSessionData } from "./server-session-store";
 export interface MediaActionsDeps {
   core: typeof iina.core;
   http: SafeHttp;
+  file?: typeof iina.file;
   utils: typeof iina.utils;
   preferences: typeof iina.preferences;
   mpv: typeof iina.mpv;
@@ -37,15 +38,12 @@ export function subtitleExtensionForCodec(codec?: string): string {
   return "srt";
 }
 
-export {
-  formatExternalSubtitleFileName,
-  formatSubtitleTrackInfo,
-  isGenericOrEmptySubtitleTitle,
-};
+export { formatExternalSubtitleFileName, formatSubtitleTrackInfo, isGenericOrEmptySubtitleTitle };
 
 export function createMediaActionsManager({
   core,
   http,
+  file,
   utils,
   preferences,
   mpv,
@@ -181,11 +179,7 @@ export function createMediaActionsManager({
         subtitleUrl = `${cleanBase}/Videos/${encodeURIComponent(itemId)}/${encodeURIComponent(effectiveMediaSourceId || itemId)}/Subtitles/${streamIndex}/Stream.${extension}?api_key=${encodeURIComponent(apiKey)}`;
       }
 
-      const { title: trackTitle, lang: trackLang, fileName } = formatSubtitleTrackInfo(
-        subtitleTitle,
-        language,
-        extension,
-      );
+      const { title: trackTitle, lang: trackLang, fileName } = formatSubtitleTrackInfo(subtitleTitle, language, extension);
       const sanitizedItemId = String(itemId).replace(/[^a-zA-Z0-9_-]/g, "_");
       const safeStreamIndex = typeof streamIndex === "number" ? streamIndex : 0;
       const localPath = `@tmp/emby_${sanitizedItemId}_${safeStreamIndex}/${fileName}`;
@@ -203,15 +197,12 @@ export function createMediaActionsManager({
       const resolvedPath = typeof utils.resolvePath === "function" ? utils.resolvePath(localPath) : localPath;
       log(`External subtitle downloaded to: ${resolvedPath}`);
 
-      // Check if file was downloaded and is non-empty
-      try {
-        const statRes = await utils.exec("/usr/bin/test", ["-s", resolvedPath]);
-        if (statRes.status !== 0) {
-          log.error(`Downloaded subtitle file is empty or does not exist: ${resolvedPath}`);
+      // Check if file was downloaded
+      if (file && typeof file.exists === "function") {
+        if (!file.exists(resolvedPath)) {
+          log.error(`Downloaded subtitle file does not exist: ${resolvedPath}`);
           return false;
         }
-      } catch {
-        // Ignore test error
       }
 
       // Check if this subtitle is already present in mpv track-list
@@ -271,9 +262,9 @@ export function createMediaActionsManager({
           const trackList = mpv.getNative<Array<{ id: number; type: string; "external-filename"?: string; title?: string }>>("track-list");
           if (Array.isArray(trackList)) {
             const subTracks = trackList.filter((t) => t.type === "sub");
-            const matched = subTracks.find(
-              (t) => t["external-filename"] === resolvedPath || (t.title && t.title === trackTitle),
-            ) || subTracks[subTracks.length - 1];
+            const matched =
+              subTracks.find((t) => t["external-filename"] === resolvedPath || (t.title && t.title === trackTitle)) ||
+              subTracks[subTracks.length - 1];
             if (matched && typeof matched.id === "number") {
               log(`Activating subtitle track: id=${matched.id}, title="${matched.title || trackTitle}"`);
               mpv.set("sid", matched.id);
@@ -301,12 +292,7 @@ export function createMediaActionsManager({
     }
   }
 
-  async function downloadAllSubtitles(
-    serverBase: string,
-    itemId: string,
-    apiKey: string,
-    targetSubtitleIndex?: number | null,
-  ) {
+  async function downloadAllSubtitles(serverBase: string, itemId: string, apiKey: string, targetSubtitleIndex?: number | null) {
     try {
       const playbackInfo = await fetchPlaybackInfo(serverBase, itemId, apiKey);
 

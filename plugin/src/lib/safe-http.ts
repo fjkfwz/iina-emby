@@ -1,6 +1,7 @@
 /**
- * Safe HTTP client using iina.utils.exec with system curl.
- * Bypasses iina.http which crashes IINA 1.5.0 on background NSURLSession callbacks.
+ * Safe HTTP client using iina.http when available, with fallback to system curl via utils.exec.
+ * Using native iina.http prevents the macOS Catalina Foundation bug where utils.exec spawns
+ * persistent NSFileHandle.readabilityHandler dispatch sources that spin at 100% CPU.
  */
 
 import type { DebugLogger } from "./debug-log";
@@ -27,16 +28,12 @@ export interface SafeHttp {
   download(url: string, destPath: string, timeoutSeconds?: number): Promise<void>;
 }
 
-export function createSafeHttp(
-  utils: typeof iina.utils,
-  log?: DebugLogger,
-): SafeHttp {
+export function createSafeHttp(utils: typeof iina.utils, log?: DebugLogger, iinaHttp?: typeof iina.http): SafeHttp {
   async function request<T = unknown>(
     method: "GET" | "POST" | "PUT" | "DELETE",
     url: string,
     options?: SafeHttpRequestOptions,
   ): Promise<SafeHttpResponse<T>> {
-    const timeout = options?.timeoutSeconds ?? 15;
     let finalUrl = url;
 
     if (options?.params) {
@@ -48,15 +45,54 @@ export function createSafeHttp(
       }
     }
 
-    const args: string[] = [
-      "-s",
-      "-S",
-      "-L",
-      "--max-time",
-      String(timeout),
-      "-X",
-      method,
-    ];
+    // 1. Prefer native iina.http (uses URLSession, doesn't leak file descriptors or spin CPU on Catalina)
+    const methodLower = method.toLowerCase() as "get" | "post" | "put" | "delete";
+    if (iinaHttp && typeof (iinaHttp as any)[methodLower] === "function") {
+      if (log) {
+        log(`[safeHttp:native] ${method} ${finalUrl}`);
+      }
+      try {
+        const reqOpts: Record<string, unknown> = {};
+        if (options?.headers) {
+          reqOpts.headers = options.headers;
+        }
+        if (options?.params) {
+          reqOpts.params = options.params;
+        }
+        if (options?.data !== undefined && options?.data !== null) {
+          reqOpts.data = options.data;
+        }
+
+        const fn = (iinaHttp as any)[methodLower].bind(iinaHttp);
+        const res = await fn(finalUrl, reqOpts);
+
+        let data = res?.data;
+        if (typeof data === "string") {
+          try {
+            data = JSON.parse(data);
+          } catch {
+            // keep as string
+          }
+        }
+        const status = typeof res?.status === "number" ? res.status : 200;
+        const text = typeof res?.data === "string" ? res.data : typeof res?.text === "string" ? res.text : JSON.stringify(res?.data ?? "");
+
+        return {
+          status,
+          statusCode: status,
+          data: data as T,
+          text,
+        };
+      } catch (err: unknown) {
+        const errMsg = err instanceof Error ? err.message : String(err);
+        if (log) log.error(`[safeHttp:native] ${method} failed: ${errMsg}`);
+        throw err;
+      }
+    }
+
+    // 2. Fallback: system curl via utils.exec (e.g. in test runner or headless environments)
+    const timeout = options?.timeoutSeconds ?? 15;
+    const args: string[] = ["-s", "-S", "-L", "--max-time", String(timeout), "-X", method];
 
     if (options?.headers) {
       for (const [k, v] of Object.entries(options.headers)) {
@@ -74,14 +110,14 @@ export function createSafeHttp(
     args.push(finalUrl);
 
     if (log) {
-      log(`[safeHttp] ${method} ${finalUrl}`);
+      log(`[safeHttp:curl] ${method} ${finalUrl}`);
     }
 
     const res = await utils.exec("/usr/bin/curl", args);
 
     if (res.status !== 0 && !res.stdout) {
       const errMsg = `curl ${method} failed with exit code ${res.status}: ${res.stderr || "unknown error"}`;
-      if (log) log.error(`[safeHttp] ${errMsg}`);
+      if (log) log.error(`[safeHttp:curl] ${errMsg}`);
       throw new Error(errMsg);
     }
 
@@ -118,8 +154,25 @@ export function createSafeHttp(
 
   async function download(url: string, destPath: string, timeoutSeconds = 30): Promise<void> {
     const resolved = typeof utils.resolvePath === "function" ? utils.resolvePath(destPath) : destPath;
+
+    // 1. Prefer native iina.http.download if available
+    if (iinaHttp && typeof iinaHttp.download === "function") {
+      if (log) {
+        log(`[safeHttp:native] Download ${url} -> ${resolved}`);
+      }
+      try {
+        await iinaHttp.download(url, resolved);
+        return;
+      } catch (err: unknown) {
+        const errMsg = err instanceof Error ? err.message : String(err);
+        if (log) log.error(`[safeHttp:native] Download failed: ${errMsg}`);
+        throw err;
+      }
+    }
+
+    // 2. Fallback: curl via utils.exec
     if (log) {
-      log(`[safeHttp] Download ${url} -> ${resolved}`);
+      log(`[safeHttp:curl] Download ${url} -> ${resolved}`);
     }
 
     if (resolved && resolved.includes("/")) {
@@ -131,22 +184,12 @@ export function createSafeHttp(
       }
     }
 
-    const args = [
-      "-s",
-      "-S",
-      "-f",
-      "-L",
-      "--max-time",
-      String(timeoutSeconds),
-      "-o",
-      resolved,
-      url,
-    ];
+    const args = ["-s", "-S", "-f", "-L", "--max-time", String(timeoutSeconds), "-o", resolved, url];
 
     const res = await utils.exec("/usr/bin/curl", args);
     if (res.status !== 0) {
       const errMsg = `curl download failed with exit code ${res.status}: ${res.stderr || "unknown error"}`;
-      if (log) log.error(`[safeHttp] ${errMsg}`);
+      if (log) log.error(`[safeHttp:curl] ${errMsg}`);
       throw new Error(errMsg);
     }
   }
