@@ -165,6 +165,8 @@ describe("playback-coordinator", () => {
     expect(coordinator.getPendingAudioIndex("ep-1")).toBe(1);
     expect(coordinator.getPendingSubtitleIndex("ep-1")).toBe(2);
     expect(coordinator.getPendingStartPosition("ep-1")).toBe(20);
+    expect(coordinator.getPendingMediaTitle("ep-1")).toBe("Series - S01E01 - Pilot");
+    expect(coordinator.getPendingMediaTitle("ep-2")).toBe("Series - S01E02 - Second Episode");
     expect(coordinator.isLaunchedFromBrowser()).toBe(true);
   });
 });

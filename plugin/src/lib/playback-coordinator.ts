@@ -60,6 +60,26 @@ export function createPlaybackCoordinator({
   // Track the most recent title and start position requested from the UI
   let currentPlaybackTitle: string | null = null;
   let currentPlaybackItemId: string | null = null;
+  const knownItemTitles = new Map<string, string>();
+
+  function registerKnownItemTitle(itemId: string | null | undefined, title: string | null | undefined): void {
+    if (!itemId || !title) return;
+    const cleanId = String(itemId).trim().toLowerCase();
+    knownItemTitles.set(cleanId, title);
+    try {
+      const decoded = decodeURIComponent(cleanId);
+      if (decoded !== cleanId) {
+        knownItemTitles.set(decoded, title);
+      }
+    } catch {
+      // Ignore
+    }
+  }
+
+  function extractItemId(streamUrl?: string | null): string | null {
+    if (!streamUrl) return null;
+    return (String(streamUrl).match(/\/(?:Items|Videos|Audio)\/([^/?]+)/i) || [])[1] || null;
+  }
   let currentPlaybackStartPositionSeconds: number | null = null;
   let currentPlaybackAudioIndex: number | null = null;
   let currentPlaybackSubtitleIndex: number | null = null;
@@ -80,6 +100,10 @@ export function createPlaybackCoordinator({
       currentPlaybackTitle = message.title;
     }
     const streamUrl = message.streamUrl;
+    const itemIdFromMsg = (message as any)?.itemId || extractItemId(streamUrl);
+    if (itemIdFromMsg && message.title) {
+      registerKnownItemTitle(itemIdFromMsg, message.title);
+    }
     if (streamUrl) {
       const match = (String(streamUrl).match(/\/(?:Items|Videos|Audio)\/([^/?]+)/) || [])[1];
       if (match && currentPlaybackItemId && match !== currentPlaybackItemId) {
@@ -144,6 +168,18 @@ export function createPlaybackCoordinator({
   }
 
   function getPendingMediaTitle(itemId?: string): string | null {
+    if (itemId) {
+      const cleanId = String(itemId).trim().toLowerCase();
+      const mapped = knownItemTitles.get(cleanId);
+      if (mapped) return mapped;
+      try {
+        const decoded = decodeURIComponent(cleanId);
+        const mappedDecoded = knownItemTitles.get(decoded);
+        if (mappedDecoded) return mappedDecoded;
+      } catch {
+        // Ignore
+      }
+    }
     if (!currentPlaybackTitle) return null;
     if (!isItemMatching(itemId)) return null;
     return currentPlaybackTitle;
@@ -317,6 +353,9 @@ export function createPlaybackCoordinator({
     currentPlaybackTitle = title || null;
     currentPlaybackItemId = (String(streamUrl).match(/\/(?:Items|Videos|Audio)\/([^/?]+)/) || [])[1] || null;
     currentPlaybackStartPositionSeconds = typeof startPositionSeconds === "number" ? startPositionSeconds : null;
+    if (currentPlaybackItemId && title) {
+      registerKnownItemTitle(currentPlaybackItemId, title);
+    }
 
     // Set replacement guard so end-file handler doesn't send spurious stop
     if (getCurrentPlaybackSession()) {
@@ -372,6 +411,12 @@ export function createPlaybackCoordinator({
 
   function queueRemainingPlaylistItems(queuedItems: PlaylistItem[], firstItemId: string | null): void {
     if (!queuedItems || queuedItems.length === 0) return;
+    for (const item of queuedItems) {
+      const id = (item as any)?.itemId || extractItemId(item.streamUrl);
+      if (id && item.title) {
+        registerKnownItemTitle(id, item.title);
+      }
+    }
     if (lastQueuedPlaylistItemId && lastQueuedPlaylistItemId === firstItemId) {
       log("Playlist items already processed for this item, skipping duplicate queue");
       return;
@@ -470,6 +515,13 @@ export function createPlaybackCoordinator({
     }
 
     const [firstItem, ...queuedItems] = items;
+
+    for (const item of items) {
+      const id = (item as any)?.itemId || extractItemId(item.streamUrl);
+      if (id && item.title) {
+        registerKnownItemTitle(id, item.title);
+      }
+    }
 
     try {
       if (queuedItems.length > 0) {

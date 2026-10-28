@@ -2,7 +2,7 @@
  * IINA Emby Plugin
  */
 
-import { isGenericOrEmptySubtitleTitle, isSameEmbyHost } from "@shared";
+import { formatFullEpisodeTitle, isGenericOrEmptySubtitleTitle, isSameEmbyHost } from "@shared";
 import { createAutoplayManager } from "./lib/autoplay-manager";
 import { createDebugLogger } from "./lib/debug-log";
 import { createEmbyApi } from "./lib/emby-api";
@@ -843,6 +843,30 @@ function onFileLoaded(fileUrl?: string): void {
           currentActiveSeriesId = meta.SeriesId;
         }
         outroManager.updateMetadataChapters(meta?.Chapters);
+        if (preferences.get("set_video_title") && meta) {
+          const known = getPendingMediaTitle(embyInfo.itemId);
+          if (!known) {
+            let episodeTitle = meta.Name;
+            if (meta.Type === "Episode") {
+              episodeTitle = formatFullEpisodeTitle(meta.SeriesName, meta.ParentIndexNumber, meta.IndexNumber, meta.Name);
+            } else if (meta.Type === "Movie" && meta.ProductionYear) {
+              episodeTitle = `${meta.Name} (${meta.ProductionYear})`;
+            }
+            if (episodeTitle) {
+              try {
+                mpv.set("force-media-title", episodeTitle);
+                debugLog(`Updated video title from fetched metadata: ${episodeTitle}`);
+              } catch {
+                // Ignore
+              }
+              try {
+                mpv.set("title", episodeTitle);
+              } catch {
+                // Ignore
+              }
+            }
+          }
+        }
       })
       .catch((e) => {
         debugLog("Error pre-fetching item metadata:", e);
@@ -885,7 +909,17 @@ function onFileLoaded(fileUrl?: string): void {
         } catch {
           // Ignore
         }
-      } else if (!isBrowser) {
+        try {
+          mpv.set("title", knownTitle);
+        } catch {
+          // Ignore
+        }
+      } else {
+        try {
+          mpv.set("force-media-title", "");
+        } catch {
+          // Ignore
+        }
         debugLog(`Setting video title from metadata for: ${embyInfo.itemId}, userId: ${reportUserId || "none"}`);
         setVideoTitleFromMetadata(reportServerBase, embyInfo.itemId, reportApiKey, reportUserId);
       }

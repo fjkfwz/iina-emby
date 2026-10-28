@@ -1489,6 +1489,23 @@ function createPlaybackCoordinator({
   let replacingPlaybackAt = 0;
   let currentPlaybackTitle = null;
   let currentPlaybackItemId = null;
+  const knownItemTitles = /* @__PURE__ */ new Map();
+  function registerKnownItemTitle(itemId, title) {
+    if (!itemId || !title) return;
+    const cleanId = String(itemId).trim().toLowerCase();
+    knownItemTitles.set(cleanId, title);
+    try {
+      const decoded = decodeURIComponent(cleanId);
+      if (decoded !== cleanId) {
+        knownItemTitles.set(decoded, title);
+      }
+    } catch {
+    }
+  }
+  function extractItemId(streamUrl) {
+    if (!streamUrl) return null;
+    return (String(streamUrl).match(/\/(?:Items|Videos|Audio)\/([^/?]+)/i) || [])[1] || null;
+  }
   let currentPlaybackStartPositionSeconds = null;
   let currentPlaybackAudioIndex = null;
   let currentPlaybackSubtitleIndex = null;
@@ -1508,6 +1525,10 @@ function createPlaybackCoordinator({
       currentPlaybackTitle = message.title;
     }
     const streamUrl = message.streamUrl;
+    const itemIdFromMsg = message?.itemId || extractItemId(streamUrl);
+    if (itemIdFromMsg && message.title) {
+      registerKnownItemTitle(itemIdFromMsg, message.title);
+    }
     if (streamUrl) {
       const match = (String(streamUrl).match(/\/(?:Items|Videos|Audio)\/([^/?]+)/) || [])[1];
       if (match && currentPlaybackItemId && match !== currentPlaybackItemId) {
@@ -1567,6 +1588,17 @@ function createPlaybackCoordinator({
     return a === b || a.includes(b) || b.includes(a);
   }
   function getPendingMediaTitle2(itemId) {
+    if (itemId) {
+      const cleanId = String(itemId).trim().toLowerCase();
+      const mapped = knownItemTitles.get(cleanId);
+      if (mapped) return mapped;
+      try {
+        const decoded = decodeURIComponent(cleanId);
+        const mappedDecoded = knownItemTitles.get(decoded);
+        if (mappedDecoded) return mappedDecoded;
+      } catch {
+      }
+    }
     if (!currentPlaybackTitle) return null;
     if (!isItemMatching(itemId)) return null;
     return currentPlaybackTitle;
@@ -1703,6 +1735,9 @@ function createPlaybackCoordinator({
     currentPlaybackTitle = title || null;
     currentPlaybackItemId = (String(streamUrl).match(/\/(?:Items|Videos|Audio)\/([^/?]+)/) || [])[1] || null;
     currentPlaybackStartPositionSeconds = typeof startPositionSeconds === "number" ? startPositionSeconds : null;
+    if (currentPlaybackItemId && title) {
+      registerKnownItemTitle(currentPlaybackItemId, title);
+    }
     if (getCurrentPlaybackSession2()) {
       markReplacingPlayback2();
     }
@@ -1740,6 +1775,12 @@ function createPlaybackCoordinator({
   let lastQueuedPlaylistItemId = null;
   function queueRemainingPlaylistItems2(queuedItems, firstItemId) {
     if (!queuedItems || queuedItems.length === 0) return;
+    for (const item of queuedItems) {
+      const id = item?.itemId || extractItemId(item.streamUrl);
+      if (id && item.title) {
+        registerKnownItemTitle(id, item.title);
+      }
+    }
     if (lastQueuedPlaylistItemId && lastQueuedPlaylistItemId === firstItemId) {
       log("Playlist items already processed for this item, skipping duplicate queue");
       return;
@@ -1818,6 +1859,12 @@ ${item.streamUrl}
       return;
     }
     const [firstItem, ...queuedItems] = items;
+    for (const item of items) {
+      const id = item?.itemId || extractItemId(item.streamUrl);
+      if (id && item.title) {
+        registerKnownItemTitle(id, item.title);
+      }
+    }
     try {
       if (queuedItems.length > 0) {
         core2.osd(`Playing ${items.length} tracks, starting with: ${firstItem.title || ""}`);
@@ -3956,6 +4003,28 @@ function onFileLoaded(fileUrl) {
         currentActiveSeriesId = meta.SeriesId;
       }
       outroManager.updateMetadataChapters(meta?.Chapters);
+      if (preferences.get("set_video_title") && meta) {
+        const known = getPendingMediaTitle(embyInfo.itemId);
+        if (!known) {
+          let episodeTitle = meta.Name;
+          if (meta.Type === "Episode") {
+            episodeTitle = formatFullEpisodeTitle(meta.SeriesName, meta.ParentIndexNumber, meta.IndexNumber, meta.Name);
+          } else if (meta.Type === "Movie" && meta.ProductionYear) {
+            episodeTitle = `${meta.Name} (${meta.ProductionYear})`;
+          }
+          if (episodeTitle) {
+            try {
+              mpv.set("force-media-title", episodeTitle);
+              debugLog(`Updated video title from fetched metadata: ${episodeTitle}`);
+            } catch {
+            }
+            try {
+              mpv.set("title", episodeTitle);
+            } catch {
+            }
+          }
+        }
+      }
     }).catch((e) => {
       debugLog("Error pre-fetching item metadata:", e);
     });
@@ -3988,7 +4057,15 @@ function onFileLoaded(fileUrl) {
           debugLog(`Pre-set video title from known playback title: ${knownTitle}`);
         } catch {
         }
-      } else if (!isBrowser) {
+        try {
+          mpv.set("title", knownTitle);
+        } catch {
+        }
+      } else {
+        try {
+          mpv.set("force-media-title", "");
+        } catch {
+        }
         debugLog(`Setting video title from metadata for: ${embyInfo.itemId}, userId: ${reportUserId || "none"}`);
         setVideoTitleFromMetadata(reportServerBase, embyInfo.itemId, reportApiKey, reportUserId);
       }
