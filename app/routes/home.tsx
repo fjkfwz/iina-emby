@@ -31,7 +31,7 @@ export default function HomeRoute({ isVisible = true }: HomeRouteProps) {
   const [searchParams, setSearchParams] = useSearchParams();
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  const { activeServer, servers, isLoading, playMedia } = useIINABridge();
+  const { activeServer, servers, isLoading, playMedia, playMediaList } = useIINABridge();
   const { config: modulesConfig } = useHomeModulesConfig();
   const { sections, isLoading: isSectionsLoading, error: sectionsError } = useLibrarySections(activeServer);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -231,7 +231,9 @@ export default function HomeRoute({ isVisible = true }: HomeRouteProps) {
             {modulesConfig.categories && <CategoriesShelf server={activeServer} />}
 
             {/* Continue Watching shelf */}
-            {modulesConfig.continueWatching && <ContinueWatching server={activeServer} onPlayMedia={playMedia} />}
+            {modulesConfig.continueWatching && (
+              <ContinueWatching server={activeServer} onPlayMedia={playMedia} onPlayMediaList={playMediaList} />
+            )}
 
             {/* My Favorites shelf */}
             {modulesConfig.favorites && <FavoritesShelf server={activeServer} onIdentifySuccess={handleIdentifySuccess} />}

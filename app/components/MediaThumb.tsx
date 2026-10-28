@@ -4,9 +4,11 @@ import {
   type EmbyUserData,
   formatDuration,
   formatEpisodeSubtitle,
+  formatFullEpisodeTitle,
   formatTimeProgress,
   getItemImageUrl,
   isNativeLazyLoadingSupported,
+  type PlayMediaListPayload,
   type PlayMediaPayload,
   ticksToSeconds,
 } from "@shared";
@@ -16,7 +18,7 @@ import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { useInView } from "../hooks/useInView";
 import { useItemPlayedStatus } from "../hooks/useItemPlayedStatus";
-import { buildStreamUrl } from "../lib/emby-library-client";
+import { buildStreamUrl, fetchEpisodes } from "../lib/emby-library-client";
 import { useTranslation } from "../lib/i18n";
 import classes from "./MediaThumb.module.css";
 import { PlayedConfirmModal, PlayStatusMenuItems } from "./PlayedConfirmModal";
@@ -52,6 +54,7 @@ export interface MediaThumbProps {
   item: EmbyItemMetadata;
   server: EmbyServer;
   onPlay?: (payload: PlayMediaPayload) => void;
+  onPlayList?: (payload: PlayMediaListPayload) => void;
   onClick?: (item: EmbyItemMetadata) => void;
   onUserDataChange?: (item: EmbyItemMetadata, userData: EmbyUserData) => void;
   aspectRatio?: number;
@@ -66,6 +69,7 @@ export const MediaThumb = memo(function MediaThumb({
   item,
   server,
   onPlay,
+  onPlayList,
   onClick,
   onUserDataChange,
   aspectRatio = 16 / 9,
@@ -195,15 +199,34 @@ export const MediaThumb = memo(function MediaThumb({
       ? `${item.SeriesName || ""} - ${formatEpisodeSubtitle(item.ParentIndexNumber, item.IndexNumber, item.Name)}`
       : item.Name || "";
 
-  const handlePlayClick = (e: React.MouseEvent) => {
+  const handlePlayClick = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (onPlay) {
-      onPlay({
-        streamUrl: buildStreamUrl(server, item.Id),
-        title: fullPlayTitle,
-        startPositionTicks: playbackPositionTicks,
-      });
+    if (!onPlay) return;
+
+    if (item.Type === "Episode" && item.SeriesId && item.SeasonId && onPlayList) {
+      try {
+        const seasonEps = await fetchEpisodes(server, item.SeriesId, item.SeasonId);
+        const currentIndex = seasonEps.findIndex((ep) => String(ep.Id) === String(item.Id));
+        if (currentIndex !== -1 && currentIndex < seasonEps.length - 1) {
+          const remaining = seasonEps.slice(currentIndex);
+          const items: PlayMediaPayload[] = remaining.map((ep, idx) => ({
+            streamUrl: buildStreamUrl(server, ep.Id),
+            title: formatFullEpisodeTitle(item.SeriesName, ep.ParentIndexNumber, ep.IndexNumber, ep.Name),
+            startPositionTicks: idx === 0 ? playbackPositionTicks : undefined,
+          }));
+          onPlayList({ items });
+          return;
+        }
+      } catch (err) {
+        console.debug("Could not fetch upcoming episodes for continue watching:", err);
+      }
     }
+
+    onPlay({
+      streamUrl: buildStreamUrl(server, item.Id),
+      title: fullPlayTitle,
+      startPositionTicks: playbackPositionTicks,
+    });
   };
 
   const handleDetailClick = (e: React.MouseEvent) => {

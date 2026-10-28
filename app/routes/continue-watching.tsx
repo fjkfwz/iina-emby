@@ -19,7 +19,7 @@ export function meta() {
 export default function ContinueWatchingRoute() {
   const navigate = useNavigate();
   const { t } = useTranslation();
-  const { activeServer, servers, isLoading: isBridgeLoading, playMedia } = useIINABridge();
+  const { activeServer, servers, isLoading: isBridgeLoading, playMedia, playMediaList } = useIINABridge();
 
   const { items, loading: isLoading, error, refresh } = useContinueWatching(activeServer, 10000);
 
@@ -84,7 +84,14 @@ export default function ContinueWatchingRoute() {
           <>
             <div className={styles.grid}>
               {visibleItems.map((item) => (
-                <MediaThumb key={item.Id} item={item} server={activeServer} onPlay={playMedia} onUserDataChange={() => handleRefresh()} />
+                <MediaThumb
+                  key={item.Id}
+                  item={item}
+                  server={activeServer}
+                  onPlay={playMedia}
+                  onPlayList={playMediaList}
+                  onUserDataChange={() => handleRefresh()}
+                />
               ))}
               {hasMore && Array.from({ length: 4 }).map((_, index) => <MediaThumbSkeleton key={`more-skeleton-${index}`} />)}
             </div>

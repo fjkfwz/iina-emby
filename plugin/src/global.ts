@@ -37,6 +37,7 @@ const serverSessionStore = createServerSessionStore({
 // Track active player target (either number ID from createPlayerInstance or string label)
 let activePlayerTarget: number | string | null = null;
 let latestPendingPlayData: PlayMediaMessage | null = null;
+let latestPendingPlayListData: PlayMediaListMessage | null = null;
 
 global.onMessage("player-active", (data?: { label?: string; url?: string }, player?: string | number) => {
   debugLog("Player reported active:", { data, player });
@@ -55,6 +56,10 @@ global.onMessage("get-pending-media", (_data?: unknown, player?: string | number
   if (latestPendingPlayData && target !== null) {
     debugLog("Replying with pending play data to player ID:", target);
     global.postMessage(target, "apply-pending-media", latestPendingPlayData);
+  }
+  if (latestPendingPlayListData && target !== null) {
+    debugLog("Replying with pending playlist data to player ID:", target);
+    global.postMessage(target, "queue-pending-playlist", latestPendingPlayListData);
   }
 });
 
@@ -83,6 +88,11 @@ global.onMessage("player-file-loaded", (data?: { itemId?: string; url?: string }
     debugLog("Sending pending play data to player on file-loaded:", target);
     global.postMessage(target, "apply-pending-media", latestPendingPlayData);
   }
+  if (latestPendingPlayListData && target !== null) {
+    debugLog("Sending pending playlist data to player on file-loaded:", target);
+    global.postMessage(target, "queue-pending-playlist", latestPendingPlayListData);
+    latestPendingPlayListData = null;
+  }
 });
 
 global.onMessage("player-next-queued", (data?: { count?: number; firstTitle?: string }) => {
@@ -109,6 +119,9 @@ function spawnNewPlayerInstance(playData: PlayMediaMessage): void {
     if (playerId !== undefined && playerId !== null) {
       activePlayerTarget = playerId;
       global.postMessage(playerId, "apply-pending-media", playData);
+      if (latestPendingPlayListData) {
+        global.postMessage(playerId, "queue-pending-playlist", latestPendingPlayListData);
+      }
     }
   } catch (err: unknown) {
     const errorMsg = err instanceof Error ? err.message : String(err);
@@ -119,9 +132,12 @@ function spawnNewPlayerInstance(playData: PlayMediaMessage): void {
 /**
  * Handle media playback initiated from the standalone browser window
  */
-function handleGlobalPlayMedia(data?: PlayMediaMessage): void {
+function handleGlobalPlayMedia(data?: PlayMediaMessage, keepPendingPlaylist = false): void {
   if (!data?.streamUrl) return;
 
+  if (!keepPendingPlaylist) {
+    latestPendingPlayListData = null;
+  }
   const streamUrl = sanitizeStreamUrl(data.streamUrl) || data.streamUrl;
   const playData = { ...data, streamUrl };
   latestPendingPlayData = playData;
@@ -150,15 +166,17 @@ function handleGlobalPlayMedia(data?: PlayMediaMessage): void {
 }
 
 function handleGlobalPlayMediaList(data?: PlayMediaListMessage): void {
+  const items = data?.items || [];
+  if (items.length === 0) return;
+
   const openInNewWindow = preferences.get("open_in_new_window");
   if (activePlayerTarget !== null && !openInNewWindow) {
     debugLog("Forwarding play-media-list to active player instance:", activePlayerTarget);
     global.postMessage(activePlayerTarget, "play-media-list-command", data);
   } else {
-    const firstItem = data?.items?.[0];
-    if (firstItem) {
-      handleGlobalPlayMedia(firstItem);
-    }
+    latestPendingPlayListData = data || null;
+    const firstItem = items[0];
+    handleGlobalPlayMedia(firstItem, true);
   }
 }
 

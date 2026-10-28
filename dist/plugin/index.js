@@ -1765,24 +1765,32 @@ function createPlaybackCoordinator({
       log("Queued playlist items are stale, not appending them");
       return;
     }
-    if (itemId && fileUrl && !String(fileUrl).includes(itemId)) {
+    const decodedFileUrl = fileUrl ? decodeURIComponent(fileUrl) : "";
+    if (itemId && fileUrl && !fileUrl.includes(itemId) && !decodedFileUrl.includes(itemId)) {
       log(`Loaded file is not the queued list's first item (${itemId}), dropping the queue`);
       return;
     }
     try {
+      let appendedViaM3u = false;
       if (file2 && utils2 && typeof file2.write === "function") {
-        let m3uContent = "#EXTM3U\n";
-        for (const item of items) {
-          const title = (item.title || "Episode").replace(/[\r\n]+/g, " ");
-          m3uContent += `#EXTINF:-1,${title}
+        try {
+          let m3uContent = "#EXTM3U\n";
+          for (const item of items) {
+            const title = (item.title || "Episode").replace(/[\r\n]+/g, " ");
+            m3uContent += `#EXTINF:-1,${title}
 ${item.streamUrl}
 `;
+          }
+          const m3uPath = utils2.resolvePath("@data/playlist_queue.m3u8");
+          file2.write(m3uPath, m3uContent);
+          log(`Appending ${items.length} queued item(s) via loadlist: ${m3uPath}`);
+          mpv2.command("loadlist", [m3uPath, "append"]);
+          appendedViaM3u = true;
+        } catch (m3uErr) {
+          log("Could not append via loadlist, falling back to loadfile:", m3uErr);
         }
-        const m3uPath = utils2.resolvePath("@data/playlist_queue.m3u8");
-        file2.write(m3uPath, m3uContent);
-        log(`Appending ${items.length} queued item(s) via loadlist: ${m3uPath}`);
-        mpv2.command("loadlist", [m3uPath, "append"]);
-      } else {
+      }
+      if (!appendedViaM3u) {
         for (const item of items) {
           const args = [item.streamUrl, "append"];
           if (item.title) {
@@ -1816,10 +1824,20 @@ ${item.streamUrl}
       } else {
         core2.osd(`Opening: ${firstItem.title || ""}`);
       }
-      const firstItemId = (String(firstItem.streamUrl).match(/\/(?:Items|Videos|Audio)\/([^/?]+)/) || [])[1] || null;
+      const firstItemId = firstItem?.itemId || (String(firstItem.streamUrl).match(/\/(?:Items|Videos|Audio)\/([^/?]+)/) || [])[1] || null;
       pendingPlaylistQueue = queuedItems.length > 0 ? { items: queuedItems, at: Date.now(), itemId: firstItemId } : null;
+      lastQueuedPlaylistItemId = firstItemId;
+      const startPosition = typeof firstItem.startPositionSeconds === "number" && firstItem.startPositionSeconds > 0 ? firstItem.startPositionSeconds : typeof firstItem.startPositionTicks === "number" && firstItem.startPositionTicks > 0 ? ticksToSeconds(firstItem.startPositionTicks) : void 0;
+      setPendingPlaybackData2(firstItem);
       markLaunchedFromBrowser2();
-      openInCurrentWindow(firstItem.streamUrl, firstItem.title);
+      if (preferences2.get("open_in_new_window")) {
+        openInNewInstance({
+          ...firstItem,
+          startPositionSeconds: startPosition
+        });
+      } else {
+        openInCurrentWindow(firstItem.streamUrl, firstItem.title, startPosition);
+      }
       log(`Holding ${queuedItems.length} item(s) until the first one loads`);
     } catch (error) {
       clearLaunchedFromBrowser2();

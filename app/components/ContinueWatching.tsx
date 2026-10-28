@@ -1,4 +1,4 @@
-import type { EmbyServer, PlayMediaPayload } from "@shared";
+import type { EmbyServer, PlayMediaListPayload, PlayMediaPayload } from "@shared";
 import { IconAlertCircle, IconChevronRight } from "@tabler/icons-react";
 import { forwardRef, useImperativeHandle } from "react";
 import { useNavigate } from "react-router";
@@ -13,13 +13,14 @@ import { Alert } from "./ui/Alert";
 export interface ContinueWatchingProps {
   server: EmbyServer;
   onPlayMedia: (payload: PlayMediaPayload) => void;
+  onPlayMediaList?: (payload: PlayMediaListPayload) => void;
 }
 
 export interface ContinueWatchingHandle {
   refresh: () => Promise<void>;
 }
 
-export const ContinueWatching = forwardRef<ContinueWatchingHandle, ContinueWatchingProps>(({ server, onPlayMedia }, ref) => {
+export const ContinueWatching = forwardRef<ContinueWatchingHandle, ContinueWatchingProps>(({ server, onPlayMedia, onPlayMediaList }, ref) => {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const { items: resumeItems, loading, error, refresh } = useContinueWatching(server, 24);
@@ -78,7 +79,14 @@ export const ContinueWatching = forwardRef<ContinueWatchingHandle, ContinueWatch
           : resumeItems
               .slice(0, 16)
               .map((item) => (
-                <MediaThumb key={item.Id} item={item} server={server} onPlay={onPlayMedia} onUserDataChange={() => refresh()} />
+                <MediaThumb
+                  key={item.Id}
+                  item={item}
+                  server={server}
+                  onPlay={onPlayMedia}
+                  onPlayList={onPlayMediaList}
+                  onUserDataChange={() => refresh()}
+                />
               ))}
       </MediaShelf>
     </div>

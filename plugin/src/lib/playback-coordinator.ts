@@ -408,23 +408,31 @@ export function createPlaybackCoordinator({
 
     // Make sure this is the file the list started with. IINA percent-encodes the
     // URL, so compare on the item id rather than the whole string.
-    if (itemId && fileUrl && !String(fileUrl).includes(itemId)) {
+    const decodedFileUrl = fileUrl ? decodeURIComponent(fileUrl) : "";
+    if (itemId && fileUrl && !fileUrl.includes(itemId) && !decodedFileUrl.includes(itemId)) {
       log(`Loaded file is not the queued list's first item (${itemId}), dropping the queue`);
       return;
     }
 
     try {
+      let appendedViaM3u = false;
       if (file && utils && typeof file.write === "function") {
-        let m3uContent = "#EXTM3U\n";
-        for (const item of items) {
-          const title = (item.title || "Episode").replace(/[\r\n]+/g, " ");
-          m3uContent += `#EXTINF:-1,${title}\n${item.streamUrl}\n`;
+        try {
+          let m3uContent = "#EXTM3U\n";
+          for (const item of items) {
+            const title = (item.title || "Episode").replace(/[\r\n]+/g, " ");
+            m3uContent += `#EXTINF:-1,${title}\n${item.streamUrl}\n`;
+          }
+          const m3uPath = utils.resolvePath("@data/playlist_queue.m3u8");
+          file.write(m3uPath, m3uContent);
+          log(`Appending ${items.length} queued item(s) via loadlist: ${m3uPath}`);
+          mpv.command("loadlist", [m3uPath, "append"]);
+          appendedViaM3u = true;
+        } catch (m3uErr) {
+          log("Could not append via loadlist, falling back to loadfile:", m3uErr);
         }
-        const m3uPath = utils.resolvePath("@data/playlist_queue.m3u8");
-        file.write(m3uPath, m3uContent);
-        log(`Appending ${items.length} queued item(s) via loadlist: ${m3uPath}`);
-        mpv.command("loadlist", [m3uPath, "append"]);
-      } else {
+      }
+      if (!appendedViaM3u) {
         for (const item of items) {
           const args: string[] = [item.streamUrl, "append"];
           if (item.title) {
@@ -471,11 +479,31 @@ export function createPlaybackCoordinator({
       }
 
       // The rest can only be appended once the first item has loaded.
-      const firstItemId = (String(firstItem.streamUrl).match(/\/(?:Items|Videos|Audio)\/([^/?]+)/) || [])[1] || null;
+      const firstItemId =
+        (firstItem as any)?.itemId ||
+        (String(firstItem.streamUrl).match(/\/(?:Items|Videos|Audio)\/([^/?]+)/) || [])[1] ||
+        null;
       pendingPlaylistQueue = queuedItems.length > 0 ? { items: queuedItems, at: Date.now(), itemId: firstItemId } : null;
+      lastQueuedPlaylistItemId = firstItemId;
 
+      const startPosition =
+        typeof firstItem.startPositionSeconds === "number" && firstItem.startPositionSeconds > 0
+          ? firstItem.startPositionSeconds
+          : typeof firstItem.startPositionTicks === "number" && firstItem.startPositionTicks > 0
+            ? ticksToSeconds(firstItem.startPositionTicks)
+            : undefined;
+
+      setPendingPlaybackData(firstItem);
       markLaunchedFromBrowser();
-      openInCurrentWindow(firstItem.streamUrl, firstItem.title);
+
+      if (preferences.get("open_in_new_window")) {
+        openInNewInstance({
+          ...firstItem,
+          startPositionSeconds: startPosition,
+        });
+      } else {
+        openInCurrentWindow(firstItem.streamUrl, firstItem.title, startPosition);
+      }
 
       log(`Holding ${queuedItems.length} item(s) until the first one loads`);
     } catch (error: unknown) {

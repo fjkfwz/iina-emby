@@ -1,4 +1,9 @@
-import { type EmbyItemMetadata, formatFullEpisodeTitle, formatSubtitleDisplayLabel } from "@shared";
+import {
+  type EmbyItemMetadata,
+  formatFullEpisodeTitle,
+  formatSubtitleDisplayLabel,
+  type PlayMediaPayload,
+} from "@shared";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useMemo, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router";
@@ -22,7 +27,7 @@ export default function ItemDetailRoute() {
   const navigate = useNavigate();
   const location = useLocation();
   const queryClient = useQueryClient();
-  const { activeServer, playMedia, preferences } = useIINABridge();
+  const { activeServer, playMedia, playMediaList, preferences } = useIINABridge();
   const { t } = useTranslation();
 
   const stateItem = location.state?.item as EmbyItemMetadata | undefined;
@@ -162,7 +167,7 @@ export default function ItemDetailRoute() {
 
       const mediaSourceId = (playTarget || item)?.MediaSources?.[0]?.Id;
 
-      playMedia({
+      const firstItemPayload: PlayMediaPayload = {
         title: playTitle,
         streamUrl: buildStreamUrl(activeServer, playTarget.Id),
         startPositionTicks: playTarget.UserData?.PlaybackPositionTicks,
@@ -181,7 +186,26 @@ export default function ItemDetailRoute() {
           selectedSubtitleIndex !== undefined
             ? selectedSubtitleStream?.DisplayTitle || selectedSubtitleStream?.Title || selectedSubtitleStream?.DisplayLanguage
             : undefined,
-      });
+      };
+
+      const shouldAutoplay = preferences?.autoplay_next_episode !== false;
+      if (isSeries && shouldAutoplay && episodes.length > 0) {
+        const targetIndex = episodes.findIndex((e) => String(e.Id) === String(playTarget.Id));
+        if (targetIndex !== -1 && targetIndex < episodes.length - 1) {
+          const remaining = episodes.slice(targetIndex);
+          const items: PlayMediaPayload[] = remaining.map((ep, idx) => {
+            if (idx === 0) return firstItemPayload;
+            return {
+              title: formatFullEpisodeTitle(item?.Name, ep.ParentIndexNumber ?? 1, ep.IndexNumber, ep.Name),
+              streamUrl: buildStreamUrl(activeServer, ep.Id),
+            };
+          });
+          playMediaList({ items });
+          return;
+        }
+      }
+
+      playMedia(firstItemPayload);
     } finally {
       setIsPlaying(false);
     }
@@ -255,7 +279,7 @@ export default function ItemDetailRoute() {
     const hasExplicitAudioSelection = selectedAudioIndex !== undefined;
     const hasExplicitSubSelection = selectedSubtitleIndex !== undefined;
 
-    playMedia({
+    const firstEpPayload: PlayMediaPayload = {
       title: playTitle,
       streamUrl: buildStreamUrl(activeServer, ep.Id),
       startPositionTicks: ep.UserData?.PlaybackPositionTicks,
@@ -271,7 +295,26 @@ export default function ItemDetailRoute() {
       mediaSourceId: epMediaSourceId,
       subtitleDeliveryUrl: hasExplicitSubSelection ? epSubDeliveryUrl : undefined,
       subtitleTitle: hasExplicitSubSelection ? epSubTitle : undefined,
-    });
+    };
+
+    const shouldAutoplay = preferences?.autoplay_next_episode !== false;
+    if (shouldAutoplay && episodes.length > 0) {
+      const epIndex = episodes.findIndex((itemEp) => String(itemEp.Id) === String(ep.Id));
+      if (epIndex !== -1 && epIndex < episodes.length - 1) {
+        const remaining = episodes.slice(epIndex);
+        const items: PlayMediaPayload[] = remaining.map((episodeItem, idx) => {
+          if (idx === 0) return firstEpPayload;
+          return {
+            title: formatFullEpisodeTitle(item?.Name, episodeItem.ParentIndexNumber, episodeItem.IndexNumber, episodeItem.Name),
+            streamUrl: buildStreamUrl(activeServer, episodeItem.Id),
+          };
+        });
+        playMediaList({ items });
+        return;
+      }
+    }
+
+    playMedia(firstEpPayload);
   };
 
   return (

@@ -142,4 +142,29 @@ describe("playback-coordinator", () => {
     coordinator.clearPendingAudio("item-clear");
     expect(coordinator.getPendingAudioIndex("item-clear")).toBeNull();
   });
+
+  it("handles handlePlayMediaList storing metadata and queueing remaining items", () => {
+    const coordinator = createTestCoordinator();
+
+    coordinator.handlePlayMediaList({
+      items: [
+        {
+          streamUrl: "http://localhost:8096/Videos/ep-1/stream?static=true",
+          title: "Series - S01E01 - Pilot",
+          selectedAudioIndex: 1,
+          selectedSubtitleIndex: 2,
+          startPositionTicks: 200000000, // 20 seconds
+        },
+        {
+          streamUrl: "http://localhost:8096/Videos/ep-2/stream?static=true",
+          title: "Series - S01E02 - Second Episode",
+        },
+      ],
+    });
+
+    expect(coordinator.getPendingAudioIndex("ep-1")).toBe(1);
+    expect(coordinator.getPendingSubtitleIndex("ep-1")).toBe(2);
+    expect(coordinator.getPendingStartPosition("ep-1")).toBe(20);
+    expect(coordinator.isLaunchedFromBrowser()).toBe(true);
+  });
 });

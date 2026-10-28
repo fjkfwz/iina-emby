@@ -974,6 +974,7 @@ var serverSessionStore = createServerSessionStore({
 });
 var activePlayerTarget = null;
 var latestPendingPlayData = null;
+var latestPendingPlayListData = null;
 global.onMessage("player-active", (data, player) => {
   debugLog("Player reported active:", { data, player });
   if (player !== void 0 && player !== null) {
@@ -990,6 +991,10 @@ global.onMessage("get-pending-media", (_data, player) => {
   if (latestPendingPlayData && target !== null) {
     debugLog("Replying with pending play data to player ID:", target);
     global.postMessage(target, "apply-pending-media", latestPendingPlayData);
+  }
+  if (latestPendingPlayListData && target !== null) {
+    debugLog("Replying with pending playlist data to player ID:", target);
+    global.postMessage(target, "queue-pending-playlist", latestPendingPlayListData);
   }
 });
 global.onMessage("player-inactive", (data, player) => {
@@ -1015,6 +1020,11 @@ global.onMessage("player-file-loaded", (data, player) => {
     debugLog("Sending pending play data to player on file-loaded:", target);
     global.postMessage(target, "apply-pending-media", latestPendingPlayData);
   }
+  if (latestPendingPlayListData && target !== null) {
+    debugLog("Sending pending playlist data to player on file-loaded:", target);
+    global.postMessage(target, "queue-pending-playlist", latestPendingPlayListData);
+    latestPendingPlayListData = null;
+  }
 });
 global.onMessage("player-next-queued", (data) => {
   debugLog("Player queued upcoming episodes:", data);
@@ -1038,14 +1048,20 @@ function spawnNewPlayerInstance(playData) {
     if (playerId !== void 0 && playerId !== null) {
       activePlayerTarget = playerId;
       global.postMessage(playerId, "apply-pending-media", playData);
+      if (latestPendingPlayListData) {
+        global.postMessage(playerId, "queue-pending-playlist", latestPendingPlayListData);
+      }
     }
   } catch (err) {
     const errorMsg = err instanceof Error ? err.message : String(err);
     debugLog.error("Failed to create player instance: " + errorMsg);
   }
 }
-function handleGlobalPlayMedia(data) {
+function handleGlobalPlayMedia(data, keepPendingPlaylist = false) {
   if (!data?.streamUrl) return;
+  if (!keepPendingPlaylist) {
+    latestPendingPlayListData = null;
+  }
   const streamUrl = sanitizeStreamUrl(data.streamUrl) || data.streamUrl;
   const playData = { ...data, streamUrl };
   latestPendingPlayData = playData;
@@ -1071,15 +1087,16 @@ function handleGlobalPlayMedia(data) {
   }
 }
 function handleGlobalPlayMediaList(data) {
+  const items = data?.items || [];
+  if (items.length === 0) return;
   const openInNewWindow = preferences.get("open_in_new_window");
   if (activePlayerTarget !== null && !openInNewWindow) {
     debugLog("Forwarding play-media-list to active player instance:", activePlayerTarget);
     global.postMessage(activePlayerTarget, "play-media-list-command", data);
   } else {
-    const firstItem = data?.items?.[0];
-    if (firstItem) {
-      handleGlobalPlayMedia(firstItem);
-    }
+    latestPendingPlayListData = data || null;
+    const firstItem = items[0];
+    handleGlobalPlayMedia(firstItem, true);
   }
 }
 var bridgeDeps = createBridgeDeps({
