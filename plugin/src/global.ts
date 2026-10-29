@@ -104,12 +104,13 @@ global.onMessage("player-active", (data?: { label?: string; url?: string }, play
 global.onMessage("get-pending-media", (data?: { label?: string }, player?: string | number) => {
   debugLog("Player requested pending media:", { data, player });
   const target = extractPlayerTarget(player, data?.label) ?? activePlayerTarget;
+  if (latestPendingPlayData && target !== null) {
+    debugLog("Replying with pending play data to player ID:", target);
+    postToPlayer(target, "apply-pending-media", latestPendingPlayData);
+  }
   if (latestPendingPlayListData && target !== null) {
     debugLog("Replying with pending playlist data to player ID:", target);
-    postToPlayer(target, "play-media-list-command", latestPendingPlayListData);
-  } else if (latestPendingPlayData && target !== null) {
-    debugLog("Replying with pending play data to player ID:", target);
-    postToPlayer(target, "play-media-command", latestPendingPlayData);
+    postToPlayer(target, "queue-pending-playlist", latestPendingPlayListData);
   }
 });
 
@@ -160,11 +161,8 @@ function spawnNewPlayerInstance(playData: PlayMediaMessage): void {
   try {
     latestPendingPlayData = playData;
     const label = `emby-${Date.now()}`;
-    // Do not pass `url` here. Passing `url` triggers IINA's OpenURLWindowController
-    // modal sheet ("正在加载内容……"). Omitting `url` creates the window cleanly,
-    // and the player instance receives play-media-command via get-pending-media and
-    // opens the stream via mpv loadfile replace directly.
     const playerId = global.createPlayerInstance({
+      url: playData.streamUrl,
       label,
       enablePlugins: true,
       disableWindowAnimation: false,
@@ -173,6 +171,7 @@ function spawnNewPlayerInstance(playData: PlayMediaMessage): void {
     if (playerId !== undefined && playerId !== null) {
       activePlayerTarget = typeof playerId === "number" ? playerId : Number.parseInt(String(playerId), 10) || label;
       postToPlayer(activePlayerTarget, "play-media-command", playData);
+      postToPlayer(activePlayerTarget, "apply-pending-media", playData);
       if (latestPendingPlayListData) {
         postToPlayer(activePlayerTarget, "queue-pending-playlist", latestPendingPlayListData);
       }
@@ -285,6 +284,7 @@ global.onMessage("create-player", (data: PlayMediaMessage, player?: string | num
 
     const label = `emby-${Date.now()}`;
     const playerId = global.createPlayerInstance({
+      url: streamUrl,
       label,
       enablePlugins: true,
       disableWindowAnimation: false,

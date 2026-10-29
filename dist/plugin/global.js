@@ -1070,12 +1070,13 @@ global.onMessage("player-active", (data, player) => {
 global.onMessage("get-pending-media", (data, player) => {
   debugLog("Player requested pending media:", { data, player });
   const target = extractPlayerTarget(player, data?.label) ?? activePlayerTarget;
+  if (latestPendingPlayData && target !== null) {
+    debugLog("Replying with pending play data to player ID:", target);
+    postToPlayer(target, "apply-pending-media", latestPendingPlayData);
+  }
   if (latestPendingPlayListData && target !== null) {
     debugLog("Replying with pending playlist data to player ID:", target);
-    postToPlayer(target, "play-media-list-command", latestPendingPlayListData);
-  } else if (latestPendingPlayData && target !== null) {
-    debugLog("Replying with pending play data to player ID:", target);
-    postToPlayer(target, "play-media-command", latestPendingPlayData);
+    postToPlayer(target, "queue-pending-playlist", latestPendingPlayListData);
   }
 });
 global.onMessage("player-inactive", (data, player) => {
@@ -1121,6 +1122,7 @@ function spawnNewPlayerInstance(playData) {
     latestPendingPlayData = playData;
     const label = `emby-${Date.now()}`;
     const playerId = global.createPlayerInstance({
+      url: playData.streamUrl,
       label,
       enablePlugins: true,
       disableWindowAnimation: false
@@ -1129,6 +1131,7 @@ function spawnNewPlayerInstance(playData) {
     if (playerId !== void 0 && playerId !== null) {
       activePlayerTarget = typeof playerId === "number" ? playerId : Number.parseInt(String(playerId), 10) || label;
       postToPlayer(activePlayerTarget, "play-media-command", playData);
+      postToPlayer(activePlayerTarget, "apply-pending-media", playData);
       if (latestPendingPlayListData) {
         postToPlayer(activePlayerTarget, "queue-pending-playlist", latestPendingPlayListData);
       }
@@ -1221,6 +1224,7 @@ global.onMessage("create-player", (data, player) => {
     latestPendingPlayData = playData;
     const label = `emby-${Date.now()}`;
     const playerId = global.createPlayerInstance({
+      url: streamUrl,
       label,
       enablePlugins: true,
       disableWindowAnimation: false
