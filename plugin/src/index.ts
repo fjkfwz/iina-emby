@@ -169,13 +169,13 @@ const outroManager = createOutroManager({
   log: debugLog,
 });
 
+const playerLabel = iinaGlobal && typeof iinaGlobal.getLabel === "function" ? iinaGlobal.getLabel() : "";
+const isEmbyPlayerInstance = Boolean(playerLabel && playerLabel.startsWith("emby-"));
+
 // Check if this player window was spawned specifically for Emby playback
-if (iinaGlobal && typeof iinaGlobal.getLabel === "function") {
-  const label = iinaGlobal.getLabel();
-  if (label?.startsWith("emby-")) {
-    debugLog(`Player instance opened with label ${label}, marking as browser playback`);
-    markLaunchedFromBrowser();
-  }
+if (isEmbyPlayerInstance) {
+  debugLog(`Player instance opened with label ${playerLabel}, marking as browser playback`);
+  markLaunchedFromBrowser();
 }
 
 // Listen for playback commands forwarded from global standalone window
@@ -262,10 +262,10 @@ if (iinaGlobal && typeof iinaGlobal.onMessage === "function") {
   });
 }
 
-// Request pending media from global entry on player entry initialization
-if (iinaGlobal && typeof iinaGlobal.postMessage === "function") {
-  iinaGlobal.postMessage("get-pending-media", {});
-  iinaGlobal.postMessage("player-active", {});
+// Request pending media from global entry on player entry initialization only if this is an Emby player instance
+if (isEmbyPlayerInstance && iinaGlobal && typeof iinaGlobal.postMessage === "function") {
+  iinaGlobal.postMessage("get-pending-media", { label: playerLabel });
+  iinaGlobal.postMessage("player-active", { label: playerLabel });
 }
 
 let currentLoadedFileUrl: string | null = null;

@@ -169,4 +169,31 @@ describe("playback-coordinator", () => {
     expect(coordinator.getPendingMediaTitle("ep-2")).toBe("Series - S01E02 - Second Episode");
     expect(coordinator.isLaunchedFromBrowser()).toBe(true);
   });
+
+  it("uses mpv loadfile replace instead of core.open when opening in current window", () => {
+    const mockCore = {
+      open: vi.fn(),
+      osd: vi.fn(),
+    } as unknown as typeof iina.core;
+
+    const mockMpv = {
+      command: vi.fn(),
+      set: vi.fn(),
+      getNumber: vi.fn().mockReturnValue(0),
+    } as unknown as typeof iina.mpv;
+
+    const coordinator = createPlaybackCoordinator({
+      core: mockCore,
+      mpv: mockMpv,
+      preferences: { get: vi.fn().mockReturnValue(false) } as unknown as typeof iina.preferences,
+      getCurrentPlaybackSession: () => null,
+      clearQueuedFlag: vi.fn(),
+      log: vi.fn() as any,
+    });
+
+    coordinator.openInCurrentWindow("http://localhost:8096/Videos/ep-1/stream", "Episode 1");
+
+    expect(mockMpv.command).toHaveBeenCalledWith("loadfile", ["http://localhost:8096/Videos/ep-1/stream", "replace"]);
+    expect(mockCore.open).not.toHaveBeenCalled();
+  });
 });

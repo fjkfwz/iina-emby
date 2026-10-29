@@ -1973,7 +1973,13 @@ function createPlaybackCoordinator({
       mpv2.set("start", "none");
     } catch {
     }
-    core2.open(streamUrl);
+    try {
+      mpv2.command("loadfile", [streamUrl, "replace"]);
+    } catch (openErr) {
+      const errorMsg = openErr instanceof Error ? openErr.message : String(openErr);
+      log.warn(`mpv loadfile replace failed (${errorMsg}), falling back to core.open`);
+      core2.open(streamUrl);
+    }
     try {
       mpv2.set("pause", false);
     } catch {
@@ -1998,7 +2004,7 @@ function createPlaybackCoordinator({
     pendingPlaylistQueue = { items: queuedItems, at: Date.now(), itemId: firstItemId };
     try {
       const currentUrl = mpv2.getString("path");
-      if (currentUrl) {
+      if (currentUrl && firstItemId && (currentUrl.includes(firstItemId) || decodeURIComponent(currentUrl).includes(firstItemId))) {
         flushPendingPlaylistQueue2(currentUrl);
       }
     } catch {
@@ -2009,16 +2015,17 @@ function createPlaybackCoordinator({
       return;
     }
     const { items, at, itemId } = pendingPlaylistQueue;
-    pendingPlaylistQueue = null;
     if (Date.now() - at > PENDING_QUEUE_TTL_MS) {
-      log("Queued playlist items are stale, not appending them");
+      log("Queued playlist items are stale, dropping queue");
+      pendingPlaylistQueue = null;
       return;
     }
     const decodedFileUrl = fileUrl ? decodeURIComponent(fileUrl) : "";
     if (itemId && fileUrl && !fileUrl.includes(itemId) && !decodedFileUrl.includes(itemId)) {
-      log(`Loaded file is not the queued list's first item (${itemId}), dropping the queue`);
+      log(`Loaded file is not the queued list's first item (${itemId}), keeping queue for when it loads`);
       return;
     }
+    pendingPlaylistQueue = null;
     try {
       let appendedViaM3u = false;
       if (file2 && utils2 && typeof file2.write === "function") {
@@ -3698,12 +3705,11 @@ var outroManager = createOutroManager({
   markAsWatched,
   log: debugLog
 });
-if (iinaGlobal && typeof iinaGlobal.getLabel === "function") {
-  const label = iinaGlobal.getLabel();
-  if (label?.startsWith("emby-")) {
-    debugLog(`Player instance opened with label ${label}, marking as browser playback`);
-    markLaunchedFromBrowser();
-  }
+var playerLabel = iinaGlobal && typeof iinaGlobal.getLabel === "function" ? iinaGlobal.getLabel() : "";
+var isEmbyPlayerInstance = Boolean(playerLabel && playerLabel.startsWith("emby-"));
+if (isEmbyPlayerInstance) {
+  debugLog(`Player instance opened with label ${playerLabel}, marking as browser playback`);
+  markLaunchedFromBrowser();
 }
 if (iinaGlobal && typeof iinaGlobal.onMessage === "function") {
   iinaGlobal.onMessage("play-media-command", (data) => {
@@ -3776,9 +3782,9 @@ if (iinaGlobal && typeof iinaGlobal.onMessage === "function") {
     setTimeout(applyTracksNow, 1200);
   });
 }
-if (iinaGlobal && typeof iinaGlobal.postMessage === "function") {
-  iinaGlobal.postMessage("get-pending-media", {});
-  iinaGlobal.postMessage("player-active", {});
+if (isEmbyPlayerInstance && iinaGlobal && typeof iinaGlobal.postMessage === "function") {
+  iinaGlobal.postMessage("get-pending-media", { label: playerLabel });
+  iinaGlobal.postMessage("player-active", { label: playerLabel });
 }
 var currentLoadedFileUrl = null;
 function getEffectiveFileUrl(fileUrl) {

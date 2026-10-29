@@ -39,8 +39,22 @@ let activePlayerTarget: number | string | null = null;
 let latestPendingPlayData: PlayMediaMessage | null = null;
 let latestPendingPlayListData: PlayMediaListMessage | null = null;
 
+function isMatchingPlayer(target: number | string | null, candidate?: string | number): boolean {
+  if (target === null || candidate === undefined || candidate === null) return true;
+  if (target === candidate) return true;
+  const sTarget = String(target);
+  const sCand = String(candidate);
+  return sTarget === sCand || sCand.startsWith(sTarget) || sTarget.startsWith(sCand);
+}
+
 global.onMessage("player-active", (data?: { label?: string; url?: string }, player?: string | number) => {
   debugLog("Player reported active:", { data, player });
+  // Ignore player-active from the welcome/initial window (player 0) unless it has an Emby label or Emby URL
+  const isEmby = Boolean((data?.label && data.label.startsWith("emby-")) || data?.url);
+  if (!isEmby && (player === 0 || player === "0")) {
+    debugLog("Ignoring player-active from welcome/initial window 0");
+    return;
+  }
   if (player !== undefined && player !== null) {
     activePlayerTarget = player;
   }
@@ -64,16 +78,15 @@ global.onMessage("get-pending-media", (_data?: unknown, player?: string | number
 });
 
 global.onMessage("player-inactive", (data?: { label?: string }, player?: string | number) => {
-  debugLog("Player reported inactive (retaining player instance for reuse):", { data, player });
+  debugLog("Player reported inactive:", { data, player });
+  if (isMatchingPlayer(activePlayerTarget, player)) {
+    activePlayerTarget = null;
+  }
 });
 
 global.onMessage("player-unregistered", (_data?: unknown, player?: string | number) => {
   debugLog("Player instance unregistered:", player);
-  if (player !== undefined && player !== null) {
-    if (activePlayerTarget === player) {
-      activePlayerTarget = null;
-    }
-  } else {
+  if (isMatchingPlayer(activePlayerTarget, player)) {
     activePlayerTarget = null;
   }
 });

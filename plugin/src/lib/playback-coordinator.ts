@@ -377,9 +377,6 @@ export function createPlaybackCoordinator({
       log(`Could not clear playlist before opening: ${errorMsg}`);
     }
 
-    // We use core.open instead of mpv.command('loadfile') because core.open
-    // properly triggers IINA's native lifecycle and sleep prevention checks.
-    // Set force-media-title BEFORE core.open so mpv uses it when loadfile runs.
     if (title) {
       try {
         mpv.set("force-media-title", title);
@@ -400,7 +397,16 @@ export function createPlaybackCoordinator({
       // Ignore
     }
 
-    core.open(streamUrl);
+    // Use mpv loadfile replace instead of core.open. core.open invokes IINA's
+    // native OpenURLWindow modal ("正在加载内容……") which never auto-closes on
+    // plugin-created player instances, and triggers a spurious window-will-close event.
+    try {
+      mpv.command("loadfile", [streamUrl, "replace"]);
+    } catch (openErr: unknown) {
+      const errorMsg = openErr instanceof Error ? openErr.message : String(openErr);
+      log.warn(`mpv loadfile replace failed (${errorMsg}), falling back to core.open`);
+      core.open(streamUrl);
+    }
 
     // Ensure playback resumes immediately (unpause)
     try {
@@ -431,7 +437,7 @@ export function createPlaybackCoordinator({
     pendingPlaylistQueue = { items: queuedItems, at: Date.now(), itemId: firstItemId };
     try {
       const currentUrl = mpv.getString("path");
-      if (currentUrl) {
+      if (currentUrl && firstItemId && (currentUrl.includes(firstItemId) || decodeURIComponent(currentUrl).includes(firstItemId))) {
         flushPendingPlaylistQueue(currentUrl);
       }
     } catch {
@@ -449,10 +455,10 @@ export function createPlaybackCoordinator({
     }
 
     const { items, at, itemId } = pendingPlaylistQueue;
-    pendingPlaylistQueue = null;
 
     if (Date.now() - at > PENDING_QUEUE_TTL_MS) {
-      log("Queued playlist items are stale, not appending them");
+      log("Queued playlist items are stale, dropping queue");
+      pendingPlaylistQueue = null;
       return;
     }
 
@@ -460,9 +466,11 @@ export function createPlaybackCoordinator({
     // URL, so compare on the item id rather than the whole string.
     const decodedFileUrl = fileUrl ? decodeURIComponent(fileUrl) : "";
     if (itemId && fileUrl && !fileUrl.includes(itemId) && !decodedFileUrl.includes(itemId)) {
-      log(`Loaded file is not the queued list's first item (${itemId}), dropping the queue`);
+      log(`Loaded file is not the queued list's first item (${itemId}), keeping queue for when it loads`);
       return;
     }
+
+    pendingPlaylistQueue = null;
 
     try {
       let appendedViaM3u = false;

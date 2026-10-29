@@ -1010,8 +1010,20 @@ var serverSessionStore = createServerSessionStore({
 var activePlayerTarget = null;
 var latestPendingPlayData = null;
 var latestPendingPlayListData = null;
+function isMatchingPlayer(target, candidate) {
+  if (target === null || candidate === void 0 || candidate === null) return true;
+  if (target === candidate) return true;
+  const sTarget = String(target);
+  const sCand = String(candidate);
+  return sTarget === sCand || sCand.startsWith(sTarget) || sTarget.startsWith(sCand);
+}
 global.onMessage("player-active", (data, player) => {
   debugLog("Player reported active:", { data, player });
+  const isEmby = Boolean(data?.label && data.label.startsWith("emby-") || data?.url);
+  if (!isEmby && (player === 0 || player === "0")) {
+    debugLog("Ignoring player-active from welcome/initial window 0");
+    return;
+  }
   if (player !== void 0 && player !== null) {
     activePlayerTarget = player;
   }
@@ -1033,15 +1045,14 @@ global.onMessage("get-pending-media", (_data, player) => {
   }
 });
 global.onMessage("player-inactive", (data, player) => {
-  debugLog("Player reported inactive (retaining player instance for reuse):", { data, player });
+  debugLog("Player reported inactive:", { data, player });
+  if (isMatchingPlayer(activePlayerTarget, player)) {
+    activePlayerTarget = null;
+  }
 });
 global.onMessage("player-unregistered", (_data, player) => {
   debugLog("Player instance unregistered:", player);
-  if (player !== void 0 && player !== null) {
-    if (activePlayerTarget === player) {
-      activePlayerTarget = null;
-    }
-  } else {
+  if (isMatchingPlayer(activePlayerTarget, player)) {
     activePlayerTarget = null;
   }
 });
