@@ -23,6 +23,7 @@ export interface GlobalPlayerCreatedMessage {
 export interface GlobalPlayerFailedMessage {
   error?: string;
   url?: string;
+  title?: string;
 }
 
 export interface PlaybackCoordinatorDeps {
@@ -650,7 +651,7 @@ export function createPlaybackCoordinator({
       log.error("Failed to create new player instance: " + (data?.error || ""));
       core.osd("Failed to open new window - opening in current window");
       if (data?.url) {
-        core.open(data.url);
+        openInCurrentWindow(data.url, data.title);
       }
     });
   }

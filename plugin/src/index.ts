@@ -224,15 +224,21 @@ if (iinaGlobal && typeof iinaGlobal.onMessage === "function") {
           : null;
 
     if (typeof startPosSeconds === "number" && startPosSeconds > 0) {
-      try {
-        const timePos = mpv.getNumber("time-pos") || 0;
-        if (timePos < 2) {
-          debugLog(`Seeking to pending start position: ${startPosSeconds}s`);
-          mpv.set("time-pos", startPosSeconds);
+      const applySeek = () => {
+        try {
+          const timePos = mpv.getNumber("time-pos") || 0;
+          if (timePos < startPosSeconds && (timePos < 5 || Math.abs(timePos - startPosSeconds) > 2)) {
+            debugLog(`Seeking to pending start position: ${startPosSeconds}s (current: ${timePos}s)`);
+            mpv.set("time-pos", startPosSeconds);
+          }
+        } catch {
+          // Ignore
         }
-      } catch {
-        // Ignore
-      }
+      };
+      applySeek();
+      setTimeout(applySeek, 250);
+      setTimeout(applySeek, 600);
+      setTimeout(applySeek, 1200);
     }
 
     const applyTracksNow = () => {
@@ -894,10 +900,28 @@ function onFileLoaded(fileUrl?: string): void {
     }
 
     const isBrowser = isLaunchedFromBrowser();
+    const pendingStart = getPendingStartPosition(embyInfo.itemId);
+
+    if (typeof pendingStart === "number" && pendingStart > 0) {
+      const applyResumeSeek = () => {
+        try {
+          const curTime = mpv.getNumber("time-pos") || 0;
+          if (curTime < pendingStart && (curTime < 5 || Math.abs(curTime - pendingStart) > 2)) {
+            debugLog(`[resume] Seeking to resume start position: ${pendingStart}s (current: ${curTime}s)`);
+            mpv.set("time-pos", pendingStart);
+          }
+        } catch (seekErr) {
+          debugLog("Could not apply resume seek:", seekErr);
+        }
+      };
+      applyResumeSeek();
+      setTimeout(applyResumeSeek, 200);
+      setTimeout(applyResumeSeek, 500);
+      setTimeout(applyResumeSeek, 1000);
+    }
 
     // Start playback tracking for progress sync
     if (preferences.get("sync_playback_progress")) {
-      const pendingStart = getPendingStartPosition(embyInfo.itemId);
       debugLog(
         `Starting playback tracking for: ${embyInfo.itemId}, userId: ${reportUserId || "none"}, pendingStart: ${pendingStart ?? "none"}, isBrowser: ${isBrowser}`,
       );

@@ -2164,7 +2164,7 @@ ${item.streamUrl}
       log.error("Failed to create new player instance: " + (data?.error || ""));
       core2.osd("Failed to open new window - opening in current window");
       if (data?.url) {
-        core2.open(data.url);
+        openInCurrentWindow(data.url, data.title);
       }
     });
   }
@@ -3748,14 +3748,20 @@ if (iinaGlobal && typeof iinaGlobal.onMessage === "function") {
     setPendingPlaybackData(data);
     const startPosSeconds = typeof data.startPositionSeconds === "number" && data.startPositionSeconds > 0 ? data.startPositionSeconds : typeof data.startPositionTicks === "number" && data.startPositionTicks > 0 ? ticksToSeconds2(data.startPositionTicks) : null;
     if (typeof startPosSeconds === "number" && startPosSeconds > 0) {
-      try {
-        const timePos = mpv.getNumber("time-pos") || 0;
-        if (timePos < 2) {
-          debugLog(`Seeking to pending start position: ${startPosSeconds}s`);
-          mpv.set("time-pos", startPosSeconds);
+      const applySeek = () => {
+        try {
+          const timePos = mpv.getNumber("time-pos") || 0;
+          if (timePos < startPosSeconds && (timePos < 5 || Math.abs(timePos - startPosSeconds) > 2)) {
+            debugLog(`Seeking to pending start position: ${startPosSeconds}s (current: ${timePos}s)`);
+            mpv.set("time-pos", startPosSeconds);
+          }
+        } catch {
         }
-      } catch {
-      }
+      };
+      applySeek();
+      setTimeout(applySeek, 250);
+      setTimeout(applySeek, 600);
+      setTimeout(applySeek, 1200);
     }
     const applyTracksNow = () => {
       const resolvedUrl = getEffectiveFileUrl();
@@ -4292,8 +4298,25 @@ function onFileLoaded(fileUrl) {
     } catch {
     }
     const isBrowser = isLaunchedFromBrowser();
+    const pendingStart = getPendingStartPosition(embyInfo.itemId);
+    if (typeof pendingStart === "number" && pendingStart > 0) {
+      const applyResumeSeek = () => {
+        try {
+          const curTime = mpv.getNumber("time-pos") || 0;
+          if (curTime < pendingStart && (curTime < 5 || Math.abs(curTime - pendingStart) > 2)) {
+            debugLog(`[resume] Seeking to resume start position: ${pendingStart}s (current: ${curTime}s)`);
+            mpv.set("time-pos", pendingStart);
+          }
+        } catch (seekErr) {
+          debugLog("Could not apply resume seek:", seekErr);
+        }
+      };
+      applyResumeSeek();
+      setTimeout(applyResumeSeek, 200);
+      setTimeout(applyResumeSeek, 500);
+      setTimeout(applyResumeSeek, 1e3);
+    }
     if (preferences.get("sync_playback_progress")) {
-      const pendingStart = getPendingStartPosition(embyInfo.itemId);
       debugLog(
         `Starting playback tracking for: ${embyInfo.itemId}, userId: ${reportUserId || "none"}, pendingStart: ${pendingStart ?? "none"}, isBrowser: ${isBrowser}`
       );
