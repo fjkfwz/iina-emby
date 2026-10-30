@@ -1,4 +1,4 @@
-import { IconAlertCircle, IconSearch, IconX } from "@tabler/icons-react";
+import { IconAlertCircle } from "@tabler/icons-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Navigate, useNavigate, useSearchParams } from "react-router";
 import { CategoriesShelf } from "../components/CategoriesShelf";
@@ -7,6 +7,7 @@ import { FavoritesShelf } from "../components/FavoritesShelf";
 import { HomeHero } from "../components/HomeHero";
 import { LibraryShelf, LibraryShelfSkeleton } from "../components/LibraryShelf";
 import { PageHeader } from "../components/PageHeader";
+import { SearchBox, type SearchBoxHandle } from "../components/SearchBox";
 import { SearchResultsView } from "../components/SearchResultsView";
 import { Alert } from "../components/ui";
 import { useHomeModulesConfig } from "../hooks/useHomeModulesConfig";
@@ -29,7 +30,7 @@ export default function HomeRoute({ isVisible = true }: HomeRouteProps) {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const [searchParams, setSearchParams] = useSearchParams();
-  const searchInputRef = useRef<HTMLInputElement>(null);
+  const searchBoxRef = useRef<SearchBoxHandle>(null);
 
   const { activeServer, servers, isLoading, playMedia, playMediaList } = useIINABridge();
   const { config: modulesConfig } = useHomeModulesConfig();
@@ -37,53 +38,54 @@ export default function HomeRoute({ isVisible = true }: HomeRouteProps) {
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const urlQ = searchParams.get("q") || "";
-  const prevQRef = useRef(urlQ);
 
-  const [searchQuery, setSearchQuery] = useState<string>(() => urlQ);
-  const [debouncedQuery, setDebouncedQuery] = useState<string>(() => urlQ);
+  /** Query that actually drives the results request (updated on the debounce boundary). */
+  const [query, setQuery] = useState<string>(urlQ);
+  /** Switches between the shelves and the results view — flips on the first keystroke. */
+  const [isSearching, setIsSearching] = useState<boolean>(urlQ.trim().length > 0);
+  /** Mirrors the `?q=` param so we never navigate to the URL we are already on. */
+  const committedRef = useRef<string>(urlQ);
 
   // Synchronize internal search state when URL param 'q' changes externally (e.g. Back/Forward navigation)
   useEffect(() => {
-    if (urlQ !== searchQuery) {
-      setSearchQuery(urlQ);
-      setDebouncedQuery(urlQ);
-      prevQRef.current = urlQ;
-    }
+    if (urlQ === committedRef.current) return;
+    committedRef.current = urlQ;
+    setQuery(urlQ);
+    setIsSearching(urlQ.trim().length > 0);
   }, [urlQ]);
 
   // Support focus=search query parameter when navigating from search buttons or shortcuts
   useEffect(() => {
     if (searchParams.get("focus") === "search") {
-      searchInputRef.current?.focus();
-      searchInputRef.current?.select();
+      searchBoxRef.current?.focus();
+      searchBoxRef.current?.select();
     }
   }, [searchParams]);
 
-  // Debounce search query and sync to URL search params
-  useEffect(() => {
-    const timer = window.setTimeout(() => {
-      const q = searchQuery.trim();
-      setDebouncedQuery(q);
-      const prevQ = prevQRef.current;
-      if (q) {
+  const handleCommit = useCallback(
+    (nextQuery: string) => {
+      setQuery(nextQuery);
+      setIsSearching(nextQuery.length > 0);
+
+      if (nextQuery === committedRef.current) return;
+      const previousQuery = committedRef.current;
+      committedRef.current = nextQuery;
+
+      if (nextQuery) {
         // Push a new history entry on transition from idle to searching so browser Back returns to home
-        const shouldReplace = Boolean(prevQ);
-        setSearchParams({ q }, { replace: shouldReplace });
-        prevQRef.current = q;
+        setSearchParams({ q: nextQuery }, { replace: Boolean(previousQuery) });
         try {
-          sessionStorage.setItem("emby_search_q", q);
+          sessionStorage.setItem("emby_search_q", nextQuery);
         } catch {}
       } else {
         setSearchParams({}, { replace: true });
-        prevQRef.current = "";
         try {
           sessionStorage.removeItem("emby_search_q");
         } catch {}
       }
-    }, 250);
-
-    return () => window.clearTimeout(timer);
-  }, [searchQuery, setSearchParams]);
+    },
+    [setSearchParams],
+  );
 
   // Global keyboard shortcut: Cmd+F or '/' to focus search input
   useEffect(() => {
@@ -93,8 +95,8 @@ export default function HomeRoute({ isVisible = true }: HomeRouteProps) {
       const isInput = target?.tagName === "INPUT" || target?.tagName === "TEXTAREA";
       if ((e.metaKey && e.key.toLowerCase() === "f") || (e.key === "/" && !isInput)) {
         e.preventDefault();
-        searchInputRef.current?.focus();
-        searchInputRef.current?.select();
+        searchBoxRef.current?.focus();
+        searchBoxRef.current?.select();
       }
     };
     window.addEventListener("keydown", handleKey);
@@ -123,22 +125,25 @@ export default function HomeRoute({ isVisible = true }: HomeRouteProps) {
     }
   }, [activeServer]);
 
-  const isSearching = Boolean(searchQuery.trim() || urlQ.trim());
-
   const handleClearSearch = useCallback(() => {
-    setSearchQuery("");
-    setDebouncedQuery("");
-    setSearchParams({}, { replace: true });
-    prevQRef.current = "";
-    try {
-      sessionStorage.removeItem("emby_search_q");
-    } catch {}
-  }, [setSearchParams]);
+    searchBoxRef.current?.clear();
+  }, []);
+
+  const handleEscape = useCallback(
+    (hasText: boolean) => {
+      if (hasText) {
+        searchBoxRef.current?.clear();
+      } else {
+        searchBoxRef.current?.blur();
+      }
+    },
+    [],
+  );
 
   const handleBack = useCallback(() => {
     if (isSearching) {
       handleClearSearch();
-      searchInputRef.current?.blur();
+      searchBoxRef.current?.blur();
       return;
     }
     navigate("/servers");
@@ -172,53 +177,24 @@ export default function HomeRoute({ isVisible = true }: HomeRouteProps) {
         shadowOnScroll
         forceShadow={isSearching}
         centerSection={
-          <div className={styles.searchBar} onClick={() => searchInputRef.current?.focus()}>
-            <IconSearch size={15} className={styles.searchIcon} aria-hidden="true" />
-            <input
-              ref={searchInputRef}
-              type="text"
-              className={styles.searchInput}
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Escape") {
-                  handleClearSearch();
-                  searchInputRef.current?.blur();
-                }
-              }}
-              placeholder={t("searchPlaceholder", "Search movies, TV series, episodes...")}
-              aria-label={t("search", "Search")}
-            />
-            {searchQuery ? (
-              <button
-                type="button"
-                className={styles.searchClearBtn}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleClearSearch();
-                  searchInputRef.current?.focus();
-                }}
-                title="Clear search"
-                aria-label="Clear search"
-              >
-                <IconX size={14} />
-              </button>
-            ) : (
-              <kbd className={styles.searchKbd} title="Press Cmd+F or / to search">
-                ⌘F
-              </kbd>
-            )}
-          </div>
+          <SearchBox
+            ref={searchBoxRef}
+            value={urlQ}
+            onCommit={handleCommit}
+            onHasTextChange={setIsSearching}
+            onEscape={handleEscape}
+            ariaLabel={t("search", "Search")}
+          />
         }
       />
 
       {/* Main content: Search Results when searching, or normal shelves when idle */}
       <main className={styles.content}>
-        {searchQuery.trim() ? (
+        {isSearching ? (
           <div className={styles.searchResultsSection}>
             <SearchResultsView
               server={activeServer}
-              query={debouncedQuery}
+              query={query}
               onIdentifySuccess={handleIdentifySuccess}
             />
           </div>

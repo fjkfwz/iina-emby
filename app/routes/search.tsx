@@ -1,7 +1,8 @@
-import { IconSearch, IconX } from "@tabler/icons-react";
+import { IconSearch } from "@tabler/icons-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Navigate, useNavigate, useSearchParams } from "react-router";
 import { PageHeader } from "../components/PageHeader";
+import { SearchBox, type SearchBoxHandle } from "../components/SearchBox";
 import { SearchResultsView } from "../components/SearchResultsView";
 import { useIINABridge } from "../hooks/useIINABridge";
 import { useTranslation } from "../lib/i18n";
@@ -15,72 +16,75 @@ export default function SearchRoute() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const searchInputRef = useRef<HTMLInputElement>(null);
+  const searchBoxRef = useRef<SearchBoxHandle>(null);
 
   const { activeServer, isLoading } = useIINABridge();
 
   const urlQ = searchParams.get("q") || "";
-  const prevQRef = useRef(urlQ);
 
-  const [searchQuery, setSearchQuery] = useState<string>(() => urlQ);
-  const [debouncedQuery, setDebouncedQuery] = useState<string>(() => urlQ);
+  /** Query that actually drives the results request (updated on the debounce boundary). */
+  const [query, setQuery] = useState<string>(urlQ);
+  /** Switches between the empty state and the results view — flips on the first keystroke. */
+  const [isSearching, setIsSearching] = useState<boolean>(urlQ.trim().length > 0);
+  /** Mirrors the `?q=` param so we never navigate to the URL we are already on. */
+  const committedRef = useRef<string>(urlQ);
 
-  // Synchronize internal state when URL param 'q' changes externally
+  // Adopt URL changes coming from outside the box (back/forward, deep links)
   useEffect(() => {
-    if (urlQ !== searchQuery) {
-      setSearchQuery(urlQ);
-      setDebouncedQuery(urlQ);
-      prevQRef.current = urlQ;
-    }
+    if (urlQ === committedRef.current) return;
+    committedRef.current = urlQ;
+    setQuery(urlQ);
+    setIsSearching(urlQ.trim().length > 0);
   }, [urlQ]);
 
-  // Auto-focus and select search input on mount
-  useEffect(() => {
-    searchInputRef.current?.focus();
-    searchInputRef.current?.select();
-  }, []);
-
-  // Debounce search query and sync to URL search params
-  useEffect(() => {
-    const timer = window.setTimeout(() => {
-      const q = searchQuery.trim();
-      setDebouncedQuery(q);
-      const prevQ = prevQRef.current;
-      if (q) {
-        const shouldReplace = Boolean(prevQ);
-        setSearchParams({ q }, { replace: shouldReplace });
-        prevQRef.current = q;
-      } else {
-        setSearchParams({}, { replace: true });
-        prevQRef.current = "";
-      }
-    }, 250);
-
-    return () => window.clearTimeout(timer);
-  }, [searchQuery, setSearchParams]);
-
-  // Global keyboard shortcut: Cmd+F or '/' to focus search input
+  // Global keyboard shortcut: Cmd+F or '/' to focus the search input
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
       const target = document.activeElement as HTMLElement | null;
       const isInput = target?.tagName === "INPUT" || target?.tagName === "TEXTAREA";
       if ((e.metaKey && e.key.toLowerCase() === "f") || (e.key === "/" && !isInput)) {
         e.preventDefault();
-        searchInputRef.current?.focus();
-        searchInputRef.current?.select();
+        searchBoxRef.current?.focus();
+        searchBoxRef.current?.select();
       }
     };
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
   }, []);
 
-  const handleClearSearch = useCallback(() => {
-    setSearchQuery("");
-    setDebouncedQuery("");
-    setSearchParams({}, { replace: true });
-    prevQRef.current = "";
-    searchInputRef.current?.focus();
-  }, [setSearchParams]);
+  const handleCommit = useCallback(
+    (nextQuery: string) => {
+      setQuery(nextQuery);
+      setIsSearching(nextQuery.length > 0);
+
+      if (nextQuery === committedRef.current) return;
+      const previousQuery = committedRef.current;
+      committedRef.current = nextQuery;
+
+      if (nextQuery) {
+        // Push a history entry only on idle -> searching, so Back returns to the empty page
+        setSearchParams({ q: nextQuery }, { replace: Boolean(previousQuery) });
+      } else {
+        setSearchParams({}, { replace: true });
+      }
+    },
+    [setSearchParams],
+  );
+
+  const handleEscape = useCallback(
+    (hasText: boolean) => {
+      if (hasText) {
+        searchBoxRef.current?.clear();
+        return;
+      }
+      if (window.history.length > 1) {
+        navigate(-1);
+      } else {
+        navigate("/");
+      }
+    },
+    [navigate],
+  );
 
   const handleBack = useCallback(() => {
     if (window.history.length > 1) {
@@ -98,8 +102,6 @@ export default function SearchRoute() {
     return null;
   }
 
-  const isSearching = Boolean(searchQuery.trim());
-
   return (
     <div className={styles.container}>
       <PageHeader
@@ -110,51 +112,21 @@ export default function SearchRoute() {
         shadowOnScroll
         forceShadow={isSearching}
         centerSection={
-          <div className={styles.searchBar} onClick={() => searchInputRef.current?.focus()}>
-            <IconSearch size={15} className={styles.searchIcon} aria-hidden="true" />
-            <input
-              ref={searchInputRef}
-              type="text"
-              className={styles.searchInput}
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Escape") {
-                  if (searchQuery) {
-                    handleClearSearch();
-                  } else {
-                    handleBack();
-                  }
-                }
-              }}
-              placeholder={t("searchPlaceholder", "Search movies, TV series, episodes...")}
-              aria-label={t("search", "Search")}
-            />
-            {searchQuery ? (
-              <button
-                type="button"
-                className={styles.searchClearBtn}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleClearSearch();
-                }}
-                title="Clear search"
-                aria-label="Clear search"
-              >
-                <IconX size={14} />
-              </button>
-            ) : (
-              <kbd className={styles.searchKbd} title="Press Cmd+F or / to search">
-                ⌘F
-              </kbd>
-            )}
-          </div>
+          <SearchBox
+            ref={searchBoxRef}
+            value={urlQ}
+            onCommit={handleCommit}
+            onHasTextChange={setIsSearching}
+            onEscape={handleEscape}
+            autoFocus
+            ariaLabel={t("search", "Search")}
+          />
         }
       />
 
       <main className={styles.content}>
-        {debouncedQuery.trim() ? (
-          <SearchResultsView server={activeServer} query={debouncedQuery} />
+        {isSearching ? (
+          <SearchResultsView server={activeServer} query={query} />
         ) : (
           <div className={styles.emptyState}>
             <IconSearch size={54} className={styles.emptyIcon} stroke={1.4} />

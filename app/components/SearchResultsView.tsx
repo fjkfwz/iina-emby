@@ -1,6 +1,7 @@
 import type { EmbyItemMetadata, EmbyServer, RemoteSearchResult } from "@shared";
 import { IconAlertCircle, IconRotateClockwise, IconSearch, IconX } from "@tabler/icons-react";
-import { useEffect, useMemo, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useIntersectionSentinel } from "../hooks/useIntersectionSentinel";
 import { MediaPoster, MediaPosterSkeleton } from "./MediaPoster";
 import { Alert } from "./ui";
 import { Select, type SelectOption } from "./ui/Select";
@@ -16,7 +17,15 @@ export interface SearchResultsViewProps {
   onIdentifySuccess?: (item: EmbyItemMetadata, result?: RemoteSearchResult) => void;
 }
 
-export function SearchResultsView({
+/**
+ * Cards are mounted in chunks instead of all at once: a search can return up to 200
+ * items, and mounting that many poster cards in a single commit blocks the main
+ * thread long enough to make the search input feel unresponsive on WebKit.
+ */
+const INITIAL_VISIBLE_COUNT = 48;
+const VISIBLE_COUNT_STEP = 48;
+
+export const SearchResultsView = memo(function SearchResultsView({
   server,
   query,
   onIdentifySuccess,
@@ -191,6 +200,38 @@ export function SearchResultsView({
     });
   }, [results, genre, year]);
 
+  // Progressive rendering: only the first chunk of cards is mounted up front, the rest
+  // is appended as the user scrolls (see INITIAL_VISIBLE_COUNT above).
+  const [visibleCount, setVisibleCount] = useState<number>(INITIAL_VISIBLE_COUNT);
+  const lastFilteredRef = useRef<EmbyItemMetadata[]>(filteredResults);
+
+  // Reset the chunk size during render (not in an effect) so a new result set never
+  // commits all of its cards in a single, main-thread blocking pass.
+  if (lastFilteredRef.current !== filteredResults) {
+    lastFilteredRef.current = filteredResults;
+    if (visibleCount !== INITIAL_VISIBLE_COUNT) {
+      setVisibleCount(INITIAL_VISIBLE_COUNT);
+    }
+  }
+
+  const visibleResults = useMemo(
+    () => filteredResults.slice(0, visibleCount),
+    [filteredResults, visibleCount],
+  );
+
+  const hasMoreVisible = visibleCount < filteredResults.length;
+
+  const handleLoadMoreVisible = useCallback(() => {
+    setVisibleCount((prev) => Math.min(prev + VISIBLE_COUNT_STEP, filteredResults.length));
+  }, [filteredResults.length]);
+
+  const sentinelRef = useIntersectionSentinel({
+    onIntersect: handleLoadMoreVisible,
+    rootMargin: "800px",
+    enabled: hasMoreVisible,
+    resetKey: `${visibleCount}:${filteredResults.length}`,
+  });
+
   const hasActiveFilters = genre !== "all" || year !== "all" || mediaType !== "all";
 
   const handleResetFilters = () => {
@@ -300,7 +341,7 @@ export function SearchResultsView({
         </Alert>
       )}
 
-      {isLoading ? (
+      {(!cleanQuery || isLoading) && results.length === 0 ? (
         <div className={styles.grid}>
           {Array.from({ length: 12 }).map((_, index) => (
             <MediaPosterSkeleton key={`skeleton-${index}`} />
@@ -341,10 +382,16 @@ export function SearchResultsView({
               {filteredResults.length !== results.length && ` (${t("filteredFrom", "filtered from")} ${results.length})`}
               {` `}for "<strong>{cleanQuery}</strong>"
             </span>
+            {/* Keep the previous results on screen while the next query loads instead of
+                unmounting/remounting the whole grid on every keystroke pause. */}
+            {isLoading && <span className={styles.loadingHint}>{t("searching", "Searching...")}</span>}
           </div>
 
-          <div className={styles.grid}>
-            {filteredResults.map((item) => (
+          <div
+            className={styles.grid}
+            style={isLoading ? { opacity: 0.55, transition: "opacity 0.15s ease" } : undefined}
+          >
+            {visibleResults.map((item) => (
               <MediaPoster
                 key={item.Id}
                 item={item}
@@ -353,8 +400,10 @@ export function SearchResultsView({
               />
             ))}
           </div>
+
+          {hasMoreVisible && <div ref={sentinelRef} className={styles.sentinel} aria-hidden="true" />}
         </>
       )}
     </div>
   );
-}
+});

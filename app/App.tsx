@@ -1,5 +1,5 @@
 import { QueryClientProvider } from "@tanstack/react-query";
-import { useEffect, useLayoutEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import { HashRouter, Navigate, Route, Routes, useLocation } from "react-router";
 import { ScrollProgress } from "./components/ui";
 import { IINABridgeProvider } from "./hooks/useIINABridge";
@@ -64,6 +64,11 @@ function AppContent() {
     });
   }, [location.pathname, isHome]);
 
+  // Only re-create the persistent home element when visibility changes, so unrelated
+  // navigations (e.g. the `?q=` updates fired while typing in search) don't re-render
+  // the whole home tree behind the scenes.
+  const persistentHome = useMemo(() => <HomeRoute isVisible={isHome} />, [isHome]);
+
   return (
     <>
       {/* Persistent Home View: Keeps heavy media DOM, image decodes, and state alive to ensure 0ms instant back navigation */}
@@ -74,7 +79,7 @@ function AppContent() {
         }}
         aria-hidden={!isHome}
       >
-        <HomeRoute isVisible={isHome} />
+        {persistentHome}
       </div>
 
       <Routes>
