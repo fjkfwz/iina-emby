@@ -1,13 +1,8 @@
 .container {
-  max-width: 960px;
+  max-width: 920px;
   margin: 0 auto;
-  padding: 1.5rem 2rem 5rem;
+  padding: 1.5rem 1.5rem 5rem;
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
-}
-
-.pageHeader {
-  max-width: 960px;
-  margin: 0 auto;
 }

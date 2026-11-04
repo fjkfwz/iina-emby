@@ -22,12 +22,7 @@ export default function SystemInfoRoute() {
 
   return (
     <>
-      <PageHeader
-        onBack={onBack}
-        backTitle={t("back", "Back")}
-        className={styles.pageHeader}
-        title={t("systemInfoTitle", "System Information")}
-      />
+      <PageHeader onBack={onBack} backTitle={t("back", "Back")} title={t("systemInfoTitle", "System Information")} />
 
       <div className={styles.container}>
         <SystemInfo />
