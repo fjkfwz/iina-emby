@@ -61,9 +61,10 @@ export function OrderedLanguageSelect({ mode = "audio", value, onChange, classNa
     popoverRef,
     placement: "bottom-end",
     offset: 4,
+    clampVertical: false,
   });
 
-  // Sync position synchronously before paint, and re-anchor on resize / scroll
+  // Sync position synchronously before paint, and smoothly follow page scroll
   useLayoutEffect(() => {
     if (!isOpen) return;
 
@@ -72,20 +73,42 @@ export function OrderedLanguageSelect({ mode = "audio", value, onChange, classNa
       updatePosition();
     });
 
+    let scrollRafId: number | null = null;
+    const root = document.getElementById("root");
+
     const onScrollOrResize = (e: Event) => {
+      // If the scroll happened INSIDE the popover itself (e.g. scrolling the language list),
+      // do not reposition or close!
       if (e.target && popoverRef.current?.contains(e.target as Node)) {
         return;
       }
-      updatePosition();
+
+      // Check if trigger button has scrolled off screen
+      const tr = triggerRef.current?.getBoundingClientRect();
+      if (tr && (tr.bottom < 0 || tr.top > window.innerHeight)) {
+        setIsOpen(false);
+        return;
+      }
+
+      if (scrollRafId !== null) return;
+      scrollRafId = requestAnimationFrame(() => {
+        scrollRafId = null;
+        updatePosition();
+      });
     };
 
-    window.addEventListener("resize", onScrollOrResize);
-    window.addEventListener("scroll", onScrollOrResize, true);
+    window.addEventListener("resize", onScrollOrResize, { passive: true });
+    window.addEventListener("scroll", onScrollOrResize, { capture: true, passive: true });
+    document.addEventListener("scroll", onScrollOrResize, { capture: true, passive: true });
+    root?.addEventListener("scroll", onScrollOrResize, { passive: true });
 
     return () => {
       cancelAnimationFrame(rafId);
+      if (scrollRafId !== null) cancelAnimationFrame(scrollRafId);
       window.removeEventListener("resize", onScrollOrResize);
       window.removeEventListener("scroll", onScrollOrResize, true);
+      document.removeEventListener("scroll", onScrollOrResize, true);
+      root?.removeEventListener("scroll", onScrollOrResize);
     };
   }, [isOpen, updatePosition]);
 

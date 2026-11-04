@@ -8,6 +8,7 @@ import {
   IconLock,
   IconNetwork,
   IconPlayerPlay,
+  IconRotate,
   IconServer,
   IconShieldCheck,
   IconSubtask,
@@ -77,7 +78,7 @@ export function SystemInfo() {
         setIsRefreshing(false);
       }
     },
-    [activeServer?.id, activeServer?.serverUrl, activeServer?.accessToken],
+    [activeServer],
   );
 
   useEffect(() => {
@@ -97,6 +98,8 @@ export function SystemInfo() {
   const subtitleMode = userInfo?.Configuration?.SubtitleMode;
   const introSkip = userInfo?.Configuration?.IntroSkipMode;
 
+  const serverDisplayName = systemInfo?.ServerName || activeServer?.serverName || "Emby Server";
+
   return (
     <div className={styles.container}>
       {error && (
@@ -105,20 +108,63 @@ export function SystemInfo() {
         </Alert>
       )}
 
-      {/* 1. Server Details */}
-      <section className={styles.section}>
-        <h2 className={styles.sectionTitle}>{t("serverInformation", "Server Information")}</h2>
+      {/* Top Standout Hero Card */}
+      <div className={styles.heroCard}>
+        <div className={styles.heroLeft}>
+          <div className={styles.heroAvatar}>
+            <IconServer size={28} />
+            <span className={styles.onlineDot} title={t("online", "Online")} />
+          </div>
+          <div className={styles.heroText}>
+            <div className={styles.heroTitleRow}>
+              <h1 className={styles.heroTitle}>{serverDisplayName}</h1>
+              <span className={`${styles.badge} ${styles.badgeOnline}`}>
+                <span className={styles.badgePulseDot} />
+                <span>{t("online", "Online")}</span>
+              </span>
+            </div>
+            <div className={styles.heroMetaRow}>
+              {systemInfo?.Version && <span className={styles.heroMetaPill}>v{systemInfo.Version}</span>}
+              {systemInfo?.OperatingSystem && <span className={styles.heroMetaPill}>{systemInfo.OperatingSystem}</span>}
+              <span className={styles.heroMetaPill}>
+                {isAdministrator ? (
+                  <>
+                    <IconShieldCheck size={12} color="var(--accent-teal)" />
+                    <span>{t("adminRole", "Admin")}</span>
+                  </>
+                ) : (
+                  <span>{t("userRole", "User")}</span>
+                )}
+              </span>
+            </div>
+          </div>
+        </div>
 
+        <div className={styles.heroActions}>
+          <Button onClick={handleRefresh} glyph="⌘R" disabled={isRefreshing} size="sm">
+            <IconRotate size={14} className={isRefreshing ? styles.spinning : ""} />
+            <span>{isRefreshing ? t("refreshing", "Refreshing...") : t("refresh", "Refresh")}</span>
+          </Button>
+        </div>
+      </div>
+
+      {/* 2-Column Responsive Dashboard Grid */}
+      <div className={styles.grid}>
+        {/* 1. Server & System */}
         <div className={styles.card}>
+          <div className={styles.cardHeader}>
+            <IconDeviceDesktop size={15} className={styles.cardHeaderIcon} />
+            <span>{t("serverInformation", "Server Information")}</span>
+          </div>
+
           <SystemInfoRow
-            icon={<IconServer size={18} />}
+            icon={<IconServer size={16} />}
             label={t("serverName", "Server Name")}
             loading={isLoading}
-            value={systemInfo?.ServerName || activeServer?.serverName || "Emby Server"}
+            value={serverDisplayName}
           />
 
           <SystemInfoRow
-            icon={<IconServer size={18} />}
             label={t("version", "Version")}
             loading={isLoading}
             skeletonWidth="35%"
@@ -126,12 +172,12 @@ export function SystemInfo() {
           >
             {systemInfo?.HasUpdateAvailable ? (
               <span className={`${styles.badge} ${styles.badgeWarning}`}>
-                <IconArrowUpCircle size={13} />
+                <IconArrowUpCircle size={12} />
                 {t("updateAvailable", "Update available")}
               </span>
             ) : systemInfo?.Version ? (
               <span className={`${styles.badge} ${styles.badgeSuccess}`}>
-                <IconCheck size={13} />
+                <IconCheck size={12} />
                 {t("upToDate", "Up to date")}
               </span>
             ) : null}
@@ -139,7 +185,6 @@ export function SystemInfo() {
 
           {(isLoading || systemInfo?.OperatingSystem || systemInfo?.OperatingSystemDisplayName) && (
             <SystemInfoRow
-              icon={<IconDeviceDesktop size={18} />}
               label={t("operatingSystem", "Operating System")}
               loading={isLoading}
               skeletonWidth="40%"
@@ -153,71 +198,81 @@ export function SystemInfo() {
 
           {systemInfo?.ProgramDataPath && (
             <SystemInfoRow
-              icon={<IconFolder size={18} />}
+              icon={<IconFolder size={16} />}
               label={t("dataPath", "Data Path")}
               loading={isLoading}
               value={systemInfo.ProgramDataPath}
-              title={systemInfo.ProgramDataPath}
+              isCode
+              copyable
             />
           )}
 
           {systemInfo?.TranscodingTempPath && (
             <SystemInfoRow
-              icon={<IconFolder size={18} />}
+              icon={<IconFolder size={16} />}
               label={t("transcodingPath", "Transcoding Path")}
               loading={isLoading}
               value={systemInfo.TranscodingTempPath}
-              title={systemInfo.TranscodingTempPath}
+              isCode
+              copyable
             />
           )}
         </div>
-      </section>
 
-      {/* 2. Network & Endpoints */}
-      <section className={styles.section}>
-        <h2 className={styles.sectionTitle}>{t("networkConnectivity", "Network & Connectivity")}</h2>
-
+        {/* 2. Network & Connectivity */}
         <div className={styles.card}>
-          <SystemInfoRow
-            icon={<IconNetwork size={18} />}
-            label={t("connectedUrl", "Connected URL")}
-            value={activeServer?.serverUrl || "—"}
-            title={activeServer?.serverUrl}
-          />
+          <div className={styles.cardHeader}>
+            <IconNetwork size={15} className={styles.cardHeaderIcon} />
+            <span>{t("networkConnectivity", "Network & Connectivity")}</span>
+          </div>
+
+          <SystemInfoRow label={t("connectedUrl", "Connected URL")} value={activeServer?.serverUrl || "—"} isCode copyable />
 
           {(isLoading || systemInfo?.LocalAddress) && (
             <SystemInfoRow
               label={t("localAddress", "Local Address")}
               loading={isLoading}
               value={systemInfo?.LocalAddress || "—"}
-              title={systemInfo?.LocalAddress}
+              isCode
+              copyable
             />
           )}
 
           {(isLoading || systemInfo?.WanAddress) && (
-            <SystemInfoRow label={t("wanAddress", "WAN Address")} loading={isLoading} value={systemInfo?.WanAddress || "—"} title={systemInfo?.WanAddress} />
+            <SystemInfoRow
+              label={t("wanAddress", "WAN Address")}
+              loading={isLoading}
+              value={systemInfo?.WanAddress || "—"}
+              isCode
+              copyable
+            />
           )}
 
           {systemInfo?.WebSocketPortNumber && (
-            <SystemInfoRow label={t("webSocketPort", "WebSocket Port")} loading={isLoading} value={String(systemInfo.WebSocketPortNumber)} />
+            <SystemInfoRow
+              label={t("webSocketPort", "WebSocket Port")}
+              loading={isLoading}
+              value={String(systemInfo.WebSocketPortNumber)}
+              isCode
+            />
           )}
         </div>
-      </section>
 
-      {/* 3. User & Permissions */}
-      <section className={styles.section}>
-        <h2 className={styles.sectionTitle}>{t("userAccountAndPrivileges", "User Account & Privileges")}</h2>
-
+        {/* 3. User Account & Privileges */}
         <div className={styles.card}>
+          <div className={styles.cardHeader}>
+            <IconUser size={15} className={styles.cardHeaderIcon} />
+            <span>{t("userAccountAndPrivileges", "User Account & Privileges")}</span>
+          </div>
+
           <SystemInfoRow
-            icon={<IconUser size={18} />}
             label={t("username", "Username")}
             loading={isLoading && !userInfo}
             value={userInfo?.Name || activeServer?.username || "—"}
           >
             {isAdministrator ? (
               <span className={`${styles.badge} ${styles.badgeSuccess}`}>
-                <IconShieldCheck size={13} />
+                <IconShieldCheck size={12} />
                 {t("adminRole", "Admin")}
               </span>
             ) : (
@@ -226,7 +281,7 @@ export function SystemInfo() {
           </SystemInfoRow>
 
           <SystemInfoRow
-            icon={<IconLock size={18} />}
+            icon={<IconLock size={16} />}
             label={t("administrativeRole", "Administrative Role")}
             loading={isLoading && !userInfo}
             value={isAdministrator ? t("fullAdministrator", "Full Administrator") : t("standardUser", "Standard User")}
@@ -246,36 +301,55 @@ export function SystemInfo() {
             }
           />
 
-          <SystemInfoRow label={t("transcoding", "Transcoding")} loading={isLoading && !userInfo} value={canTranscode ? t("enabled", "Enabled") : t("directPlayOnly", "Direct Play Only")} />
+          <SystemInfoRow
+            label={t("transcoding", "Transcoding")}
+            loading={isLoading && !userInfo}
+            value={canTranscode ? t("enabled", "Enabled") : t("directPlayOnly", "Direct Play Only")}
+          />
 
           {userInfo?.DateCreated && (
-            <SystemInfoRow label={t("accountCreated", "Account Created")} loading={isLoading && !userInfo} value={formatDate(userInfo.DateCreated)} />
+            <SystemInfoRow
+              label={t("accountCreated", "Account Created")}
+              loading={isLoading && !userInfo}
+              value={formatDate(userInfo.DateCreated)}
+            />
           )}
 
           {userInfo?.LastActivityDate && (
-            <SystemInfoRow label={t("lastActivity", "Last Activity")} loading={isLoading && !userInfo} value={formatDate(userInfo.LastActivityDate)} />
+            <SystemInfoRow
+              label={t("lastActivity", "Last Activity")}
+              loading={isLoading && !userInfo}
+              value={formatDate(userInfo.LastActivityDate)}
+            />
           )}
         </div>
-      </section>
 
-      {/* 4. Playback & Library Preferences */}
-      {(userInfo?.Configuration || isLoading) && (
-        <section className={styles.section}>
-          <h2 className={styles.sectionTitle}>{t("userPreferences", "Emby User Preferences")}</h2>
-
+        {/* 4. Playback & Library Preferences */}
+        {(userInfo?.Configuration || isLoading) && (
           <div className={styles.card}>
+            <div className={styles.cardHeader}>
+              <IconPlayerPlay size={15} className={styles.cardHeaderIcon} />
+              <span>{t("userPreferences", "Emby User Preferences")}</span>
+            </div>
+
             <SystemInfoRow
-              icon={<IconPlayerPlay size={18} />}
               label={t("autoplayNextEpisode", "Auto Play Next Episode")}
               loading={isLoading && !userInfo}
               value={autoPlayNext !== undefined ? (autoPlayNext ? t("enabled", "Enabled") : t("disabled", "Disabled")) : "—"}
             />
 
             {subtitleMode && (
-              <SystemInfoRow icon={<IconSubtask size={18} />} label={t("subtitleMode", "Subtitle Mode")} loading={isLoading && !userInfo} value={subtitleMode} />
+              <SystemInfoRow
+                icon={<IconSubtask size={16} />}
+                label={t("subtitleMode", "Subtitle Mode")}
+                loading={isLoading && !userInfo}
+                value={subtitleMode}
+              />
             )}
 
-            {introSkip && <SystemInfoRow label={t("introSkipMode", "Intro Skip Mode")} loading={isLoading && !userInfo} value={introSkip} />}
+            {introSkip && (
+              <SystemInfoRow label={t("introSkipMode", "Intro Skip Mode")} loading={isLoading && !userInfo} value={introSkip} />
+            )}
 
             {userInfo?.Configuration?.ResumeRewindSeconds !== undefined && (
               <SystemInfoRow
@@ -285,13 +359,7 @@ export function SystemInfo() {
               />
             )}
           </div>
-        </section>
-      )}
-
-      <div>
-        <Button onClick={handleRefresh} glyph="⌘R" disabled={isRefreshing}>
-          {isRefreshing ? t("refreshing", "Refreshing...") : t("refresh", "Refresh")}
-        </Button>
+        )}
       </div>
     </div>
   );

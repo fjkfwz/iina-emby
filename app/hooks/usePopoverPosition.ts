@@ -14,6 +14,7 @@ export interface CalculatePopoverPositionOptions {
   viewportPadding?: number;
   windowWidth: number;
   windowHeight: number;
+  clampVertical?: boolean;
 }
 
 export interface CalculatedPopoverPosition {
@@ -34,6 +35,7 @@ export function calculatePopoverPosition({
   viewportPadding = DEFAULT_POPOVER_VIEWPORT_PADDING,
   windowWidth,
   windowHeight,
+  clampVertical = true,
 }: CalculatePopoverPositionOptions): CalculatedPopoverPosition {
   let [side, align] = placement.split("-") as ["bottom" | "top", "start" | "end"];
 
@@ -56,7 +58,9 @@ export function calculatePopoverPosition({
   let left = align === "start" ? triggerRect.left : triggerRect.right - popoverRect.width;
 
   left = Math.min(Math.max(left, viewportPadding), windowWidth - popoverRect.width - viewportPadding);
-  top = Math.min(Math.max(top, viewportPadding), windowHeight - popoverRect.height - viewportPadding);
+  if (clampVertical) {
+    top = Math.min(Math.max(top, viewportPadding), windowHeight - popoverRect.height - viewportPadding);
+  }
 
   return { top, left, side, align };
 }
@@ -69,6 +73,8 @@ export interface UsePopoverPositionOptions {
   offset?: number;
   /** Minimum padding to viewport edges in px. Defaults to 8. */
   viewportPadding?: number;
+  /** Whether to clamp the vertical coordinate within the viewport (defaults to true). Set false for scrollable popovers that follow trigger motion. */
+  clampVertical?: boolean;
 }
 
 export function usePopoverPosition({
@@ -77,6 +83,7 @@ export function usePopoverPosition({
   placement = DEFAULT_POPOVER_PLACEMENT,
   offset = DEFAULT_POPOVER_OFFSET,
   viewportPadding = DEFAULT_POPOVER_VIEWPORT_PADDING,
+  clampVertical = true,
 }: UsePopoverPositionOptions) {
   const updatePosition = useCallback(() => {
     const trigger = triggerRef.current;
@@ -106,13 +113,14 @@ export function usePopoverPosition({
       viewportPadding,
       windowWidth: window.innerWidth,
       windowHeight: window.innerHeight,
+      clampVertical,
     });
 
     popover.style.top = `${Math.round(top)}px`;
     popover.style.left = `${Math.round(left)}px`;
     popover.dataset.side = side;
     popover.dataset.align = align;
-  }, [triggerRef, popoverRef, placement, offset, viewportPadding]);
+  }, [triggerRef, popoverRef, placement, offset, viewportPadding, clampVertical]);
 
   return { updatePosition };
 }

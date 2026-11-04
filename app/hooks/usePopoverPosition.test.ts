@@ -105,4 +105,37 @@ describe("calculatePopoverPosition", () => {
     expect(result.side).toBe("top");
     expect(result.align).toBe("end");
   });
+
+  it("does not clamp top to viewport when clampVertical is false", () => {
+    const triggerRect = {
+      left: 100,
+      right: 200,
+      top: 100,
+      bottom: 130,
+      width: 100,
+      height: 30,
+    };
+
+    const popoverRect = {
+      left: 0,
+      right: 160,
+      top: 0,
+      bottom: 400,
+      width: 160,
+      height: 400,
+    };
+
+    const result = calculatePopoverPosition({
+      triggerRect,
+      popoverRect,
+      placement: "bottom-end",
+      offset: 4,
+      windowWidth: 1000,
+      windowHeight: 400,
+      clampVertical: false,
+    });
+
+    // Directly follows trigger bottom: 130 + 4 = 134 (unclamped by viewport height limit)
+    expect(result.top).toBe(134);
+  });
 });

@@ -225,6 +225,9 @@ export const translations: Record<LanguageCode, Record<string, string>> = {
 
     // Server & Diagnostics
     serverSection: "服务器与诊断",
+    online: "在线",
+    copy: "复制",
+    copied: "已复制",
     systemInfoTitle: "系统信息",
     systemInfoDesc: "查看 Emby 服务器版本、网络端点和用户权限",
     libraryScanTitle: "媒体库扫描",
@@ -508,6 +511,9 @@ export const translations: Record<LanguageCode, Record<string, string>> = {
 
     // Server & Diagnostics
     serverSection: "伺服器與診斷",
+    online: "線上",
+    copy: "複製",
+    copied: "已複製",
     systemInfoTitle: "系統資訊",
     systemInfoDesc: "查看 Emby 伺服器版本、網路端點與使用者權限",
     libraryScanTitle: "媒體庫掃描",
@@ -791,6 +797,9 @@ export const translations: Record<LanguageCode, Record<string, string>> = {
 
     // Server & Diagnostics
     serverSection: "Server & Diagnostics",
+    online: "Online",
+    copy: "Copy",
+    copied: "Copied!",
     systemInfoTitle: "System Information",
     systemInfoDesc: "View server version, network endpoints, and permissions",
     libraryScanTitle: "Library Scan",
@@ -1074,6 +1083,9 @@ export const translations: Record<LanguageCode, Record<string, string>> = {
 
     // Server & Diagnostics
     serverSection: "Servidor y Diagnóstico",
+    online: "En línea",
+    copy: "Copiar",
+    copied: "¡Copiado!",
     systemInfoTitle: "Información del sistema",
     systemInfoDesc: "Ver versión del servidor, conexiones y permisos",
     libraryScanTitle: "Escanear bibliotecas",
@@ -1357,6 +1369,9 @@ export const translations: Record<LanguageCode, Record<string, string>> = {
 
     // Server & Diagnostics
     serverSection: "サーバーと診断",
+    online: "オンライン",
+    copy: "コピー",
+    copied: "コピー完了",
     systemInfoTitle: "システム情報",
     systemInfoDesc: "サーバーバージョン、ネットワーク設定、権限を確認",
     libraryScanTitle: "ライブラリスキャン",
@@ -1640,6 +1655,9 @@ export const translations: Record<LanguageCode, Record<string, string>> = {
 
     // Server & Diagnostics
     serverSection: "서버 및 진단",
+    online: "온라인",
+    copy: "복사",
+    copied: "복사됨",
     systemInfoTitle: "시스템 정보",
     systemInfoDesc: "서버 버전, 네트워크 엔드포인트 및 권한 확인",
     libraryScanTitle: "라이브러리 스캔",
