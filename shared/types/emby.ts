@@ -70,6 +70,7 @@ export interface EmbyServer {
   accessToken: string;
   userId: string;
   username: string;
+  password?: string;
   user?: EmbyUser;
   addedAt?: number;
   updatedAt?: number;

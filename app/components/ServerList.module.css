@@ -38,6 +38,19 @@
   position: relative;
 }
 
+.serverRowActive {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.serverRowEditing {
+  background: rgba(56, 189, 248, 0.08);
+}
+
+.serverRowEditing .editBtn {
+  color: #38bdf8;
+  background: rgba(56, 189, 248, 0.16);
+}
+
 .serverRow:not(:last-child) {
   border-bottom: 1px solid var(--border-subtle);
 }
@@ -61,6 +74,11 @@
 
 .serverSelectBtn:hover {
   background: var(--bg-row-hover);
+}
+
+.serverSelectBtn:active {
+  background: rgba(255, 255, 255, 0.08);
+  transform: scale(0.995);
 }
 
 .serverSelectBtn:focus-visible {

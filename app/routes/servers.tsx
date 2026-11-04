@@ -11,7 +11,11 @@ export default function ServersRoute() {
   return (
     <ServerManagement
       onServerSelected={() => {
-        navigate("/");
+        if (window.history.length > 1) {
+          navigate(-1);
+        } else {
+          navigate("/");
+        }
       }}
     />
   );

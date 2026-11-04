@@ -14,15 +14,15 @@ import {
   IconVolume,
   IconWorld,
 } from "@tabler/icons-react";
-import type React from "react";
+import { useMemo } from "react";
 import { useNavigate } from "react-router";
 import { LibraryScan } from "~/components/LibraryScan";
+import { AudioLanguageSelect, SubtitleLanguageSelect } from "~/components/OrderedLanguageSelect";
 import { PageHeader } from "~/components/PageHeader";
-import { Input } from "~/components/ui/Input";
 import { Select } from "~/components/ui/Select";
 import { useHomeModulesConfig } from "~/hooks/useHomeModulesConfig";
 import { useIINABridge } from "~/hooks/useIINABridge";
-import { SUPPORTED_LANGUAGES, type LanguageCode, useTranslation } from "~/lib/i18n";
+import { type LanguageSetting, SUPPORTED_LANGUAGES, useTranslation } from "~/lib/i18n";
 import styles from "./settings.module.css";
 
 export function meta() {
@@ -47,16 +47,26 @@ function ToggleSwitch({ id, checked, onChange, disabled }: ToggleSwitchProps) {
 
 export default function SettingsRoute() {
   const navigate = useNavigate();
-  const { setting, language, setLanguage, t } = useTranslation();
+  const { setting, setLanguage, t } = useTranslation();
   const { config: modulesConfig, toggleModule } = useHomeModulesConfig();
   const { preferences, setPreference, servers, activeServer } = useIINABridge();
 
+  const interfaceLanguageOptions = useMemo(
+    () =>
+      SUPPORTED_LANGUAGES.map((lang) => ({
+        value: lang.code,
+        label:
+          lang.code === "auto"
+            ? `${t("followSystem", "Follow System")} (Auto)`
+            : lang.nativeLabel === lang.label
+              ? lang.nativeLabel
+              : `${lang.nativeLabel} (${lang.label})`,
+      })),
+    [t],
+  );
+
   const handleBack = () => {
-    if (window.history.length > 1) {
-      navigate(-1);
-    } else {
-      navigate("/", { replace: true });
-    }
+    navigate("/");
   };
 
   return (
@@ -80,25 +90,15 @@ export default function SettingsRoute() {
                   </span>
                 </div>
               </div>
-            </div>
-
-            <div className={styles.divider} />
-
-            <div className={styles.languageGrid}>
-              {SUPPORTED_LANGUAGES.map((lang) => {
-                const isActive = setting === lang.code;
-                return (
-                  <button
-                    key={lang.code}
-                    type="button"
-                    className={`${styles.langCard} ${isActive ? styles.langCardActive : ""}`}
-                    onClick={() => setLanguage(lang.code)}
-                  >
-                    <span className={styles.langNative}>{lang.nativeLabel}</span>
-                    <span className={styles.langCode}>{lang.code === "auto" ? t("followSystem", "System") : lang.code}</span>
-                  </button>
-                );
-              })}
+              <div className={styles.rowControl}>
+                <Select
+                  value={setting}
+                  onChange={(val) => {
+                    if (val) setLanguage(val as LanguageSetting);
+                  }}
+                  data={interfaceLanguageOptions}
+                />
+              </div>
             </div>
           </div>
         </section>
@@ -433,21 +433,16 @@ export default function SettingsRoute() {
                   <IconVolume size={18} />
                 </span>
                 <div className={styles.textGroup}>
-                  <span className={styles.rowTitle}>{t("preferredAudioLanguage", "Preferred Audio Languages")}</span>
+                  <span className={styles.rowTitle}>{t("preferredAudioLanguage", "Preferred Audio Language")}</span>
                   <span className={styles.rowSubtitle}>
-                    {t(
-                      "preferredAudioLanguageDesc",
-                      "Comma-separated language codes for preferred audio tracks (e.g. zh,chi,ja,jpn,en,eng)",
-                    )}
+                    {t("preferredAudioLanguageDesc", "Automatically select the audio track matching your preferred language on playback")}
                   </span>
                 </div>
               </div>
-              <div className={styles.rowControl}>
-                <Input
-                  size="sm"
+              <div className={styles.rowControlGroup}>
+                <AudioLanguageSelect
                   value={(preferences.preferred_audio_language as string) ?? "zh,chi,ja,jpn,en,eng"}
-                  onChange={(e) => setPreference("preferred_audio_language", e.target.value)}
-                  placeholder="zh,chi,ja,jpn,en,eng"
+                  onChange={(val) => setPreference("preferred_audio_language", val)}
                 />
               </div>
             </div>
@@ -491,19 +486,14 @@ export default function SettingsRoute() {
                 <div className={styles.textGroup}>
                   <span className={styles.rowTitle}>{t("preferredSubtitleLanguage", "Preferred Subtitle Languages")}</span>
                   <span className={styles.rowSubtitle}>
-                    {t(
-                      "preferredSubtitleLanguageDesc",
-                      "Comma-separated language codes and variants for subtitles (e.g. zh,chi,chs,sc,cht,tc,en)",
-                    )}
+                    {t("preferredSubtitleLanguageDesc", "Automatically select matching subtitle track on playback start")}
                   </span>
                 </div>
               </div>
-              <div className={styles.rowControl}>
-                <Input
-                  size="sm"
+              <div className={styles.rowControlGroup}>
+                <SubtitleLanguageSelect
                   value={(preferences.preferred_subtitle_language as string) ?? "zh,chi,chs,sc,cht,tc,en"}
-                  onChange={(e) => setPreference("preferred_subtitle_language", e.target.value)}
-                  placeholder="zh,chi,chs,sc,cht,tc,en"
+                  onChange={(val) => setPreference("preferred_subtitle_language", val)}
                 />
               </div>
             </div>

@@ -118,17 +118,23 @@
   height: var(--height-action);
   border-radius: var(--radius-m);
   background: var(--bg-control);
-  border: none;
+  border: 1px solid rgba(255, 255, 255, 0.08);
   color: var(--text-primary);
   font-size: var(--font-size-body);
   font-weight: 500;
   cursor: pointer;
-  transition: background 0.12s ease;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  transition:
+    background 0.12s ease,
+    border-color 0.12s ease,
+    box-shadow 0.12s ease;
   -webkit-app-region: no-drag;
 }
 
 .actionRow:hover {
   background: var(--bg-control-hover);
+  border-color: rgba(255, 255, 255, 0.15);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.22);
 }
 
 .actionRow:active {
@@ -145,8 +151,13 @@
 }
 
 .shortcutGlyph {
-  font-size: var(--font-size-sub);
+  font-size: var(--font-size-caption);
   color: var(--text-tertiary);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+  padding: 0.125rem 0.375rem;
   font-family: var(--font-system);
   letter-spacing: 0.05em;
+  line-height: 1.2;
 }

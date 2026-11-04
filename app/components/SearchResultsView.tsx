@@ -1,12 +1,14 @@
 import type { EmbyItemMetadata, EmbyServer, RemoteSearchResult } from "@shared";
 import { IconAlertCircle, IconRotateClockwise, IconSearch, IconX } from "@tabler/icons-react";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate } from "react-router";
 import { useIntersectionSentinel } from "../hooks/useIntersectionSentinel";
 import { MediaPoster, MediaPosterSkeleton } from "./MediaPoster";
 import { Alert } from "./ui";
 import { Select, type SelectOption } from "./ui/Select";
 import { embyFetch } from "../lib/emby-library-client";
 import { useTranslation } from "../lib/i18n";
+import { addRecentSearch } from "../lib/search-history";
 import styles from "./SearchResultsView.module.css";
 
 export type MediaTypeFilter = "all" | "movies" | "series";
@@ -40,6 +42,18 @@ export const SearchResultsView = memo(function SearchResultsView({
   const [error, setError] = useState<string | null>(null);
 
   const cleanQuery = query.trim();
+  const navigate = useNavigate();
+
+  const handleItemClick = useCallback(
+    (item: EmbyItemMetadata) => {
+      if (cleanQuery) {
+        addRecentSearch(cleanQuery);
+      }
+      const targetId = item.Type === "Episode" && item.SeriesId ? item.SeriesId : item.Id;
+      navigate(`/item/${targetId}`, { state: targetId === item.Id ? { item } : undefined });
+    },
+    [cleanQuery, navigate],
+  );
 
   // Fetch search results from Emby server whenever query or mediaType changes
   useEffect(() => {
@@ -396,6 +410,7 @@ export const SearchResultsView = memo(function SearchResultsView({
                 key={item.Id}
                 item={item}
                 server={server}
+                onClick={handleItemClick}
                 onIdentifySuccess={onIdentifySuccess}
               />
             ))}

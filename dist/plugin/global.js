@@ -3,7 +3,7 @@
 // shared/constants.ts
 var CLIENT_NAME = "IINA Emby Plugin";
 var DEVICE_NAME = "IINA";
-var CLIENT_VERSION = true ? "0.8.8" : "0.1.0";
+var CLIENT_VERSION = true ? "0.8.9" : "0.1.0";
 var WINDOW_DIMENSIONS = {
   DEFAULT_WIDTH: 960,
   DEFAULT_HEIGHT: 680,
@@ -170,6 +170,7 @@ function registerBridgeHandlers(view, deps, options) {
         serverName: data.serverName || "",
         userId: data.userId || "",
         username: data.username || "",
+        password: data.password,
         user: data.user
       });
       if (server) {
@@ -854,6 +855,7 @@ function createServerSessionStore({ preferences: preferences2, sidebar, standalo
         accessToken: serverData.accessToken,
         userId: serverData.userId || "",
         username: serverData.username || "",
+        password: serverData.password !== void 0 ? serverData.password : existingIndex >= 0 ? servers[existingIndex].password : void 0,
         user: serverData.user || (existingIndex >= 0 ? servers[existingIndex].user : void 0),
         addedAt: existingIndex >= 0 ? servers[existingIndex].addedAt : Date.now(),
         updatedAt: Date.now()
@@ -968,7 +970,8 @@ function createServerSessionStore({ preferences: preferences2, sidebar, standalo
         serverId: server.id,
         serverName: server.serverName,
         userId: server.userId,
-        username: server.username
+        username: server.username,
+        password: server.password
       };
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);

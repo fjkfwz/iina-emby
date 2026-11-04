@@ -1,8 +1,8 @@
 import type { EmbyServer } from "@shared";
 import { IconPlus } from "@tabler/icons-react";
 import { useState } from "react";
-import { useTranslation } from "../lib/i18n";
 import { useIINABridge } from "../hooks/useIINABridge";
+import { useTranslation } from "../lib/i18n";
 import { IINAEmbyLogo } from "./IINAEmbyLogo";
 import { ServerConnectForm } from "./ServerConnectForm";
 import { ServerList } from "./ServerList";
@@ -65,6 +65,7 @@ export function ServerManagement({ onServerSelected }: ServerManagementProps) {
           <ServerList
             servers={servers}
             activeServerId={activeServerId}
+            editingServerId={editingServer?.id ?? null}
             onSelectServer={handleSelect}
             onRequestDelete={setServerToDelete}
             onRequestEdit={(server) => {

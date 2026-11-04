@@ -44,6 +44,11 @@
     background: var(--bg-control-hover);
     color: var(--text-primary);
   }
+
+  &:active {
+    background: var(--bg-control-active);
+    transform: scale(0.95);
+  }
 }
 
 .moreBtn > * + * {

@@ -223,7 +223,11 @@ export default function SectionRoute() {
   }
 
   const handleBack = () => {
-    navigate("/");
+    if (window.history.length > 1) {
+      navigate(-1);
+    } else {
+      navigate("/");
+    }
   };
 
   const totalCount = rawData?.items.length ?? 0;

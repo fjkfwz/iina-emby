@@ -1,0 +1,74 @@
+/* Page Transition Container for sub-routes */
+.pageContainer {
+  width: 100%;
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+/* Forward Navigation: Slide from right */
+.pageEnterForward {
+  animation: pageEnterForward 0.24s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes pageEnterForward {
+  0% {
+    opacity: 0;
+    transform: translateX(36px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Backward Navigation: Slide from left */
+.pageEnterBack {
+  animation: pageEnterBack 0.22s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes pageEnterBack {
+  0% {
+    opacity: 0;
+    transform: translateX(-36px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Persistent Home View: Kept in memory without display: none so WebKit never discards decoded image textures or layout trees */
+.homePersistentView {
+  width: 100%;
+}
+
+.homeVisible {
+  position: relative;
+  width: 100%;
+  visibility: visible;
+  opacity: 1;
+  pointer-events: auto;
+  transition: opacity 0.12s ease;
+}
+
+.homeHidden {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 0;
+  overflow: hidden;
+  visibility: hidden;
+  pointer-events: none;
+  opacity: 0;
+  contain: strict;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pageEnterForward,
+  .pageEnterBack {
+    animation-duration: 0.15s;
+  }
+}

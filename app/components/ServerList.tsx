@@ -7,12 +7,13 @@ import { Tooltip } from "./ui";
 export interface ServerListProps {
   servers: EmbyServer[];
   activeServerId: string | null;
+  editingServerId?: string | null;
   onSelectServer: (serverId: string) => void;
   onRequestDelete: (server: EmbyServer) => void;
   onRequestEdit?: (server: EmbyServer) => void;
 }
 
-export function ServerList({ servers, activeServerId, onSelectServer, onRequestDelete, onRequestEdit }: ServerListProps) {
+export function ServerList({ servers, activeServerId, editingServerId, onSelectServer, onRequestDelete, onRequestEdit }: ServerListProps) {
   const { t } = useTranslation();
 
   if (servers.length === 0) {
@@ -28,8 +29,12 @@ export function ServerList({ servers, activeServerId, onSelectServer, onRequestD
       <div className={styles.serverList}>
         {servers.map((server) => {
           const isActive = server.id === activeServerId;
+          const isEditing = server.id === editingServerId;
           return (
-            <div key={server.id} className={`${styles.serverRow} ${isActive ? styles.serverRowActive : ""}`}>
+            <div
+              key={server.id}
+              className={`${styles.serverRow} ${isActive ? styles.serverRowActive : ""} ${isEditing ? styles.serverRowEditing : ""}`}
+            >
               <button
                 type="button"
                 className={styles.serverSelectBtn}

@@ -46,6 +46,7 @@ export interface StoreSessionPayload {
   serverName?: string;
   userId?: string;
   username?: string;
+  password?: string;
   user?: EmbyServer["user"];
   [key: string]: unknown;
 }

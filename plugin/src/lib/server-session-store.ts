@@ -15,6 +15,7 @@ export interface StoredSessionData {
   serverName?: string;
   userId?: string;
   username?: string;
+  password?: string;
 }
 
 export function createServerSessionStore({ preferences, sidebar, standaloneWindow, log }: ServerSessionStoreDeps) {
@@ -106,6 +107,8 @@ export function createServerSessionStore({ preferences, sidebar, standaloneWindo
         accessToken: serverData.accessToken,
         userId: serverData.userId || "",
         username: serverData.username || "",
+        password:
+          serverData.password !== undefined ? serverData.password : existingIndex >= 0 ? servers[existingIndex].password : undefined,
         user: serverData.user || (existingIndex >= 0 ? servers[existingIndex].user : undefined),
         addedAt: existingIndex >= 0 ? servers[existingIndex].addedAt : Date.now(),
         updatedAt: Date.now(),
@@ -241,6 +244,7 @@ export function createServerSessionStore({ preferences, sidebar, standaloneWindo
         serverName: server.serverName,
         userId: server.userId,
         username: server.username,
+        password: server.password,
       };
     } catch (error: unknown) {
       const errorMsg = error instanceof Error ? error.message : String(error);

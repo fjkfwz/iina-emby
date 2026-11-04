@@ -118,6 +118,7 @@ export async function authenticateByName(
       accessToken: data.AccessToken,
       userId: data.User.Id,
       username: data.User.Name,
+      password: pw,
       user: data.User as EmbyUser,
       addedAt: Date.now(),
       updatedAt: Date.now(),

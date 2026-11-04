@@ -13,12 +13,21 @@ export default function SystemInfoRoute() {
   const { t } = useTranslation();
 
   const onBack = () => {
-    navigate("/");
+    if (window.history.length > 1) {
+      navigate(-1);
+    } else {
+      navigate("/");
+    }
   };
 
   return (
     <>
-      <PageHeader onBack={onBack} backTitle={t("back", "Back")} className={styles.pageHeader} title={t("systemInfoTitle", "System Information")} />
+      <PageHeader
+        onBack={onBack}
+        backTitle={t("back", "Back")}
+        className={styles.pageHeader}
+        title={t("systemInfoTitle", "System Information")}
+      />
 
       <div className={styles.container}>
         <SystemInfo />

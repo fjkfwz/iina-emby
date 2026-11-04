@@ -1,6 +1,7 @@
 import { QueryClientProvider } from "@tanstack/react-query";
 import { useEffect, useLayoutEffect, useMemo, useRef } from "react";
-import { HashRouter, Navigate, Route, Routes, useLocation } from "react-router";
+import { HashRouter, Navigate, Route, Routes, useLocation, useNavigationType } from "react-router";
+import styles from "./App.module.css";
 import { ScrollProgress } from "./components/ui";
 import { IINABridgeProvider } from "./hooks/useIINABridge";
 import { LanguageProvider } from "./lib/i18n";
@@ -68,31 +69,36 @@ function AppContent() {
   // navigations (e.g. the `?q=` updates fired while typing in search) don't re-render
   // the whole home tree behind the scenes.
   const persistentHome = useMemo(() => <HomeRoute isVisible={isHome} />, [isHome]);
+  const navigationType = useNavigationType();
 
   return (
     <>
       {/* Persistent Home View: Keeps heavy media DOM, image decodes, and state alive to ensure 0ms instant back navigation */}
       <div
         id="home-persistent-view"
-        style={{
-          display: isHome ? "block" : "none",
-        }}
+        className={`${styles.homePersistentView} ${isHome ? styles.homeVisible : styles.homeHidden}`}
         aria-hidden={!isHome}
       >
         {persistentHome}
       </div>
 
-      <Routes>
-        <Route path="/" element={null} />
-        <Route path="/search" element={<SearchRoute />} />
-        <Route path="/continue-watching" element={<ContinueWatchingRoute />} />
-        <Route path="/section/:id" element={<SectionRoute />} />
-        <Route path="/item/:id" element={<ItemDetailRoute />} />
-        <Route path="/servers" element={<ServersRoute />} />
-        <Route path="/settings" element={<SettingsRoute />} />
-        <Route path="/system-info" element={<SystemInfoRoute />} />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
+      {!isHome && (
+        <div
+          key={location.pathname}
+          className={`${styles.pageContainer} ${navigationType === "POP" ? styles.pageEnterBack : styles.pageEnterForward}`}
+        >
+          <Routes location={location}>
+            <Route path="/search" element={<SearchRoute />} />
+            <Route path="/continue-watching" element={<ContinueWatchingRoute />} />
+            <Route path="/section/:id" element={<SectionRoute />} />
+            <Route path="/item/:id" element={<ItemDetailRoute />} />
+            <Route path="/servers" element={<ServersRoute />} />
+            <Route path="/settings" element={<SettingsRoute />} />
+            <Route path="/system-info" element={<SystemInfoRoute />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </div>
+      )}
       <ScrollProgress />
     </>
   );

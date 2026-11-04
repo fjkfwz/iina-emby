@@ -223,7 +223,16 @@ export const MediaPoster = memo(function MediaPoster({
             </button>
           )}
         >
-          <DropdownMenu.Item icon={<IconInfoCircle size={16} />} onSelect={() => navigate(`/item/${item.Id}`, { state: { item } })}>
+          <DropdownMenu.Item
+            icon={<IconInfoCircle size={16} />}
+            onSelect={() => {
+              if (onClick) {
+                onClick(item);
+              } else {
+                navigate(`/item/${item.Id}`, { state: { item } });
+              }
+            }}
+          >
             {t("details", "Details")}
           </DropdownMenu.Item>
           {canIdentify && (

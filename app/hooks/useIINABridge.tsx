@@ -410,6 +410,7 @@ export function IINABridgeProvider({ children }: { children: React.ReactNode }) 
         serverName: server.serverName,
         userId: server.userId,
         username: server.username,
+        password: server.password,
         user: server.user,
       });
     }

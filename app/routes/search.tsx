@@ -1,4 +1,4 @@
-import { IconSearch } from "@tabler/icons-react";
+import { IconClock, IconHistory, IconSearch, IconX } from "@tabler/icons-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Navigate, useNavigate, useSearchParams } from "react-router";
 import { PageHeader } from "../components/PageHeader";
@@ -6,6 +6,7 @@ import { SearchBox, type SearchBoxHandle } from "../components/SearchBox";
 import { SearchResultsView } from "../components/SearchResultsView";
 import { useIINABridge } from "../hooks/useIINABridge";
 import { useTranslation } from "../lib/i18n";
+import { useSearchHistory } from "../lib/search-history";
 import styles from "./search.module.css";
 
 export function meta() {
@@ -19,6 +20,7 @@ export default function SearchRoute() {
   const searchBoxRef = useRef<SearchBoxHandle>(null);
 
   const { activeServer, isLoading } = useIINABridge();
+  const { history: recentSearches, removeSearch } = useSearchHistory();
 
   const urlQ = searchParams.get("q") || "";
 
@@ -130,12 +132,46 @@ export default function SearchRoute() {
         ) : (
           <div className={styles.emptyState}>
             <IconSearch size={54} className={styles.emptyIcon} stroke={1.4} />
-            <div className={styles.emptyTitle}>
-              {t("searchPlaceholder", "Search movies, TV series, episodes...")}
-            </div>
-            <div className={styles.emptyDesc}>
-              {t("searchEmptyDesc", "Try checking your spelling or searching for another title.")}
-            </div>
+            <div className={styles.emptyTitle}>{t("searchPlaceholder", "Search movies, TV series, episodes...")}</div>
+            <div className={styles.emptyDesc}>{t("searchEmptyDesc", "Try checking your spelling or searching for another title.")}</div>
+
+            {recentSearches.length > 0 && (
+              <div className={styles.recentSearchesSection}>
+                <div className={styles.recentSearchesHeader}>
+                  <IconHistory size={14} className={styles.recentSearchesIcon} />
+                  <span>{t("recentSearches", "Recent Searches")}</span>
+                </div>
+                <div className={styles.recentPillsGrid}>
+                  {recentSearches.map((item) => (
+                    <div key={item} className={styles.recentPill}>
+                      <button
+                        type="button"
+                        className={styles.recentPillBtn}
+                        onClick={() => {
+                          searchBoxRef.current?.setValue(item);
+                          handleCommit(item);
+                        }}
+                      >
+                        <IconClock size={13} className={styles.recentPillIcon} />
+                        <span className={styles.recentPillText}>{item}</span>
+                      </button>
+                      <button
+                        type="button"
+                        className={styles.recentPillDelete}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          removeSearch(item);
+                        }}
+                        title={t("deleteSearchHistoryItem", "Delete")}
+                        aria-label={`${t("deleteSearchHistoryItem", "Delete")} ${item}`}
+                      >
+                        <IconX size={12} stroke={2.2} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
       </main>

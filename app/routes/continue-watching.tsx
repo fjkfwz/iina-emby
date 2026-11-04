@@ -45,7 +45,11 @@ export default function ContinueWatchingRoute() {
   }
 
   const handleBack = () => {
-    navigate("/");
+    if (window.history.length > 1) {
+      navigate(-1);
+    } else {
+      navigate("/");
+    }
   };
 
   const totalCount = items.length;

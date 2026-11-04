@@ -153,6 +153,7 @@ export function registerBridgeHandlers(view: WebviewTarget, deps: WebviewBridgeD
         serverName: data.serverName || "",
         userId: data.userId || "",
         username: data.username || "",
+        password: data.password,
         user: data.user,
       });
       if (server) {
