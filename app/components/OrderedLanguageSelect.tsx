@@ -61,7 +61,7 @@ export function OrderedLanguageSelect({ mode = "audio", value, onChange, classNa
     popoverRef,
     placement: "bottom-end",
     offset: 4,
-    clampVertical: false,
+    viewportPadding: 16,
   });
 
   // Sync position synchronously before paint, and smoothly follow page scroll

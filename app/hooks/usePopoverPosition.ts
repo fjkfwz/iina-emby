@@ -4,7 +4,7 @@ export type PopoverPlacement = "bottom-start" | "bottom-end" | "top-start" | "to
 
 export const DEFAULT_POPOVER_PLACEMENT: PopoverPlacement = "bottom-end";
 export const DEFAULT_POPOVER_OFFSET = 6;
-export const DEFAULT_POPOVER_VIEWPORT_PADDING = 8;
+export const DEFAULT_POPOVER_VIEWPORT_PADDING = 16;
 
 export interface CalculatePopoverPositionOptions {
   triggerRect: { top: number; bottom: number; left: number; right: number; width: number; height: number };
@@ -39,27 +39,30 @@ export function calculatePopoverPosition({
 }: CalculatePopoverPositionOptions): CalculatedPopoverPosition {
   let [side, align] = placement.split("-") as ["bottom" | "top", "start" | "end"];
 
-  // Flip vertically if there's not enough room.
-  if (
-    side === "bottom" &&
-    triggerRect.bottom + offset + popoverRect.height > windowHeight &&
-    triggerRect.top - offset - popoverRect.height >= 0
-  ) {
+  const fitsBottom = triggerRect.bottom + offset + popoverRect.height <= windowHeight - viewportPadding;
+  const fitsTop = triggerRect.top - offset - popoverRect.height >= viewportPadding;
+
+  // Flip vertically if there's not enough room below but enough room above, or vice versa
+  if (side === "bottom" && !fitsBottom && fitsTop) {
     side = "top";
-  } else if (
-    side === "top" &&
-    triggerRect.top - offset - popoverRect.height < 0 &&
-    triggerRect.bottom + offset + popoverRect.height <= windowHeight
-  ) {
+  } else if (side === "top" && !fitsTop && fitsBottom) {
     side = "bottom";
+  } else if (!fitsBottom && !fitsTop) {
+    // If it fits neither side fully, place on the side with more available space
+    const spaceBelow = windowHeight - viewportPadding - (triggerRect.bottom + offset);
+    const spaceAbove = triggerRect.top - offset - viewportPadding;
+    side = spaceBelow >= spaceAbove ? "bottom" : "top";
   }
 
   let top = side === "bottom" ? triggerRect.bottom + offset : triggerRect.top - offset - popoverRect.height;
   let left = align === "start" ? triggerRect.left : triggerRect.right - popoverRect.width;
 
-  left = Math.min(Math.max(left, viewportPadding), windowWidth - popoverRect.width - viewportPadding);
+  const maxLeft = Math.max(viewportPadding, windowWidth - popoverRect.width - viewportPadding);
+  left = Math.min(Math.max(left, viewportPadding), maxLeft);
+
   if (clampVertical) {
-    top = Math.min(Math.max(top, viewportPadding), windowHeight - popoverRect.height - viewportPadding);
+    const maxTop = Math.max(viewportPadding, windowHeight - popoverRect.height - viewportPadding);
+    top = Math.min(Math.max(top, viewportPadding), maxTop);
   }
 
   return { top, left, side, align };

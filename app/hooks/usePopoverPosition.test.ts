@@ -138,4 +138,38 @@ describe("calculatePopoverPosition", () => {
     // Directly follows trigger bottom: 130 + 4 = 134 (unclamped by viewport height limit)
     expect(result.top).toBe(134);
   });
+
+  it("safely clamps within 16px viewport padding to avoid overlapping window edges", () => {
+    const triggerRect = {
+      left: 5,
+      right: 105,
+      top: 5,
+      bottom: 35,
+      width: 100,
+      height: 30,
+    };
+
+    const popoverRect = {
+      left: 0,
+      right: 360,
+      top: 0,
+      bottom: 500,
+      width: 360,
+      height: 500,
+    };
+
+    const result = calculatePopoverPosition({
+      triggerRect,
+      popoverRect,
+      placement: "bottom-start",
+      offset: 4,
+      windowWidth: 800,
+      windowHeight: 600,
+    });
+
+    // Left is clamped to at least 16px safe margin
+    expect(result.left).toBe(16);
+    // Top is placed at trigger bottom + offset = 39, and clamped between 16 and 600 - 500 - 16 = 84
+    expect(result.top).toBe(39);
+  });
 });
