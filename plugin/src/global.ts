@@ -36,8 +36,15 @@ const serverSessionStore = createServerSessionStore({
 
 // Track active player target (either number ID from createPlayerInstance or string label)
 let activePlayerTarget: number | string | null = null;
+let activePlayerLabel: string | null = null;
 let latestPendingPlayData: PlayMediaMessage | null = null;
 let latestPendingPlayListData: PlayMediaListMessage | null = null;
+
+function clearActivePlayer(): void {
+  debugLog("Clearing active player state:", { activePlayerTarget, activePlayerLabel });
+  activePlayerTarget = null;
+  activePlayerLabel = null;
+}
 
 function extractPlayerTarget(candidate?: string | number | null, label?: string): number | string | null {
   if (candidate === null || candidate === undefined) {
@@ -71,7 +78,8 @@ function postToPlayer(target: number | string | null, name: string, data?: unkno
 }
 
 function isMatchingPlayer(target: number | string | null, candidate?: string | number): boolean {
-  if (target === null || candidate === undefined || candidate === null) return true;
+  if (target === null || target === undefined) return false;
+  if (candidate === undefined || candidate === null) return false;
   if (target === candidate) return true;
   const numTarget = typeof target === "number" ? target : Number.parseInt(String(target), 10);
   const numCandidate = typeof candidate === "number" ? candidate : Number.parseInt(String(candidate), 10);
@@ -81,6 +89,32 @@ function isMatchingPlayer(target: number | string | null, candidate?: string | n
   const sTarget = String(target);
   const sCand = String(candidate);
   return sTarget === sCand || sCand.startsWith(sTarget) || sTarget.startsWith(sCand);
+}
+
+function handlePlayerDeactivated(dataLabel?: string, player?: string | number): void {
+  if (!activePlayerTarget && !activePlayerLabel) return;
+  const matchesTarget = player !== undefined && player !== null && isMatchingPlayer(activePlayerTarget, player);
+  const matchesLabel = Boolean(
+    dataLabel && (dataLabel === activePlayerLabel || isMatchingPlayer(activePlayerTarget, dataLabel)),
+  );
+  const isEmbyPlayer = Boolean(dataLabel && dataLabel.startsWith("emby-"));
+
+  if (matchesTarget || matchesLabel || isEmbyPlayer) {
+    debugLog("Clearing active player because player deactivated:", {
+      activePlayerTarget,
+      activePlayerLabel,
+      player,
+      dataLabel,
+    });
+    clearActivePlayer();
+  } else {
+    debugLog("Ignoring deactivation from non-active or unknown player:", {
+      activePlayerTarget,
+      activePlayerLabel,
+      player,
+      dataLabel,
+    });
+  }
 }
 
 global.onMessage("player-active", (data?: { label?: string; url?: string }, player?: string | number) => {
@@ -94,6 +128,9 @@ global.onMessage("player-active", (data?: { label?: string; url?: string }, play
   const target = extractPlayerTarget(player, data?.label);
   if (target !== null) {
     activePlayerTarget = target;
+  }
+  if (data?.label) {
+    activePlayerLabel = data.label;
   }
   if (latestPendingPlayData && activePlayerTarget !== null) {
     debugLog("Sending pending play data to active player ID:", activePlayerTarget);
@@ -116,23 +153,31 @@ global.onMessage("get-pending-media", (data?: { label?: string }, player?: strin
 
 global.onMessage("player-inactive", (data?: { label?: string }, player?: string | number) => {
   debugLog("Player reported inactive:", { data, player });
-  if (isMatchingPlayer(activePlayerTarget, player) || (data?.label && isMatchingPlayer(activePlayerTarget, data.label))) {
-    activePlayerTarget = null;
-  }
+  handlePlayerDeactivated(data?.label, player);
 });
 
-global.onMessage("player-unregistered", (_data?: unknown, player?: string | number) => {
-  debugLog("Player instance unregistered:", player);
-  if (isMatchingPlayer(activePlayerTarget, player)) {
-    activePlayerTarget = null;
-  }
+global.onMessage("player-closed", (data?: { label?: string } | unknown, player?: string | number) => {
+  debugLog("Player reported closed:", { data, player });
+  const dataLabel =
+    typeof data === "object" && data !== null && "label" in data ? (data as { label?: string }).label : undefined;
+  handlePlayerDeactivated(dataLabel, player);
 });
 
-global.onMessage("player-file-loaded", (data?: { itemId?: string; url?: string }, player?: string | number) => {
+global.onMessage("player-unregistered", (data?: { label?: string } | unknown, player?: string | number) => {
+  debugLog("Player instance unregistered:", { data, player });
+  const dataLabel =
+    typeof data === "object" && data !== null && "label" in data ? (data as { label?: string }).label : undefined;
+  handlePlayerDeactivated(dataLabel, player);
+});
+
+global.onMessage("player-file-loaded", (data?: { itemId?: string; url?: string; label?: string }, player?: string | number) => {
   debugLog("Player file loaded:", data);
-  const target = extractPlayerTarget(player);
+  const target = extractPlayerTarget(player, data?.label);
   if (target !== null) {
     activePlayerTarget = target;
+  }
+  if (data?.label) {
+    activePlayerLabel = data.label;
   }
   const targetForMsg = target !== null ? target : activePlayerTarget;
   if (latestPendingPlayData && targetForMsg !== null) {
@@ -154,6 +199,10 @@ global.onMessage("playback-progress-updated", (data?: unknown) => {
   if (standaloneWindow && typeof standaloneWindow.postMessage === "function") {
     standaloneWindow.postMessage("playback-progress-updated", data);
   }
+  if (typeof data === "object" && data !== null && (data as any).event === "stop") {
+    debugLog("Playback reported stopped, clearing active player");
+    clearActivePlayer();
+  }
 });
 
 function spawnNewPlayerInstance(playData: PlayMediaMessage): void {
@@ -167,7 +216,8 @@ function spawnNewPlayerInstance(playData: PlayMediaMessage): void {
       enablePlugins: true,
       disableWindowAnimation: false,
     });
-    debugLog(`Created player instance ${playerId} for: ${playData.title}`);
+    debugLog(`Created player instance ${playerId} (label=${label}) for: ${playData.title}`);
+    activePlayerLabel = label;
     if (playerId !== undefined && playerId !== null) {
       activePlayerTarget = typeof playerId === "number" ? playerId : Number.parseInt(String(playerId), 10) || label;
       postToPlayer(activePlayerTarget, "play-media-command", playData);
@@ -175,10 +225,13 @@ function spawnNewPlayerInstance(playData: PlayMediaMessage): void {
       if (latestPendingPlayListData) {
         postToPlayer(activePlayerTarget, "queue-pending-playlist", latestPendingPlayListData);
       }
+    } else {
+      activePlayerTarget = label;
     }
   } catch (err: unknown) {
     const errorMsg = err instanceof Error ? err.message : String(err);
     debugLog.error("Failed to create player instance: " + errorMsg);
+    clearActivePlayer();
   }
 }
 
@@ -253,7 +306,8 @@ const { openEmbyStandaloneWindow, showEmbyBrowser } = createBrowserWindowManager
 // Reopen standalone browser when requested by any player window closing or finishing playback
 global.onMessage("reopen-browser", () => {
   console.log("[iina-emby] Global entry received reopen-browser request, opening standalone browser");
-  debugLog("Global entry opening standalone Emby browser");
+  debugLog("Global entry opening standalone Emby browser and clearing active player");
+  clearActivePlayer();
   openEmbyStandaloneWindow();
 });
 
@@ -290,11 +344,14 @@ global.onMessage("create-player", (data: PlayMediaMessage, player?: string | num
       disableWindowAnimation: false,
     });
 
-    debugLog(`Created new player instance ${playerId} for: ${title}`);
+    debugLog(`Created new player instance ${playerId} (label=${label}) for: ${title}`);
+    activePlayerLabel = label;
     if (playerId !== undefined && playerId !== null) {
       activePlayerTarget = typeof playerId === "number" ? playerId : Number.parseInt(String(playerId), 10) || label;
       postToPlayer(activePlayerTarget, "play-media-command", playData);
       postToPlayer(activePlayerTarget, "apply-pending-media", playData);
+    } else {
+      activePlayerTarget = label;
     }
 
     if (player !== undefined && player !== null) {

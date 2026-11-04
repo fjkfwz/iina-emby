@@ -3,7 +3,7 @@
 // shared/constants.ts
 var CLIENT_NAME = "IINA Emby Plugin";
 var DEVICE_NAME = "IINA";
-var CLIENT_VERSION = true ? "0.8.4" : "0.1.0";
+var CLIENT_VERSION = true ? "0.8.8" : "0.1.0";
 
 // shared/utils/auth.ts
 function buildAuthorizationHeader(identity, token) {
@@ -4412,11 +4412,13 @@ function onFileLoaded(fileUrl) {
     if (iinaGlobal && typeof iinaGlobal.postMessage === "function") {
       iinaGlobal.postMessage("player-file-loaded", {
         itemId: embyInfo.itemId,
-        url: resolvedUrl
+        url: resolvedUrl,
+        label: playerLabel
       });
       iinaGlobal.postMessage("player-active", {
         itemId: embyInfo.itemId,
-        url: resolvedUrl
+        url: resolvedUrl,
+        label: playerLabel
       });
     }
   }
@@ -4616,9 +4618,17 @@ event.on("mpv.end-file", () => {
   handlePlaybackTermination("end-file");
 });
 event.on("iina.window-will-close", () => {
+  if (!isEmbyPlayerInstance) {
+    debugLog("Ignoring window-will-close for non-Emby instance (e.g. welcome window)");
+    return;
+  }
   if (isWindowClosing) return;
   isWindowClosing = true;
-  debugLog("Window closing, stopping playback tracking");
+  try {
+    mpv.command("stop", []);
+  } catch {
+  }
+  debugLog(`Window closing (label=${playerLabel}), stopping playback tracking`);
   currentLoadedFileUrl = null;
   resetForNewFile();
   introManager.resetForNewFile();
@@ -4627,8 +4637,9 @@ event.on("iina.window-will-close", () => {
   stopEnforcingTracks();
   clearPendingTracks();
   if (iinaGlobal && typeof iinaGlobal.postMessage === "function") {
-    iinaGlobal.postMessage("player-unregistered", {});
-    iinaGlobal.postMessage("player-inactive", {});
+    iinaGlobal.postMessage("player-closed", { label: playerLabel });
+    iinaGlobal.postMessage("player-unregistered", { label: playerLabel });
+    iinaGlobal.postMessage("player-inactive", { label: playerLabel });
   }
   stopPlaybackTracking();
   handlePlaybackTermination("window-close");
