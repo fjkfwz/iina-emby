@@ -40,9 +40,10 @@
 .triggerLeft {
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   min-width: 0;
   flex: 1;
+  overflow: hidden;
 }
 
 .placeholder {
@@ -53,43 +54,45 @@
 .triggerPill {
   display: inline-flex;
   align-items: center;
-  margin-right: 0.45rem;
-  margin-bottom: 0.25rem;
-  padding: 0.18rem 0.5rem;
+  margin-right: 0.35rem;
+  padding: 0.15rem 0.4rem;
   background: rgba(255, 255, 255, 0.08);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 4px;
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   color: var(--text-primary, #ffffff);
   line-height: 1.2;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .triggerOrderBadge {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 17px;
-  height: 17px;
-  margin-right: 0.45rem;
-  padding: 0 4px;
-  border-radius: 10px;
+  min-width: 15px;
+  height: 15px;
+  padding: 0 3px;
+  border-radius: 8px;
   background: var(--accent-teal, #00c781);
   color: #0b1510;
-  font-size: 0.68rem;
+  font-size: 0.65rem;
   font-weight: 700;
   line-height: 1;
   flex-shrink: 0;
+  margin-right: 0.35rem;
 }
 
 .morePill {
   display: inline-flex;
   align-items: center;
-  margin-bottom: 0.25rem;
   padding: 0.15rem 0.4rem;
   background: rgba(255, 255, 255, 0.05);
   border-radius: 4px;
   font-size: 0.7rem;
   color: var(--text-tertiary, rgba(255, 255, 255, 0.5));
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .chevron {
@@ -227,14 +230,14 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 26px;
-  height: 20px;
-  margin-right: 0.875rem;
-  padding: 0 6px;
-  border-radius: 10px;
+  min-width: 18px;
+  height: 18px;
+  margin-right: 0.75rem;
+  padding: 0 4px;
+  border-radius: 9px;
   background: var(--accent-teal, #00c781);
   color: #0b1510;
-  font-size: 0.72rem;
+  font-size: 0.7rem;
   font-weight: 700;
   line-height: 1;
   flex-shrink: 0;

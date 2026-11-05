@@ -57,27 +57,23 @@ const CategoryCard = memo(function CategoryCard({ view, server }: CategoryCardPr
     accessToken: server.accessToken,
   });
 
-  const isJpg = rawImageUrl?.includes("format=jpg") || rawImageUrl?.endsWith(".jpg") || rawImageUrl?.endsWith(".jpeg");
-  const needsWebpPolyfill = !isWebp && Boolean(rawImageUrl) && !isJpg;
-
-  const [decodedSrc, setDecodedSrc] = useState<string | null>(() =>
-    needsWebpPolyfill && rawImageUrl ? getCachedDecodedWebp(rawImageUrl) || null : null,
-  );
+  const [decodedSrc, setDecodedSrc] = useState<string | null>(() => (rawImageUrl ? getCachedDecodedWebp(rawImageUrl) || null : null));
 
   // Sync memory cache updates (e.g. populated via prefetchDecodedWebp from IndexedDB)
   useEffect(() => {
-    if (needsWebpPolyfill && !decodedSrc && rawImageUrl) {
+    if (!isWebp && !decodedSrc && rawImageUrl) {
       const cached = getCachedDecodedWebp(rawImageUrl);
       if (cached) {
         setDecodedSrc(cached);
         setIsLoaded(true);
       }
     }
-  }, [needsWebpPolyfill, rawImageUrl, decodedSrc]);
+  }, [isWebp, rawImageUrl, decodedSrc]);
 
-  // If WebP is not natively supported and image format is WebP, decode via polyfill
+  // If WebP is not natively supported by the browser (such as Safari < 14 on macOS Catalina),
+  // decode the category WebP image to PNG via libwebp polyfill once the card enters/approaches the viewport.
   useEffect(() => {
-    if (needsWebpPolyfill && rawImageUrl && !decodedSrc && !imgError && isInView) {
+    if (!isWebp && rawImageUrl && !decodedSrc && !imgError && isInView) {
       let cancelled = false;
       decodeWebpToPng(rawImageUrl)
         .then((png) => {
@@ -96,9 +92,9 @@ const CategoryCard = memo(function CategoryCard({ view, server }: CategoryCardPr
         cancelled = true;
       };
     }
-  }, [needsWebpPolyfill, rawImageUrl, decodedSrc, imgError, isInView]);
+  }, [isWebp, rawImageUrl, decodedSrc, imgError, isInView]);
 
-  const activeSrc = needsWebpPolyfill
+  const activeSrc = !isWebp
     ? decodedSrc || undefined
     : (!imgError && (isInView || isNativeLazy) ? rawImageUrl : undefined);
 
@@ -107,7 +103,7 @@ const CategoryCard = memo(function CategoryCard({ view, server }: CategoryCardPr
   };
 
   const handleImgError = () => {
-    if (needsWebpPolyfill && rawImageUrl && !decodedSrc) {
+    if (!isWebp && rawImageUrl && !decodedSrc) {
       decodeWebpToPng(rawImageUrl)
         .then((png) => {
           setDecodedSrc(png);
@@ -177,7 +173,7 @@ export const CategoriesShelf = memo(function CategoriesShelf({ server }: Categor
   const { views, loading } = useUserViews(server);
   const titleText = t("categoriesNav", "Categories");
 
-  // Prefetch cached PNGs from persistent IndexedDB as soon as views are known (only if needed)
+  // Prefetch cached PNGs from persistent IndexedDB as soon as views are known
   useEffect(() => {
     if (!isWebpSupported() && server && views.length > 0) {
       const urls = views
@@ -190,10 +186,7 @@ export const CategoriesShelf = memo(function CategoriesShelf({ server }: Categor
           }),
         )
         .filter(Boolean) as string[];
-      const webpUrls = urls.filter((u) => !u.includes("format=jpg") && !u.endsWith(".jpg") && !u.endsWith(".jpeg"));
-      if (webpUrls.length > 0) {
-        prefetchDecodedWebp(webpUrls);
-      }
+      prefetchDecodedWebp(urls);
     }
   }, [server, views]);
 
