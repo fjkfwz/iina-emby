@@ -573,7 +573,7 @@ export default function SettingsRoute() {
           <div className={`${styles.card} ${styles.aboutCard}`}>
             <div className={styles.aboutRow}>
               <span className={styles.aboutLabel}>{t("appVersion", "Plugin Version")}</span>
-              <span className={styles.aboutValue}>v0.6.2</span>
+              <span className={styles.aboutValue}>v{__APP_VERSION__}</span>
             </div>
             <div className={styles.aboutRow}>
               <span className={styles.aboutLabel}>IINA Platform</span>

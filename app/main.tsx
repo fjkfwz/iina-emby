@@ -27,6 +27,13 @@ window.addEventListener("unhandledrejection", (event) => {
   } catch {}
 });
 
+window.addEventListener("keydown", (e) => {
+  if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "r") {
+    e.preventDefault();
+    window.location.reload();
+  }
+});
+
 interface ErrorBoundaryProps {
   children: React.ReactNode;
 }
