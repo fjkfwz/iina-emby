@@ -3,16 +3,22 @@
   top: 0;
   z-index: 100;
   box-sizing: border-box;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 2.25rem 1.5rem 1.25rem;
+  padding: 2.25rem 0 1.25rem;
   background: transparent;
   border: none;
   -webkit-app-region: drag;
   user-select: none;
   -webkit-user-select: none;
   pointer-events: auto;
+}
+
+.headerInner {
+  width: 100%;
+  padding: 0 1.5rem;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 
 .header::before {

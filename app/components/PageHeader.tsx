@@ -20,6 +20,7 @@ export interface PageHeaderProps {
   shadowOnScroll?: boolean;
   forceShadow?: boolean;
   className?: string;
+  innerClassName?: string;
   style?: React.CSSProperties;
 }
 
@@ -39,6 +40,7 @@ export const PageHeader = forwardRef<HTMLElement, PageHeaderProps>(function Page
     shadowOnScroll = false,
     forceShadow = false,
     className,
+    innerClassName,
     style,
   },
   ref,
@@ -139,79 +141,81 @@ export const PageHeader = forwardRef<HTMLElement, PageHeaderProps>(function Page
       className={`${styles.header} ${transparent ? styles.transparent : ""} ${shadowOnScroll ? styles.shadowOnScroll : ""} ${className || ""}`}
       data-window-drag
     >
-      <div className={styles.headerLeft}>
-        {onBack && (
-          <GlassElement variant="glass" shape="rounded" size="sm" isIconOnly onClick={onBack} title={backTitle} aria-label={backTitle}>
-            <IconChevronLeft size={18} />
-          </GlassElement>
-        )}
+      <div className={`${styles.headerInner} ${innerClassName || ""}`}>
+        <div className={styles.headerLeft}>
+          {onBack && (
+            <GlassElement variant="glass" shape="rounded" size="sm" isIconOnly onClick={onBack} title={backTitle} aria-label={backTitle}>
+              <IconChevronLeft size={18} />
+            </GlassElement>
+          )}
 
-        {title && (
-          <GlassElement
-            as="div"
-            variant="glass"
-            shape="rounded"
-            size="sm"
-            interactive={false}
-            leftSection={showActiveDot ? <span className={styles.activeDot} /> : undefined}
-            className={styles.badge}
-          >
-            {typeof title === "string" ? <span className={styles.titleText}>{title}</span> : title}
-          </GlassElement>
-        )}
-      </div>
+          {title && (
+            <GlassElement
+              as="div"
+              variant="glass"
+              shape="rounded"
+              size="sm"
+              interactive={false}
+              leftSection={showActiveDot ? <span className={styles.activeDot} /> : undefined}
+              className={styles.badge}
+            >
+              {typeof title === "string" ? <span className={styles.titleText}>{title}</span> : title}
+            </GlassElement>
+          )}
+        </div>
 
-      {centerSection && <div className={styles.headerCenter}>{centerSection}</div>}
+        {centerSection && <div className={styles.headerCenter}>{centerSection}</div>}
 
-      <div className={styles.headerRight}>
-        {canSearch && !hideSearch && (
-          <GlassElement
-            variant="glass"
-            shape="rounded"
-            size="sm"
-            isIconOnly
-            title="Search (Cmd+F)"
-            aria-label="Search"
-            onClick={() => {
-              navigate("/search");
-            }}
-          >
-            <IconSearch size={16} />
-          </GlassElement>
-        )}
+        <div className={styles.headerRight}>
+          {canSearch && !hideSearch && (
+            <GlassElement
+              variant="glass"
+              shape="rounded"
+              size="sm"
+              isIconOnly
+              title="Search (Cmd+F)"
+              aria-label="Search"
+              onClick={() => {
+                navigate("/search");
+              }}
+            >
+              <IconSearch size={16} />
+            </GlassElement>
+          )}
 
-        {shouldShowSettings && (
-          <GlassElement
-            variant="glass"
-            shape="rounded"
-            size="sm"
-            isIconOnly
-            title={t("settings", "Settings")}
-            aria-label={t("settings", "Settings")}
-            onClick={() => {
-              navigate("/settings");
-            }}
-          >
-            <IconSettings2 size={16} />
-          </GlassElement>
-        )}
+          {shouldShowSettings && (
+            <GlassElement
+              variant="glass"
+              shape="rounded"
+              size="sm"
+              isIconOnly
+              title={t("settings", "Settings")}
+              aria-label={t("settings", "Settings")}
+              onClick={() => {
+                navigate("/settings");
+              }}
+            >
+              <IconSettings2 size={16} />
+            </GlassElement>
+          )}
 
-        {rightSection}
+          {rightSection}
 
-        {onRefresh && (
-          <GlassElement
-            variant="glass"
-            shape="rounded"
-            size="sm"
-            isIconOnly
-            onClick={onRefresh}
-            disabled={isRefreshing}
-            title="Refresh"
-            aria-label="Refresh content"
-          >
-            <IconReload size={16} className={isRefreshing ? styles.spinning : ""} />
-          </GlassElement>
-        )}
+          {onRefresh && (
+            <GlassElement
+              variant="glass"
+              shape="rounded"
+              size="sm"
+              isIconOnly
+              onClick={onRefresh}
+              disabled={isRefreshing}
+              title="Refresh"
+              aria-label="Refresh content"
+            >
+              <IconReload size={16} className={isRefreshing ? styles.spinning : ""} />
+            </GlassElement>
+          )}
+        </div>
       </div>
     </header>
   );

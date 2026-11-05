@@ -57,6 +57,8 @@ export function Select({
     popoverRef: menuRef,
     placement,
     offset: 4,
+    viewportPadding: 20,
+    topSafeArea: 48,
   });
 
   const close = useCallback(() => {

@@ -139,7 +139,7 @@ describe("calculatePopoverPosition", () => {
     expect(result.top).toBe(134);
   });
 
-  it("safely clamps within 16px viewport padding to avoid overlapping window edges", () => {
+  it("safely clamps within viewport padding and respects topSafeArea to avoid overlapping window controls", () => {
     const triggerRect = {
       left: 5,
       right: 105,
@@ -169,7 +169,42 @@ describe("calculatePopoverPosition", () => {
 
     // Left is clamped to at least 16px safe margin
     expect(result.left).toBe(16);
-    // Top is placed at trigger bottom + offset = 39, and clamped between 16 and 600 - 500 - 16 = 84
-    expect(result.top).toBe(39);
+    // Top is placed at trigger bottom + offset = 39, and clamped to at least topSafeArea (44)
+    expect(result.top).toBe(44);
+  });
+
+  it("dynamically sets maxHeight when space below is constrained", () => {
+    const triggerRect = {
+      left: 200,
+      right: 400,
+      top: 200,
+      bottom: 230,
+      width: 200,
+      height: 30,
+    };
+
+    const popoverRect = {
+      left: 0,
+      right: 360,
+      top: 0,
+      bottom: 500,
+      width: 360,
+      height: 500,
+    };
+
+    const result = calculatePopoverPosition({
+      triggerRect,
+      popoverRect,
+      placement: "bottom-end",
+      offset: 4,
+      windowWidth: 800,
+      windowHeight: 600,
+    });
+
+    // Top: 230 + 4 = 234
+    // Space below: 600 - 16 - 234 = 350px
+    // Since 500 doesn't fit, maxHeight is capped at 350px
+    expect(result.top).toBe(234);
+    expect(result.maxHeight).toBe(350);
   });
 });

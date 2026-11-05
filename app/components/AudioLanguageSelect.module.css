@@ -109,8 +109,8 @@
   top: auto;
   left: auto;
   width: 360px;
-  max-width: calc(100vw - 32px);
-  max-height: min(440px, calc(100vh - 44px));
+  max-width: calc(100vw - 40px);
+  max-height: min(440px, calc(100vh - 64px));
   display: flex;
   flex-direction: column;
   padding: 1rem 1.125rem;

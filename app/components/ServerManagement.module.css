@@ -77,7 +77,7 @@
 .content {
   flex: 1;
   min-width: 0;
-  padding: 2.5rem 2.75rem 3.5rem;
+  padding: 1.75rem 2rem 2.5rem;
   box-sizing: border-box;
   overflow-y: auto;
   display: flex;
@@ -86,11 +86,11 @@
 }
 
 .content > * + * {
-  margin-top: 1.5rem;
+  margin-top: 1.25rem;
 }
 
 .contentInner {
-  max-width: 44rem;
+  max-width: 42rem;
   width: 100%;
   margin: 0 auto;
   display: flex;
@@ -98,7 +98,7 @@
 }
 
 .contentInner > * + * {
-  margin-top: 1.5rem;
+  margin-top: 1.25rem;
 }
 
 .contentDragRegion {

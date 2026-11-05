@@ -1,3 +1,13 @@
+.headerInner {
+  max-width: 700px;
+  margin: 0 auto;
+  padding: 0 1.5rem;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
 .container {
   max-width: 700px;
   margin: 0 auto;

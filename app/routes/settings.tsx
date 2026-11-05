@@ -71,7 +71,12 @@ export default function SettingsRoute() {
 
   return (
     <>
-      <PageHeader onBack={handleBack} backTitle={t("back", "Back")} title={t("settingsTitle", "Settings")} />
+      <PageHeader
+        onBack={handleBack}
+        backTitle={t("back", "Back")}
+        innerClassName={styles.headerInner}
+        title={t("settingsTitle", "Settings")}
+      />
 
       <div className={styles.container}>
         {/* Language Selection */}

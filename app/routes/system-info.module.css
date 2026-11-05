@@ -1,7 +1,17 @@
-.container {
-  max-width: 760px;
+.headerInner {
+  max-width: 900px;
   margin: 0 auto;
-  padding: 2rem 2rem 5rem;
+  padding: 0 1.5rem;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.container {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 1.25rem 1.5rem 5rem;
   display: flex;
   flex-direction: column;
   box-sizing: border-box;

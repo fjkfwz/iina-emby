@@ -100,8 +100,10 @@
   left: auto;
   inset: auto;
   margin: 0;
-  min-width: 11rem;
-  padding: 0.3125rem;
+  min-width: 12rem;
+  max-width: calc(100vw - 40px);
+  max-height: min(320px, calc(100vh - 64px));
+  padding: 0.45rem 0.5rem;
   background: var(--bg-dialog, rgba(30, 30, 34, 0.96));
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
