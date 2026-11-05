@@ -66,6 +66,11 @@
   contain: strict;
 }
 
+/* In smooth/performance mode on legacy GPUs, completely detach hidden background home layers to free GPU VRAM */
+:global([data-performance-mode="true"]) .homeHidden {
+  display: none !important;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .pageEnterForward,
   .pageEnterBack {

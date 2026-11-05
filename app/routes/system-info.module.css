@@ -1,6 +1,6 @@
 .headerInner {
   width: 100%;
-  max-width: 900px;
+  max-width: 700px;
   margin: 0 auto;
   padding: 0 1.5rem;
   box-sizing: border-box;
@@ -11,7 +11,7 @@
 
 .container {
   width: 100%;
-  max-width: 900px;
+  max-width: 700px;
   margin: 0 auto;
   padding: 1.5rem 1.5rem 5rem;
   display: flex;

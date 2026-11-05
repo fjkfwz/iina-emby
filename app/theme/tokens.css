@@ -145,6 +145,15 @@
 [data-performance-mode="true"] * {
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
+  box-shadow: none !important;
+  text-shadow: none !important;
+}
+
+[data-performance-mode="true"] button,
+[data-performance-mode="true"] a,
+[data-performance-mode="true"] input,
+[data-performance-mode="true"] select {
+  transition: none !important;
 }
 
 [data-performance-mode="true"] [class*="posterWrap"]:hover,

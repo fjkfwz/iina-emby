@@ -1,7 +1,6 @@
 .container {
   display: flex;
   flex-direction: column;
-  gap: 1.75rem;
   width: 100%;
 }
 
@@ -11,7 +10,7 @@
   align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
-  gap: 1.5rem;
+  margin-bottom: 1.5rem;
   padding: 1.5rem 1.75rem;
   background: linear-gradient(135deg, rgba(255, 255, 255, 0.07) 0%, rgba(255, 255, 255, 0.02) 100%);
   border: 1px solid rgba(255, 255, 255, 0.12);
@@ -24,7 +23,6 @@
 .heroLeft {
   display: flex;
   align-items: center;
-  gap: 1.25rem;
   min-width: 0;
   flex: 1;
 }
@@ -33,6 +31,7 @@
   position: relative;
   width: 52px;
   height: 52px;
+  margin-right: 1.25rem;
   border-radius: 12px;
   background: rgba(0, 199, 129, 0.12);
   border: 1.5px solid rgba(0, 199, 129, 0.3);
@@ -58,19 +57,18 @@
 .heroText {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
   min-width: 0;
 }
 
 .heroTitleRow {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
   flex-wrap: wrap;
+  margin-bottom: 0.5rem;
 }
 
 .heroTitle {
-  margin: 0;
+  margin: 0 0.875rem 0 0;
   font-size: 1.35rem;
   font-weight: 700;
   color: #ffffff;
@@ -81,14 +79,14 @@
 .heroMetaRow {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
   flex-wrap: wrap;
 }
 
 .heroMetaPill {
   display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
+  margin-right: 0.625rem;
+  margin-bottom: 0.25rem;
   padding: 0.28rem 0.65rem;
   border-radius: 20px;
   font-size: 0.78rem;
@@ -99,18 +97,28 @@
   border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
+.heroMetaPill:last-child {
+  margin-right: 0;
+}
+
+.heroMetaPill svg {
+  margin-right: 0.35rem;
+}
+
 .heroActions {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
   flex-shrink: 0;
 }
 
-/* 2-Column Responsive Dashboard Grid */
+.heroActions > * + * {
+  margin-left: 0.75rem;
+}
+
+/* 1-Column Responsive Dashboard */
 .grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
-  gap: 1.5rem;
+  display: flex;
+  flex-direction: column;
   width: 100%;
 }
 
@@ -124,12 +132,16 @@
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
   display: flex;
   flex-direction: column;
+  margin-bottom: 1.25rem;
+}
+
+.card:last-child {
+  margin-bottom: 0;
 }
 
 .cardHeader {
   display: flex;
   align-items: center;
-  gap: 0.625rem;
   padding: 0.875rem 1.25rem;
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
   font-size: 0.8125rem;
@@ -142,6 +154,7 @@
 
 .cardHeaderIcon {
   color: var(--accent-teal, #00c781);
+  margin-right: 0.625rem;
 }
 
 .row {
@@ -149,7 +162,6 @@
   align-items: center;
   justify-content: space-between;
   padding: 0.85rem 1.25rem;
-  gap: 1.5rem;
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
   transition: background 0.12s ease;
 }
@@ -165,7 +177,6 @@
 .rowLeft {
   display: flex;
   align-items: center;
-  gap: 0.625rem;
   min-width: 130px;
   flex-shrink: 0;
 }
@@ -176,6 +187,7 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  margin-right: 0.75rem;
 }
 
 .rowLabel {
@@ -189,10 +201,13 @@
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 0.75rem;
   min-width: 0;
   flex: 1;
   text-align: right;
+}
+
+.rowRight > * + * {
+  margin-left: 0.75rem;
 }
 
 .rowValue {
@@ -249,7 +264,6 @@
 .badge {
   display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
   padding: 0.28rem 0.65rem;
   border-radius: var(--radius-sm, 6px);
   font-size: 0.74rem;
@@ -268,7 +282,12 @@
   height: 6px;
   border-radius: 50%;
   background: #00e599;
+  margin-right: 0.45rem;
   animation: pulse 2s infinite ease-in-out;
+}
+
+.badge svg {
+  margin-right: 0.35rem;
 }
 
 @keyframes pulse {

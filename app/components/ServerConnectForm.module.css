@@ -40,7 +40,6 @@
 .formHeader {
   display: flex;
   align-items: center;
-  gap: 0.875rem;
   padding-bottom: 0.875rem;
   margin-bottom: 0.25rem;
   border-bottom: 1px solid var(--border-subtle);
@@ -49,6 +48,7 @@
 .headerIconBadge {
   width: 2.25rem;
   height: 2.25rem;
+  margin-right: 0.875rem;
   border-radius: 0.625rem;
   display: flex;
   align-items: center;
@@ -200,13 +200,13 @@
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 0.625rem;
   margin-top: 0.625rem;
   padding-top: 0.875rem;
   border-top: 1px solid var(--border-subtle);
 }
 
 .cancelBtn {
+  margin-right: 0.625rem;
   height: 2.125rem;
   padding: 0 1rem;
   font-size: 0.8125rem;

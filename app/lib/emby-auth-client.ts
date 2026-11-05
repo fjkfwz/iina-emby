@@ -28,15 +28,25 @@ export function buildAuthHeaders(token?: string, extraHeaders?: HeadersInit): He
 
 export { cleanServerUrl };
 
+async function fetchWithTimeout(url: string, options: RequestInit = {}, timeoutMs = 5000): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 export async function resolveServerApiBase(url: string): Promise<string> {
   const normalized = cleanServerUrl(url);
   if (normalized.endsWith("/emby")) {
     return normalized;
   }
 
-  // Try /emby first (default for Emby)
+  // Try /emby first (default for Emby) with 3s timeout
   try {
-    const res = await fetch(`${normalized}/emby/System/Info/Public`);
+    const res = await fetchWithTimeout(`${normalized}/emby/System/Info/Public`, {}, 3000);
     if (res.ok) {
       return `${normalized}/emby`;
     }
@@ -44,9 +54,9 @@ export async function resolveServerApiBase(url: string): Promise<string> {
     // Ignore and check root
   }
 
-  // Try root (reverse proxy setups)
+  // Try root (reverse proxy setups) with 3s timeout
   try {
-    const res = await fetch(`${normalized}/System/Info/Public`);
+    const res = await fetchWithTimeout(`${normalized}/System/Info/Public`, {}, 3000);
     if (res.ok) {
       return normalized;
     }
@@ -59,7 +69,7 @@ export async function resolveServerApiBase(url: string): Promise<string> {
 
 export async function getPublicSystemInfo(apiBase: string): Promise<EmbySystemInfo | null> {
   try {
-    const res = await fetch(`${apiBase}/System/Info/Public`);
+    const res = await fetchWithTimeout(`${apiBase}/System/Info/Public`, {}, 4000);
     if (res.ok) {
       return await res.json();
     }
@@ -82,17 +92,21 @@ export async function authenticateByName(
     const apiBase = await resolveServerApiBase(serverUrl);
     const authUrl = `${apiBase}/Users/AuthenticateByName`;
 
-    const res = await fetch(authUrl, {
-      method: "POST",
-      headers: {
-        ...buildAuthHeaders(),
-        "Content-Type": "application/json",
+    const res = await fetchWithTimeout(
+      authUrl,
+      {
+        method: "POST",
+        headers: {
+          ...buildAuthHeaders(),
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          Username: username.trim(),
+          Pw: pw,
+        }),
       },
-      body: JSON.stringify({
-        Username: username.trim(),
-        Pw: pw,
-      }),
-    });
+      8000,
+    );
 
     if (res.status === 401) {
       return { success: false, error: "Invalid username or password" };

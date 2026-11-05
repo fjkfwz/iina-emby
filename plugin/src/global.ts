@@ -214,7 +214,7 @@ function spawnNewPlayerInstance(playData: PlayMediaMessage): void {
       url: playData.streamUrl,
       label,
       enablePlugins: true,
-      disableWindowAnimation: false,
+      disableWindowAnimation: true,
     });
     debugLog(`Created player instance ${playerId} (label=${label}) for: ${playData.title}`);
     activePlayerLabel = label;
@@ -341,7 +341,7 @@ global.onMessage("create-player", (data: PlayMediaMessage, player?: string | num
       url: streamUrl,
       label,
       enablePlugins: true,
-      disableWindowAnimation: false,
+      disableWindowAnimation: true,
     });
 
     debugLog(`Created new player instance ${playerId} (label=${label}) for: ${title}`);

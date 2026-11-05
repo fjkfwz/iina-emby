@@ -16,7 +16,8 @@
     "format": "biome format --write .",
     "test": "vitest run",
     "test:watch": "vitest",
-    "install:plugin": "./scripts/install.sh"
+    "install:plugin": "./scripts/install.sh",
+    "deploy:imac": "./scripts/deploy-imac.sh"
   },
   "dependencies": {
     "@tabler/icons-react": "^3.48.0",
