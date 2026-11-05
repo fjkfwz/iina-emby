@@ -123,3 +123,40 @@
     --accent-orange: color(display-p3 1 0.5843 0);
   }
 }
+
+/* ========================================================================
+   Smooth / Performance Mode for older GPUs (e.g. Intel HD Graphics Haswell)
+   Disables heavy WebKit backdrop blur filters, heavy shadows, and animations
+   ======================================================================== */
+[data-performance-mode="true"] {
+  --bg-dialog: rgba(26, 26, 32, 0.98);
+  --bg-panel: rgba(255, 255, 255, 0.05);
+  --bg-control: rgba(255, 255, 255, 0.10);
+  --bg-control-hover: rgba(255, 255, 255, 0.16);
+  --bg-row: rgba(255, 255, 255, 0.05);
+  --bg-row-hover: rgba(255, 255, 255, 0.08);
+  --bg-toolbar: rgba(18, 18, 24, 0.96);
+  --bg-overlay: rgba(0, 0, 0, 0.85);
+  --shadow-dialog: 0 8px 24px rgba(0, 0, 0, 0.5);
+  --shadow-card: none;
+  --shadow-glass: none;
+}
+
+[data-performance-mode="true"] * {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+[data-performance-mode="true"] [class*="posterWrap"]:hover,
+[data-performance-mode="true"] [class*="poster"]:hover,
+[data-performance-mode="true"] [class*="thumb"]:hover {
+  transform: none !important;
+}
+
+[data-performance-mode="true"] [class*="pageContainer"],
+[data-performance-mode="true"] [class*="pageEnterForward"],
+[data-performance-mode="true"] [class*="pageEnterBack"] {
+  animation: none !important;
+  transition: none !important;
+}
+

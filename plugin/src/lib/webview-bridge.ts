@@ -107,6 +107,7 @@ export function buildPreferencesPayload(preferences?: typeof iina.preferences): 
     preferred_audio_channel: (preferences.get("preferred_audio_channel") as string) || "auto",
     preferred_subtitle_language: (preferences.get("preferred_subtitle_language") as string) || "zh,chi,chs,sc,cht,tc,en",
     auto_select_subtitles: preferences.get("auto_select_subtitles") !== false,
+    performance_mode: Boolean(preferences.get("performance_mode")),
     emby_track_preferences: preferences.get("emby_track_preferences"),
     emby_series_track_preferences: preferences.get("emby_series_track_preferences"),
   };

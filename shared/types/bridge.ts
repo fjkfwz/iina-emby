@@ -106,6 +106,7 @@ export interface PluginPreferencesPayload {
   preferred_audio_channel?: "auto" | "stereo" | "surround" | string;
   preferred_subtitle_language?: string;
   auto_select_subtitles?: boolean;
+  performance_mode?: boolean;
   [key: string]: unknown;
 }
 

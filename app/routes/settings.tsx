@@ -1,4 +1,5 @@
 import {
+  IconBolt,
   IconBookmarks,
   IconBug,
   IconChevronRight,
@@ -79,7 +80,7 @@ export default function SettingsRoute() {
       />
 
       <div className={styles.container}>
-        {/* Language Selection */}
+        {/* Language & Smooth Mode Selection */}
         <section className={styles.section}>
           <h2 className={styles.sectionTitle}>{t("generalSection", "General & Interface")}</h2>
           <div className={styles.card}>
@@ -104,6 +105,28 @@ export default function SettingsRoute() {
                   data={interfaceLanguageOptions}
                 />
               </div>
+            </div>
+
+            <div className={styles.divider} />
+
+            {/* Smooth Mode / Performance Mode */}
+            <div className={styles.settingRow}>
+              <div className={styles.rowLeft}>
+                <span className={styles.rowIcon}>
+                  <IconBolt size={18} />
+                </span>
+                <div className={styles.textGroup}>
+                  <span className={styles.rowTitle}>{t("smoothMode", "Smooth Mode")}</span>
+                  <span className={styles.rowSubtitle}>
+                    {t("smoothModeDesc", "Disable blur effects and transitions to maximize responsiveness on older Macs")}
+                  </span>
+                </div>
+              </div>
+              <ToggleSwitch
+                id="toggle-performance-mode"
+                checked={Boolean(preferences.performance_mode)}
+                onChange={(checked) => setPreference("performance_mode", checked)}
+              />
             </div>
           </div>
         </section>

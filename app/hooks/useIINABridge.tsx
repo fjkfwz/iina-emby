@@ -68,25 +68,61 @@ export function IINABridgeProvider({ children }: { children: React.ReactNode }) 
   const [isLoading, setIsLoading] = useState<boolean>(() => hasIina && servers.length === 0);
   const [reopenCount, setReopenCount] = useState<number>(0);
   const [progressUpdateCount, setProgressUpdateCount] = useState<number>(0);
-  const [preferences, setPreferences] = useState<PluginPreferencesPayload>(() => ({
-    auto_open_on_launch: true,
-    open_in_new_window: false,
-    sync_playback_progress: true,
-    reopen_browser_on_playback_end: true,
-    autoplay_next_episode: true,
-    auto_skip_intro: true,
-    auto_skip_outro: true,
-    auto_download_enabled: true,
-    debug_logging: false,
-    remember_track_selections: true,
-    preferred_audio_language: "zh,chi,ja,jpn,en,eng",
-    preferred_audio_channel: "auto",
-    preferred_subtitle_language: "zh,chi,chs,sc,cht,tc,en",
-    auto_select_subtitles: true,
-  }));
+  const [preferences, setPreferences] = useState<PluginPreferencesPayload>(() => {
+    let initialPerf = false;
+    try {
+      initialPerf = localStorage.getItem("emby_performance_mode") === "true";
+      if (initialPerf && typeof document !== "undefined") {
+        document.documentElement.setAttribute("data-performance-mode", "true");
+      }
+    } catch {}
+    return {
+      auto_open_on_launch: true,
+      open_in_new_window: false,
+      sync_playback_progress: true,
+      reopen_browser_on_playback_end: true,
+      autoplay_next_episode: true,
+      auto_skip_intro: true,
+      auto_skip_outro: true,
+      auto_download_enabled: true,
+      debug_logging: false,
+      remember_track_selections: true,
+      preferred_audio_language: "zh,chi,ja,jpn,en,eng",
+      preferred_audio_channel: "auto",
+      preferred_subtitle_language: "zh,chi,chs,sc,cht,tc,en",
+      auto_select_subtitles: true,
+      performance_mode: initialPerf,
+    };
+  });
+
+  // Keep document attribute and localStorage synced with performance_mode
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    const isPerf = Boolean(preferences.performance_mode);
+    if (isPerf) {
+      document.documentElement.setAttribute("data-performance-mode", "true");
+    } else {
+      document.documentElement.removeAttribute("data-performance-mode");
+    }
+    try {
+      localStorage.setItem("emby_performance_mode", String(isPerf));
+    } catch {}
+  }, [preferences.performance_mode]);
 
   const setPreference = useCallback((key: string, value: unknown) => {
     setPreferences((prev) => ({ ...prev, [key]: value }));
+    if (key === "performance_mode") {
+      try {
+        localStorage.setItem("emby_performance_mode", String(Boolean(value)));
+      } catch {}
+      if (typeof document !== "undefined") {
+        if (value) {
+          document.documentElement.setAttribute("data-performance-mode", "true");
+        } else {
+          document.documentElement.removeAttribute("data-performance-mode");
+        }
+      }
+    }
     if (window?.iina?.postMessage) {
       window.iina.postMessage("set-preference", { key, value });
     }

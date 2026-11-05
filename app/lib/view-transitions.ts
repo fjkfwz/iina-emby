@@ -15,6 +15,7 @@ function canAnimate(): boolean {
   return (
     typeof document !== "undefined" &&
     "startViewTransition" in document &&
+    !document.documentElement.hasAttribute("data-performance-mode") &&
     // `match-element` is required: Safari 18.4+ / Chrome 137+. Without it no element
     // would be named and the transition would only add a pointless async frame.
     typeof CSS !== "undefined" &&

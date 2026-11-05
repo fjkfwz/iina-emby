@@ -134,6 +134,7 @@ function buildPreferencesPayload(preferences2) {
     preferred_audio_channel: preferences2.get("preferred_audio_channel") || "auto",
     preferred_subtitle_language: preferences2.get("preferred_subtitle_language") || "zh,chi,chs,sc,cht,tc,en",
     auto_select_subtitles: preferences2.get("auto_select_subtitles") !== false,
+    performance_mode: Boolean(preferences2.get("performance_mode")),
     emby_track_preferences: preferences2.get("emby_track_preferences"),
     emby_series_track_preferences: preferences2.get("emby_series_track_preferences")
   };
