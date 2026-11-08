@@ -161,6 +161,8 @@
 
 .dropdownTitleIcon {
   color: var(--text-tertiary);
+  margin-right: 0.45rem;
+  flex-shrink: 0;
 }
 
 .clearAllBtn {
@@ -175,6 +177,11 @@
   border-radius: var(--radius-s);
   cursor: pointer;
   transition: all 0.15s ease;
+}
+
+.clearAllBtn svg {
+  margin-right: 0.35rem;
+  flex-shrink: 0;
 }
 
 .clearAllBtn:hover {
@@ -201,10 +208,15 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  margin-bottom: 2px;
   border-radius: 8px;
   background: transparent;
   transition: background-color 0.12s ease;
   overflow: hidden;
+}
+
+.historyItem:last-child {
+  margin-bottom: 0;
 }
 
 .historyItem:hover {
@@ -231,6 +243,7 @@
 .historyItemIcon {
   color: var(--text-tertiary);
   flex-shrink: 0;
+  margin-right: 0.625rem;
   transition: color 0.12s ease;
 }
 
@@ -265,6 +278,7 @@
   cursor: pointer;
   flex-shrink: 0;
   margin-left: 0.5rem;
+  margin-right: 0.35rem;
   opacity: 0.6;
   transition: all 0.15s ease;
 }

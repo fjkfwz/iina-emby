@@ -1,10 +1,10 @@
 {
   "name": "Emby Browser",
   "identifier": "com.ghotriw.iina-emby",
-  "version": "0.8.10",
+  "version": "0.8.11",
   "description": "Emby plugin for IINA.",
   "ghRepo": "fjkfwz/iina-emby",
-  "ghVersion": 29,
+  "ghVersion": 30,
   "author": {
     "name": "Andrii Honcharov"
   },
